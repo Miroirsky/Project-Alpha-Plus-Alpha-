@@ -87,6 +87,11 @@ class MapEditor {
     this.isDraggingPlayhead = false;
     this.wasPlayingBeforeScrub = false;
 
+    // Timeline Audio Waveform Visualizer
+    this.waveformPeaks = null;
+    this.isWaveformLoading = false;
+    this.currentWaveformFile = null;
+
     // Export Modal DOM Elements
     this.exportBtn = document.getElementById("btn-editor-export");
     this.exportModal = document.getElementById("export-modal");
@@ -200,6 +205,7 @@ class MapEditor {
   /**
    * Initializes the HTML5 Audio element for audio scrubbing and playback.
    * Kept strictly paused on creation.
+   * Also loads audio waveform peaks for the timeline visualizer.
    * @param {string} file
    */
   initAudio(file) {
@@ -212,6 +218,9 @@ class MapEditor {
       }
       this.audio = null;
     }
+
+    // Trigger waveform loading/decoding (cached, bundled, or dynamic Web Audio API)
+    this.loadAudioWaveform(file);
 
     if (file) {
       try {
@@ -242,6 +251,147 @@ class MapEditor {
         console.warn("Audio loading failed in editor:", err);
       }
     }
+  }
+
+  /**
+   * Loads and extracts audio waveform peaks for the timeline workstation.
+   * Checks in-memory cache first, then pre-extracted bundled waveforms (instantaneous & offline safe),
+   * and dynamically decodes custom/imported audio via Web Audio API when needed.
+   * @param {string} file
+   */
+  async loadAudioWaveform(file) {
+    if (!file) {
+      this.waveformPeaks = null;
+      this.isWaveformLoading = false;
+      this.currentWaveformFile = null;
+      return;
+    }
+
+    this.currentWaveformFile = file;
+
+    // 1. Check in-memory runtime cache
+    if (MapEditor.waveformCache && MapEditor.waveformCache.has(file)) {
+      this.waveformPeaks = MapEditor.waveformCache.get(file);
+      this.isWaveformLoading = false;
+      this.renderTimeline();
+      return;
+    }
+
+    // 2. Check bundled waveforms (instantaneous 0ms load & works offline / file:///)
+    if (typeof window !== "undefined" && window.BUNDLED_WAVEFORMS && window.BUNDLED_WAVEFORMS[file]) {
+      const bundled = window.BUNDLED_WAVEFORMS[file];
+      const peaksData = {
+        peaks: new Float32Array(bundled.peaks),
+        samplesPerSec: bundled.samplesPerSec || 50,
+        duration: bundled.duration
+      };
+      if (!MapEditor.waveformCache) {
+        MapEditor.waveformCache = new Map();
+      }
+      MapEditor.waveformCache.set(file, peaksData);
+      this.waveformPeaks = peaksData;
+      this.isWaveformLoading = false;
+      this.renderTimeline();
+      return;
+    }
+
+    // 3. Dynamic Web Audio API extraction for custom/imported songs (blob: or http:)
+    this.isWaveformLoading = true;
+    try {
+      const AudioContextClass = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
+      if (!AudioContextClass) {
+        this.isWaveformLoading = false;
+        return;
+      }
+
+      if (!MapEditor.audioCtx) {
+        MapEditor.audioCtx = new AudioContextClass();
+      }
+      const audioCtx = MapEditor.audioCtx;
+
+      const response = await fetch(file);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} fetching audio`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+
+      const audioBuffer = await new Promise((resolve, reject) => {
+        const res = audioCtx.decodeAudioData(arrayBuffer, resolve, reject);
+        if (res && typeof res.then === "function") {
+          res.then(resolve).catch(reject);
+        }
+      });
+
+      const peaksData = this.extractWaveformPeaks(audioBuffer);
+      if (peaksData) {
+        if (!MapEditor.waveformCache) {
+          MapEditor.waveformCache = new Map();
+        }
+        MapEditor.waveformCache.set(file, peaksData);
+
+        // Only apply if the editor is still showing this audio file
+        if (this.currentWaveformFile === file) {
+          this.waveformPeaks = peaksData;
+          this.renderTimeline();
+        }
+      }
+    } catch (err) {
+      console.warn("Waveform extraction not available for track:", err);
+      if (this.currentWaveformFile === file) {
+        this.waveformPeaks = null;
+      }
+    } finally {
+      if (this.currentWaveformFile === file) {
+        this.isWaveformLoading = false;
+      }
+    }
+  }
+
+  /**
+   * Downsamples decoded audio buffer channels into a normalized amplitude envelope array.
+   * @param {AudioBuffer} audioBuffer
+   * @returns {{peaks: Float32Array, samplesPerSec: number, duration: number}|null}
+   */
+  extractWaveformPeaks(audioBuffer) {
+    if (!audioBuffer) return null;
+    const samplesPerSec = 50;
+    const dur = audioBuffer.duration;
+    const numBins = Math.floor(dur * samplesPerSec);
+    if (numBins <= 0) return null;
+
+    const peaks = new Float32Array(numBins);
+    const rawSR = audioBuffer.sampleRate;
+    const ch0 = audioBuffer.getChannelData(0);
+    const ch1 = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : null;
+    const binSize = rawSR / samplesPerSec;
+
+    let maxPeak = 0;
+    for (let b = 0; b < numBins; b++) {
+      const start = Math.floor(b * binSize);
+      const end = Math.min(audioBuffer.length, Math.floor((b + 1) * binSize));
+      let m = 0;
+      for (let s = start; s < end; s += 2) {
+        const v0 = Math.abs(ch0[s]);
+        if (v0 > m) m = v0;
+        if (ch1) {
+          const v1 = Math.abs(ch1[s]);
+          if (v1 > m) m = v1;
+        }
+      }
+      peaks[b] = m;
+      if (m > maxPeak) maxPeak = m;
+    }
+
+    const norm = maxPeak > 0.01 ? (1.0 / maxPeak) : 1.0;
+    for (let b = 0; b < numBins; b++) {
+      peaks[b] = Math.min(1.0, peaks[b] * norm);
+    }
+
+    return {
+      peaks,
+      samplesPerSec,
+      duration: dur
+    };
   }
 
   /**
@@ -1456,6 +1606,9 @@ class MapEditor {
 
     ctx.clearRect(0, 0, w, h);
 
+    // Render Audio Waveform Visualizer in background (aligned to song timestamps and zoom)
+    this.drawTimelineWaveform(ctx, w, h, pps);
+
     // Track divider line (Lane 1: Red Notes y=4..38; Lane 2: Blue Notes y=42..78)
     ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
     ctx.lineWidth = 1;
@@ -1494,53 +1647,161 @@ class MapEditor {
       }
 
       if (isTriangle) {
-        // Triangle Bomb Note on timeline
+        // Triangle Bomb Note on timeline (semi-transparent so waveform is visible behind)
         const triSize = 10;
         ctx.beginPath();
         ctx.moveTo(x, laneCenterY - triSize);
         ctx.lineTo(x + triSize * Math.cos(Math.PI / 6), laneCenterY + triSize * Math.sin(Math.PI / 6));
         ctx.lineTo(x - triSize * Math.cos(Math.PI / 6), laneCenterY + triSize * Math.sin(Math.PI / 6));
         ctx.closePath();
-        ctx.fillStyle = "#ffd32a";
+
+        ctx.fillStyle = isSelected ? "rgba(255, 211, 42, 0.65)" : "rgba(255, 211, 42, 0.42)";
         ctx.fill();
-        ctx.strokeStyle = isSelected ? "#ffffff" : "#ff4757";
-        ctx.lineWidth = 2.0;
+        ctx.strokeStyle = isSelected ? "#ffd700" : "rgba(255, 71, 87, 0.95)";
+        ctx.lineWidth = isSelected ? 2.5 : 2.0;
         ctx.stroke();
 
-        ctx.fillStyle = "#1e272e";
+        ctx.fillStyle = "#ffffff";
         ctx.font = "bold 9px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText("!", x, laneCenterY + 2);
 
-        ctx.fillStyle = "rgba(255, 211, 42, 0.85)";
+        ctx.fillStyle = "rgba(255, 211, 42, 0.9)";
         ctx.font = "8px monospace";
         ctx.fillText(`${note.time}s`, x, laneCenterY + 16);
       } else {
-        // Normal Note: Single circular ball
-        const colorHex = isRed ? "#ff4757" : "#00d4ff";
+        // Normal Note: Semi-transparent circular ball displaying waveform through body
+        const fillAlpha = isSelected ? 0.65 : 0.45;
+        const fillColor = isRed
+          ? `rgba(255, 71, 87, ${fillAlpha})`
+          : `rgba(0, 212, 255, ${fillAlpha})`;
+        const strokeColor = isSelected
+          ? "#ffd700"
+          : (isRed ? "rgba(255, 120, 130, 0.95)" : "rgba(100, 230, 255, 0.95)");
 
         ctx.beginPath();
         ctx.arc(x, laneCenterY, 8.5, 0, Math.PI * 2);
-        ctx.fillStyle = colorHex;
+        ctx.fillStyle = fillColor;
         ctx.fill();
-        ctx.strokeStyle = isSelected ? "#ffd700" : "rgba(255, 255, 255, 0.8)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = isSelected ? 2.5 : 1.75;
         ctx.stroke();
 
         ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 8px monospace";
+        ctx.font = "bold 8.5px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(isRed ? "R" : "B", x, laneCenterY);
 
-        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
         ctx.font = "8px monospace";
         ctx.fillText(`${note.time}s`, x, laneCenterY + 15);
       }
 
       ctx.restore();
     });
+  }
+
+  /**
+   * Draws the audio waveform directly on the timeline canvas behind notes.
+   * Displays changes in sound intensity over time, highlights loud beats and drops,
+   * and stays mathematically synchronized across zooming, scrolling, and playback.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} w
+   * @param {number} h
+   * @param {number} pps
+   */
+  drawTimelineWaveform(ctx, w, h, pps) {
+    if (this.isWaveformLoading && !this.waveformPeaks) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 212, 255, 0.4)";
+      ctx.font = "italic 9px monospace";
+      ctx.fillText("Loading waveform...", 48, 45);
+      ctx.restore();
+      return;
+    }
+
+    if (!this.waveformPeaks || !this.waveformPeaks.peaks) return;
+
+    const peaks = this.waveformPeaks.peaks;
+    const samplesPerSec = this.waveformPeaks.samplesPerSec || 50;
+    const numPeaks = peaks.length;
+    if (numPeaks === 0) return;
+
+    const centerY = 41.5;
+    const maxHalfHeight = 35; // Spans from y=6.5 to y=76.5
+    const stepPx = 2.0;
+    const barWidth = 1.25;
+
+    const usePath2D = typeof Path2D !== "undefined";
+    const regularBars = usePath2D ? new Path2D() : null;
+    const beatBars = usePath2D ? new Path2D() : null;
+
+    const maxDrawX = Math.min(w, Math.ceil((this.duration || 180) * pps));
+
+    // Prepare styles
+    const grad = ctx.createLinearGradient(0, centerY - maxHalfHeight, 0, centerY + maxHalfHeight);
+    grad.addColorStop(0.0, "rgba(255, 71, 87, 0.42)");   // Red lane top tint
+    grad.addColorStop(0.3, "rgba(255, 107, 129, 0.30)");
+    grad.addColorStop(0.5, "rgba(0, 212, 255, 0.52)");   // Electric cyan center
+    grad.addColorStop(0.7, "rgba(30, 144, 255, 0.30)");
+    grad.addColorStop(1.0, "rgba(0, 168, 255, 0.42)");   // Blue lane bottom tint
+
+    ctx.save();
+
+    for (let x = 0; x <= maxDrawX; x += stepPx) {
+      const tStart = x / pps;
+      const tEnd = (x + stepPx) / pps;
+
+      const startBin = Math.max(0, Math.floor(tStart * samplesPerSec));
+      const endBin = Math.min(numPeaks - 1, Math.ceil(tEnd * samplesPerSec));
+
+      let amp = 0;
+      if (endBin <= startBin) {
+        amp = peaks[startBin] || 0;
+      } else {
+        for (let b = startBin; b <= endBin; b++) {
+          if (peaks[b] > amp) amp = peaks[b];
+        }
+      }
+
+      // Quiet baseline: tiny 1.2px bar at center line for smooth visual flow
+      const halfH = Math.max(1.2, amp * maxHalfHeight);
+      const yTop = centerY - halfH;
+      const barH = halfH * 2;
+
+      if (regularBars) {
+        regularBars.rect(x, yTop, barWidth, barH);
+        if (amp >= 0.65) {
+          const beatCapH = Math.max(2.5, halfH * 0.4);
+          beatBars.rect(x, centerY - halfH, barWidth, beatCapH);
+          beatBars.rect(x, centerY + halfH - beatCapH, barWidth, beatCapH);
+        }
+      } else {
+        // Direct context fallback if Path2D is not available
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, yTop, barWidth, barH);
+        if (amp >= 0.65) {
+          ctx.fillStyle = "rgba(255, 215, 0, 0.70)";
+          const beatCapH = Math.max(2.5, halfH * 0.4);
+          ctx.fillRect(x, centerY - halfH, barWidth, beatCapH);
+          ctx.fillRect(x, centerY + halfH - beatCapH, barWidth, beatCapH);
+        }
+      }
+    }
+
+    if (regularBars) {
+      ctx.fillStyle = grad;
+      ctx.fill(regularBars);
+
+      if (beatBars) {
+        ctx.fillStyle = "rgba(255, 215, 0, 0.70)";
+        ctx.fill(beatBars);
+      }
+    }
+
+    ctx.restore();
   }
 
   /**
@@ -1959,6 +2220,10 @@ class MapEditor {
     return this.view ? this.view.classList.contains("is-active") : false;
   }
 }
+
+// Static cache for precomputed and dynamically decoded audio waveforms
+MapEditor.waveformCache = new Map();
+MapEditor.audioCtx = null;
 
 // Expose to window / global
 if (typeof window !== "undefined") {
