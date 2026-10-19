@@ -21,6 +21,7 @@
   <script defer src="scripts/songsData.js"></script>
   <script defer src="scripts/mapData.js"></script>
   <script defer src="scripts/importedTracks.js"></script>
+  <script defer src="scripts/mediaStorage.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
   <script defer src="scripts/musicPlayer.js"></script>
   <script defer src="scripts/playMenu.js"></script>
@@ -240,6 +241,10 @@
         </div>
 
         <div class="editor-bar-right">
+          <button id="btn-editor-bg" class="btn-editor-action btn-editor-bg" type="button" title="Configure playfield background image/video">
+            <span class="btn-icon">&#128444;</span>
+            <span>Background</span>
+          </button>
           <button id="btn-editor-params" class="btn-editor-action btn-editor-params" type="button" title="Edit track parameters & metadata">
             <span class="btn-icon">&#9881;</span>
             <span>Track Parameters</span>
@@ -792,6 +797,58 @@
                 <div class="artwork-card-meta">
                   <span id="params-artwork-title" class="artwork-card-title">Default-0.png</span>
                   <span class="artwork-card-badge">Selected Artwork</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Play Area Background Section (Image or Video) -->
+          <div class="form-group" id="params-bg-section">
+            <label class="form-label">Playfield Arena Background</label>
+            <div class="artwork-picker-box bg-picker-box">
+              <span class="artwork-picker-subtitle">Import Image or Video for Square Play Area</span>
+
+              <div class="artwork-upload-row">
+                <input type="file" id="params-bg-file" accept="image/*,video/*" style="display: none;">
+                <label for="params-bg-file" class="custom-file-btn bg-upload-btn">
+                  <span>Upload Image / Video...</span>
+                </label>
+                <button type="button" id="btn-params-bg-remove" class="btn-editor-action btn-bg-remove" style="display: none;">
+                  <span>Remove Background</span>
+                </button>
+                <span id="params-bg-status" class="file-status-text">Default Arena Grid</span>
+              </div>
+
+              <!-- Controls row: Fit Mode & Opacity -->
+              <div class="form-row-2 bg-options-row">
+                <div class="form-group">
+                  <label for="params-bg-fit" class="form-label">Fit Mode</label>
+                  <select id="params-bg-fit" class="form-select">
+                    <option value="cover">Cover (Fill Square Area)</option>
+                    <option value="contain">Contain (Fit Inside Square)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="params-bg-opacity" class="form-label" style="margin-bottom: 0;">Opacity</label>
+                    <span id="params-bg-opacity-val" class="artwork-card-badge" style="font-size: 0.75rem;">70%</span>
+                  </div>
+                  <input type="range" id="params-bg-opacity" class="editor-speed-slider" min="0.05" max="1.0" step="0.05" value="0.7">
+                </div>
+              </div>
+
+              <!-- Selected Preview Card -->
+              <div class="artwork-selected-card bg-selected-card" id="params-bg-preview-box">
+                <div id="params-bg-media-container" class="bg-media-container" style="position: relative; width: 68px; height: 68px; border-radius: 0.5rem; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <img id="params-bg-preview-img" class="artwork-card-img" style="display: none; width: 100%; height: 100%; object-fit: cover;" alt="Background Preview">
+                  <video id="params-bg-preview-video" class="artwork-card-img" muted loop playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+                  <div id="params-bg-preview-empty" class="bg-preview-empty" style="color: rgba(255, 255, 255, 0.4); font-size: 0.65rem; text-align: center; padding: 4px;">
+                    <span>Grid</span>
+                  </div>
+                </div>
+                <div class="artwork-card-meta">
+                  <span id="params-bg-preview-title" class="artwork-card-title">Default Arena Grid</span>
+                  <span id="params-bg-preview-badge" class="artwork-card-badge">No Custom Media</span>
                 </div>
               </div>
             </div>

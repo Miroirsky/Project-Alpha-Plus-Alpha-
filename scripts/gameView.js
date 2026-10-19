@@ -32,6 +32,11 @@ class GameView {
     this.colorText = document.getElementById("game-color-text");
     this.exitBtn = document.getElementById("btn-game-exit");
 
+    // Track Background Media (Image or Video)
+    this.bgMedia = null;
+    this.bgMediaType = null;
+    this.bgConfig = null;
+
     // Comprehensive End Screen Elements
     this.resultsOverlay = document.getElementById("game-results-overlay");
     this.resultsSongName = document.getElementById("results-song-name");
@@ -108,13 +113,80 @@ class GameView {
   }
 
   /**
-   * Sets up track metadata in the HUD.
+   * Sets up track metadata and custom background in the HUD.
    * @param {Object} song
    */
   setupSong(song) {
     if (this.trackTitle) this.trackTitle.textContent = song.name;
     if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} &bull; Mapped by ${song.mapper || "Mapper"}`;
     this.hideResults();
+
+    this.cleanupBackgroundMedia();
+    if (song && song.background) {
+      this.initBackgroundMedia(song.background);
+    }
+  }
+
+  /**
+   * Cleans up and releases background video / image media resources.
+   */
+  cleanupBackgroundMedia() {
+    if (this.bgMedia && this.bgMediaType === "video") {
+      try {
+        this.bgMedia.pause();
+        this.bgMedia.src = "";
+      } catch (e) {}
+    }
+    this.bgMedia = null;
+    this.bgMediaType = null;
+    this.bgConfig = null;
+  }
+
+  /**
+   * Initializes background image or video for gameplay.
+   * @param {Object} bg
+   */
+  async initBackgroundMedia(bg) {
+    if (!bg) return;
+    this.bgConfig = bg;
+
+    let mediaUrl = bg.url;
+    if (!mediaUrl && bg.mediaId && typeof window !== "undefined" && window.MediaStorage) {
+      const stored = await window.MediaStorage.getBackgroundMedia(bg.mediaId);
+      if (stored) {
+        if (typeof stored === "string") {
+          mediaUrl = stored;
+        } else if (typeof window.URL !== "undefined" && window.URL.createObjectURL) {
+          mediaUrl = window.URL.createObjectURL(stored);
+        }
+      }
+    }
+
+    if (!mediaUrl) return;
+
+    if (bg.type === "video") {
+      try {
+        const video = document.createElement("video");
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.src = mediaUrl;
+        this.bgMedia = video;
+        this.bgMediaType = "video";
+      } catch (err) {
+        console.warn("Failed to initialize gameplay background video:", err);
+      }
+    } else {
+      try {
+        const img = new Image();
+        img.src = mediaUrl;
+        this.bgMedia = img;
+        this.bgMediaType = "image";
+      } catch (err) {
+        console.warn("Failed to initialize gameplay background image:", err);
+      }
+    }
   }
 
   /**
@@ -193,6 +265,10 @@ class GameView {
 
     ctx.clearRect(0, 0, width, height);
 
+    if (state.isPaused && this.bgMedia && this.bgMediaType === "video" && !this.bgMedia.paused) {
+      try { this.bgMedia.pause(); } catch (e) {}
+    }
+
     this.drawTrackBackground(ctx, width, height, state.currentTime);
     this.drawNotes(ctx, width, height, state.notes, state.currentTime);
     this.drawEffects(ctx, state.effects);
@@ -201,6 +277,7 @@ class GameView {
 
   /**
    * Draws ambient rhythmic arena background with square playfield boundary and subtle pulses.
+   * Also renders custom track background (image or video) inside the square play area.
    */
   drawTrackBackground(ctx, width, height, time) {
     const playArea = PlayArea.getMetrics(width, height);
@@ -209,6 +286,19 @@ class GameView {
     const s = playArea.size;
     const ox = playArea.offsetX;
     const oy = playArea.offsetY;
+
+    // Custom Track Background Media (Image or Video)
+    if (this.bgMedia && this.bgConfig) {
+      if (this.bgMediaType === "video") {
+        if (this.bgMedia.duration > 0 && Math.abs(this.bgMedia.currentTime - (time % this.bgMedia.duration)) > 0.15) {
+          try { this.bgMedia.currentTime = time % this.bgMedia.duration; } catch (e) {}
+        }
+        if (this.bgMedia.paused) {
+          this.bgMedia.play().catch(() => {});
+        }
+      }
+      PlayArea.drawBackgroundMedia(ctx, this.bgMedia, ox, oy, s, this.bgConfig.fit || "cover", this.bgConfig.opacity !== undefined ? this.bgConfig.opacity : 0.7);
+    }
 
     ctx.save();
 
@@ -958,6 +1048,7 @@ class GameView {
    * Hides gameplay view.
    */
   hide() {
+    this.cleanupBackgroundMedia();
     if (this.container) {
       this.container.classList.remove("is-active");
       this.container.setAttribute("aria-hidden", "true");

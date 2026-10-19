@@ -27,7 +27,19 @@ class MapStorage {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const uniqueMaps = [];
+          const seenIds = new Set();
+          for (const m of parsed) {
+            if (m && m.id && !seenIds.has(m.id)) {
+              seenIds.add(m.id);
+              uniqueMaps.push({
+                ...m,
+                isCustom: true,
+                isDefault: false
+              });
+            }
+          }
+          return uniqueMaps;
         }
       }
     } catch (err) {
@@ -244,9 +256,31 @@ class MapStorage {
   }
 
   /**
+   * Checks whether a map is a default track (from importedTracks.js / presets).
+   * Any map present in this.customMaps is strictly a custom track, never default.
+   * @param {Object} track
+   * @returns {boolean}
+   */
+  isDefaultTrack(track) {
+    if (!track || !track.id) return false;
+    // If it exists in customMaps, it is strictly a custom track!
+    if (this.customMaps && this.customMaps.some((m) => m.id === track.id)) {
+      return false;
+    }
+    const defaults = this.getDefaultMaps();
+    if (defaults.some((m) => m.id === track.id)) {
+      return true;
+    }
+    if (track.isDefault === true || String(track.id).startsWith("default_") || track.isCustom === false) {
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Saves updates to a map:
    * - When editing a default track, saves changes as a separate copy, leaving the original unchanged.
-   * - For custom tracks, saves changes directly to the current track without creating duplicate saves.
+   * - For custom tracks, saves changes directly to the existing track without creating duplicate saves or new tracks.
    * @param {Object} updatedMap
    * @returns {Object} savedMap (or new copy if default track)
    */
@@ -278,12 +312,32 @@ class MapStorage {
       ? parseFloat((notesClone.length / durationSec).toFixed(1))
       : 0;
 
-    // 1. If editing a default track, save changes as a separate copy!
-    if (updatedMap.isDefault || updatedMap.isCustom === false) {
+    // 1. If this track already exists in customMaps, update it directly in-place!
+    // NEVER create a new track or save copy for an existing custom track!
+    const customIndex = this.customMaps.findIndex((m) => m.id === updatedMap.id);
+    if (customIndex !== -1) {
+      this.customMaps[customIndex] = {
+        ...this.customMaps[customIndex],
+        ...updatedMap,
+        id: updatedMap.id, // Strictly preserve existing ID
+        isCustom: true,
+        isDefault: false,
+        cover: trackCover,
+        nps: computedNps,
+        notes: notesClone
+      };
+      this.saveCustomMapsToStorage();
+      return this.customMaps[customIndex];
+    }
+
+    // 2. The only exception: editing a default track creates a separate custom copy!
+    if (this.isDefaultTrack(updatedMap)) {
       const copyId = `custom_copy_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      const copyName = updatedMap.name.includes("(Copy)")
+      const originalTrack = this.getMap(updatedMap.id);
+      const isRenamed = updatedMap.name && originalTrack && updatedMap.name !== originalTrack.name;
+      const copyName = isRenamed
         ? updatedMap.name
-        : `${updatedMap.name} (Copy)`;
+        : (updatedMap.name.includes("(Copy)") ? updatedMap.name : `${updatedMap.name} (Copy)`);
 
       const copyMap = {
         ...updatedMap,
@@ -302,23 +356,10 @@ class MapStorage {
       return copyMap;
     }
 
-    // 2. For custom tracks, update the existing track directly without creating a new save
-    const customIndex = this.customMaps.findIndex((m) => m.id === updatedMap.id);
-    if (customIndex !== -1) {
-      this.customMaps[customIndex] = {
-        ...this.customMaps[customIndex],
-        ...updatedMap,
-        cover: trackCover,
-        nps: computedNps,
-        notes: notesClone
-      };
-      this.saveCustomMapsToStorage();
-      return this.customMaps[customIndex];
-    }
-
-    // Fallback: save to custom maps
+    // 3. Fallback: custom track not yet in customMaps (e.g. freshly created custom map)
     const newCustomMap = {
       ...updatedMap,
+      id: updatedMap.id,
       cover: trackCover,
       isCustom: true,
       isDefault: false,
@@ -427,6 +468,24 @@ class MapStorage {
         notes: sanitizedNotes
       }
     };
+
+    if (map.background && typeof map.background === "object") {
+      const bg = map.background;
+      const isVideo = bg.type === "video";
+      const hasDirectUrl = typeof bg.url === "string" && (bg.url.startsWith("data:") || bg.url.startsWith("Assets/") || bg.url.startsWith("http"));
+      const bgPayload = {
+        type: isVideo ? "video" : "image",
+        fit: bg.fit === "contain" ? "contain" : "cover",
+        opacity: typeof bg.opacity === "number" ? Math.max(0.05, Math.min(1.0, bg.opacity)) : 0.7,
+        name: bg.name || (isVideo ? "background.mp4" : "background.png")
+      };
+      if (hasDirectUrl && bg.url.length < 3000000) {
+        bgPayload.url = bg.url;
+      } else {
+        bgPayload.needsMedia = true;
+      }
+      payload.track.background = bgPayload;
+    }
 
     const jsonStr = JSON.stringify(payload, null, 2);
     let base64Code = "";
@@ -569,7 +628,23 @@ class MapStorage {
       notes: sanitizedNotes
     };
 
-    return { valid: true, track: sanitizedTrack };
+    if (trackObj.background && typeof trackObj.background === "object") {
+      const bg = trackObj.background;
+      const isVideo = bg.type === "video";
+      const validBg = {
+        type: isVideo ? "video" : "image",
+        fit: bg.fit === "contain" ? "contain" : "cover",
+        opacity: typeof bg.opacity === "number" ? Math.max(0.05, Math.min(1.0, bg.opacity)) : 0.7,
+        name: typeof bg.name === "string" ? bg.name.slice(0, 100) : (isVideo ? "background.mp4" : "background.png")
+      };
+      if (typeof bg.url === "string" && bg.url.trim()) {
+        validBg.url = bg.url.trim();
+      }
+      if (bg.needsMedia) {
+        validBg.needsMedia = true;
+      }
+      sanitizedTrack.background = validBg;
+    }
 
     return { valid: true, track: sanitizedTrack };
   }
@@ -590,6 +665,7 @@ class MapStorage {
       id: uniqueId,
       date: new Date().toISOString().split("T")[0],
       isCustom: true,
+      isDefault: false,
       notes: [...(validatedTrack.notes || [])]
     };
 

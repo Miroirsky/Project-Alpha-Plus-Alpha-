@@ -28,6 +28,8 @@ class MapEditor {
     this.audio = null;
     this.eventsBound = false;
     this.isSeeking = false;
+    this.isDirty = false;
+    this._isClosing = false;
 
     // DOM Elements
     this.view = document.getElementById("map-editor-view");
@@ -127,6 +129,27 @@ class MapEditor {
     this.paramsArtworkTitle = document.getElementById("params-artwork-title");
     this.selectedParamArtwork = "Assets/Tracks Placeholders/Default-0.png";
 
+    // Track Playfield Background DOM Elements
+    this.editorBgBtn = document.getElementById("btn-editor-bg");
+    this.paramsBgSection = document.getElementById("params-bg-section");
+    this.paramsBgFile = document.getElementById("params-bg-file");
+    this.paramsBgRemoveBtn = document.getElementById("btn-params-bg-remove");
+    this.paramsBgStatus = document.getElementById("params-bg-status");
+    this.paramsBgFit = document.getElementById("params-bg-fit");
+    this.paramsBgOpacity = document.getElementById("params-bg-opacity");
+    this.paramsBgOpacityVal = document.getElementById("params-bg-opacity-val");
+    this.paramsBgPreviewBox = document.getElementById("params-bg-preview-box");
+    this.paramsBgPreviewImg = document.getElementById("params-bg-preview-img");
+    this.paramsBgPreviewVideo = document.getElementById("params-bg-preview-video");
+    this.paramsBgPreviewEmpty = document.getElementById("params-bg-preview-empty");
+    this.paramsBgPreviewTitle = document.getElementById("params-bg-preview-title");
+    this.paramsBgPreviewBadge = document.getElementById("params-bg-preview-badge");
+
+    // Background Media Runtime State
+    this.bgMedia = null;
+    this.bgMediaType = null;
+    this.activeBgConfig = null;
+
     // Mouse cursor coordinates inside canvas
     this.mouse = { x: 0, y: 0, isHovering: false };
 
@@ -146,14 +169,38 @@ class MapEditor {
   }
 
   /**
+   * Flags the map state as modified with unsaved changes.
+   */
+  markDirty() {
+    this.isDirty = true;
+    if (this.saveIndicatorEl) {
+      this.saveIndicatorEl.textContent = "• Unsaved changes";
+      this.saveIndicatorEl.className = "editor-save-tag dirty";
+    }
+  }
+
+  /**
    * Loads a map into the editor and opens the workspace.
    * @param {Object} map
    */
   open(map) {
     if (!map) return;
+
+    // If switching between songs while editor has unsaved edits, flush the previous map first
+    if (this.isOpen() && this.isDirty && this.activeMap && map.id && this.activeMap.id !== map.id) {
+      this.saveMapState();
+    }
+
     // Always fetch fresh map data from mapStorage to avoid stale object references
     const freshMap = (this.mapStorage && map.id && this.mapStorage.getMap(map.id)) || map;
     this.activeMap = freshMap;
+    this.isDirty = false;
+
+    if (this.saveIndicatorEl) {
+      this.saveIndicatorEl.textContent = "✓ All changes saved";
+      this.saveIndicatorEl.className = "editor-save-tag saved";
+    }
+
     this.notes = (freshMap.notes || []).map((n) => {
       const isTriangle = n.type === "triangle" || n.type === "bomb";
       return {
@@ -174,7 +221,7 @@ class MapEditor {
     }
 
     if (this.titleEl) {
-      this.titleEl.textContent = `${map.name} - by ${map.mapper}`;
+      this.titleEl.textContent = `${freshMap.name} - by ${freshMap.mapper}`;
     }
 
     if (this.metaAudioEl && map.file) {
@@ -184,6 +231,9 @@ class MapEditor {
 
     // Initialize audio element for timeline playback (stays strictly paused)
     this.initAudio(map.file);
+
+    // Initialize playfield custom background media (image or video)
+    this.loadBackgroundMedia(freshMap.background);
 
     this.resizeCanvas();
     this.selectNote(null);
@@ -395,6 +445,138 @@ class MapEditor {
   }
 
   /**
+   * Loads and initializes playfield background media (image or video).
+   * @param {Object|null} bg
+   */
+  async loadBackgroundMedia(bg) {
+    if (this.bgMedia && this.bgMediaType === "video") {
+      try {
+        this.bgMedia.pause();
+        this.bgMedia.src = "";
+      } catch (e) {}
+    }
+    this.bgMedia = null;
+    this.bgMediaType = null;
+    this.activeBgConfig = null;
+
+    if (!bg) {
+      this.updateBgParamsUI();
+      return;
+    }
+
+    let mediaUrl = bg.url;
+    if (!mediaUrl && bg.mediaId && typeof window !== "undefined" && window.MediaStorage) {
+      const stored = await window.MediaStorage.getBackgroundMedia(bg.mediaId);
+      if (stored) {
+        if (typeof stored === "string") {
+          mediaUrl = stored;
+        } else if (typeof window.URL !== "undefined" && window.URL.createObjectURL) {
+          mediaUrl = window.URL.createObjectURL(stored);
+        }
+      }
+    }
+
+    this.activeBgConfig = {
+      type: bg.type === "video" ? "video" : "image",
+      fit: bg.fit === "contain" ? "contain" : "cover",
+      opacity: typeof bg.opacity === "number" ? Math.max(0.05, Math.min(1.0, bg.opacity)) : 0.7,
+      name: bg.name || (bg.type === "video" ? "background.mp4" : "background.png"),
+      url: mediaUrl || bg.url || "",
+      mediaId: bg.mediaId || null
+    };
+
+    if (mediaUrl) {
+      if (bg.type === "video") {
+        try {
+          const video = document.createElement("video");
+          video.muted = true;
+          video.loop = true;
+          video.playsInline = true;
+          video.preload = "auto";
+          video.src = mediaUrl;
+          video.playbackRate = this.playSpeed || 1.0;
+          this.bgMedia = video;
+          this.bgMediaType = "video";
+        } catch (err) {
+          console.warn("Failed to load editor background video:", err);
+        }
+      } else {
+        try {
+          const img = new Image();
+          img.src = mediaUrl;
+          this.bgMedia = img;
+          this.bgMediaType = "image";
+        } catch (err) {
+          console.warn("Failed to load editor background image:", err);
+        }
+      }
+    }
+
+    this.updateBgParamsUI();
+  }
+
+  /**
+   * Updates Track Parameters modal background preview and controls to reflect activeBgConfig.
+   */
+  updateBgParamsUI() {
+    const bg = this.activeBgConfig;
+    const hasMedia = Boolean(bg && (bg.url || bg.mediaId));
+
+    if (this.paramsBgFit && bg) {
+      this.paramsBgFit.value = bg.fit || "cover";
+    }
+    if (this.paramsBgOpacity && bg) {
+      this.paramsBgOpacity.value = bg.opacity !== undefined ? bg.opacity : 0.7;
+    }
+    if (this.paramsBgOpacityVal) {
+      const op = bg && bg.opacity !== undefined ? bg.opacity : 0.7;
+      this.paramsBgOpacityVal.textContent = `${Math.round(op * 100)}%`;
+    }
+
+    if (this.paramsBgRemoveBtn) {
+      this.paramsBgRemoveBtn.style.display = hasMedia ? "inline-block" : "none";
+    }
+
+    if (this.paramsBgStatus) {
+      if (!hasMedia) {
+        this.paramsBgStatus.textContent = "Default Arena Grid (No custom background)";
+      } else if (bg.type === "video") {
+        this.paramsBgStatus.textContent = `Video: ${bg.name || "Custom Video"}`;
+      } else {
+        this.paramsBgStatus.textContent = `Image: ${bg.name || "Custom Image"}`;
+      }
+    }
+
+    if (this.paramsBgPreviewTitle) {
+      this.paramsBgPreviewTitle.textContent = hasMedia ? (bg.name || "Custom Media") : "Default Arena Grid";
+    }
+
+    if (this.paramsBgPreviewBadge) {
+      this.paramsBgPreviewBadge.textContent = hasMedia
+        ? (bg.type === "video" ? "Video Background" : "Image Background")
+        : "No Custom Media";
+    }
+
+    if (this.paramsBgPreviewImg && this.paramsBgPreviewVideo && this.paramsBgPreviewEmpty) {
+      if (!hasMedia) {
+        this.paramsBgPreviewImg.style.display = "none";
+        this.paramsBgPreviewVideo.style.display = "none";
+        this.paramsBgPreviewEmpty.style.display = "block";
+      } else if (bg.type === "video" && bg.url) {
+        this.paramsBgPreviewImg.style.display = "none";
+        this.paramsBgPreviewEmpty.style.display = "none";
+        this.paramsBgPreviewVideo.style.display = "block";
+        this.paramsBgPreviewVideo.src = bg.url;
+      } else if (bg.url) {
+        this.paramsBgPreviewVideo.style.display = "none";
+        this.paramsBgPreviewEmpty.style.display = "none";
+        this.paramsBgPreviewImg.style.display = "block";
+        this.paramsBgPreviewImg.src = bg.url;
+      }
+    }
+  }
+
+  /**
    * Adjusts canvas resolution to match window.
    */
   resizeCanvas() {
@@ -452,6 +634,7 @@ class MapEditor {
       this.clearBtn.addEventListener("click", () => {
         if (confirm("Are you sure you want to clear all mapped notes in this track?")) {
           this.notes = [];
+          this.markDirty();
           this.saveMapState();
           this.renderTimelineMarkers();
         }
@@ -769,6 +952,118 @@ class MapEditor {
       });
     }
 
+    // Editor Header Background Button -> Opens modal & scrolls to Background Section
+    if (this.editorBgBtn) {
+      this.editorBgBtn.addEventListener("click", () => {
+        this.openParamsModal();
+        if (this.paramsBgSection && typeof this.paramsBgSection.scrollIntoView === "function") {
+          setTimeout(() => {
+            try { this.paramsBgSection.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) {}
+          }, 60);
+        }
+      });
+    }
+
+    // Background Media File Upload (Image or Video)
+    if (this.paramsBgFile) {
+      this.paramsBgFile.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+
+        const isVideo = file.type.startsWith("video");
+        const isImage = file.type.startsWith("image");
+        if (!isVideo && !isImage) {
+          alert("Please upload a valid image or video file.");
+          return;
+        }
+
+        const mediaKey = `bg_${(this.activeMap && this.activeMap.id) || "track"}_${Date.now()}`;
+        const fit = (this.paramsBgFit && this.paramsBgFit.value) || "cover";
+        const opacity = this.paramsBgOpacity ? parseFloat(this.paramsBgOpacity.value) : 0.7;
+
+        // Persist blob in MediaStorage if available
+        if (typeof window !== "undefined" && window.MediaStorage) {
+          window.MediaStorage.saveBackgroundMedia(mediaKey, file, { name: file.name, type: isVideo ? "video" : "image" });
+        }
+
+        const blobUrl = typeof window.URL !== "undefined" && window.URL.createObjectURL ? window.URL.createObjectURL(file) : "";
+        const bgConfig = {
+          type: isVideo ? "video" : "image",
+          name: file.name,
+          fit,
+          opacity,
+          mediaId: mediaKey,
+          url: blobUrl
+        };
+
+        // For portable export, generate data URL for images under 3MB
+        if (isImage && file.size < 3 * 1024 * 1024 && typeof FileReader !== "undefined") {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            bgConfig.url = evt.target.result;
+            this.activeBgConfig = bgConfig;
+            this.loadBackgroundMedia(bgConfig);
+            this.markDirty();
+            this.saveMapState();
+          };
+          reader.readAsDataURL(file);
+        } else {
+          this.activeBgConfig = bgConfig;
+          this.loadBackgroundMedia(bgConfig);
+          this.markDirty();
+          this.saveMapState();
+        }
+
+        if (this.soundManager) this.soundManager.playClick();
+      });
+    }
+
+    // Background Fit Mode Selector (Cover / Contain)
+    if (this.paramsBgFit) {
+      this.paramsBgFit.addEventListener("change", (e) => {
+        if (!this.activeBgConfig) {
+          this.activeBgConfig = { type: "image", url: "", fit: e.target.value, opacity: 0.7, name: "Default" };
+        }
+        this.activeBgConfig.fit = e.target.value;
+        this.updateBgParamsUI();
+        this.markDirty();
+        this.saveMapState();
+        if (this.soundManager) this.soundManager.playClick();
+      });
+    }
+
+    // Background Opacity Slider (0.05 - 1.0)
+    if (this.paramsBgOpacity) {
+      this.paramsBgOpacity.addEventListener("input", (e) => {
+        const val = parseFloat(e.target.value) || 0.7;
+        if (this.paramsBgOpacityVal) {
+          this.paramsBgOpacityVal.textContent = `${Math.round(val * 100)}%`;
+        }
+        if (this.activeBgConfig) {
+          this.activeBgConfig.opacity = val;
+          this.markDirty();
+          this.saveMapState();
+        }
+      });
+    }
+
+    // Remove Background Button
+    if (this.paramsBgRemoveBtn) {
+      this.paramsBgRemoveBtn.addEventListener("click", () => {
+        if (confirm("Remove background and restore default arena grid?")) {
+          if (this.activeBgConfig && this.activeBgConfig.mediaId && typeof window !== "undefined" && window.MediaStorage) {
+            window.MediaStorage.deleteBackgroundMedia(this.activeBgConfig.mediaId);
+          }
+          this.activeBgConfig = null;
+          this.loadBackgroundMedia(null);
+          if (this.paramsBgFile) this.paramsBgFile.value = "";
+          this.markDirty();
+          this.saveMapState();
+          if (this.soundManager) this.soundManager.playClick();
+        }
+      });
+    }
+
     if (this.paramsForm) {
       this.paramsForm.addEventListener("submit", (e) => {
         this.onSaveParams(e);
@@ -782,7 +1077,9 @@ class MapEditor {
    */
   openExportModal() {
     this.pause();
-    this.saveMapState();
+    if (this.isDirty) {
+      this.saveMapState();
+    }
 
     if (!this.activeMap || !this.mapStorage) return;
 
@@ -949,6 +1246,9 @@ class MapEditor {
       }
     }
 
+    // Refresh Background configuration preview and controls
+    this.updateBgParamsUI();
+
     if (this.paramsModal) {
       this.paramsModal.classList.add("is-active");
       this.paramsModal.setAttribute("aria-hidden", "false");
@@ -1049,12 +1349,29 @@ class MapEditor {
       file: newAudio,
       duration: newDuration,
       durationSeconds: newDurationSeconds,
+      background: this.activeBgConfig ? { ...this.activeBgConfig } : null,
       notes: [...this.notes]
     };
 
     const savedMap = this.mapStorage.saveMap(updated);
     this.activeMap = savedMap;
     this.duration = savedMap.durationSeconds || 180;
+    this.isDirty = false;
+
+    if (this.saveIndicatorEl) {
+      this.saveIndicatorEl.textContent = "✓ All changes saved";
+      this.saveIndicatorEl.className = "editor-save-tag saved";
+    }
+
+    if (this.paramsTypeBadge && this.mapStorage) {
+      const isDef = this.mapStorage.isDefaultTrack(this.activeMap);
+      this.paramsTypeBadge.textContent = isDef ? "Default Track" : "Custom Track";
+      if (isDef) {
+        this.paramsTypeBadge.classList.add("is-default");
+      } else {
+        this.paramsTypeBadge.classList.remove("is-default");
+      }
+    }
 
     if (this.titleEl) {
       this.titleEl.textContent = `${this.activeMap.name} - by ${this.activeMap.mapper}`;
@@ -1145,6 +1462,14 @@ class MapEditor {
       return;
     }
 
+    if (e.key === "Delete" || e.key === "Backspace") {
+      if (this.selectedNote) {
+        e.preventDefault();
+        this.deleteSelectedNote();
+        return;
+      }
+    }
+
     if (e.code === "Space") {
       e.preventDefault();
       // Ignore key repeat to prevent rapid fluttering on held Spacebar
@@ -1227,6 +1552,7 @@ class MapEditor {
       }
     }
 
+    this.markDirty();
     this.saveMapState();
     this.renderTimelineMarkers();
   }
@@ -1270,6 +1596,10 @@ class MapEditor {
         playPromise.catch((err) => console.warn(err));
       }
     }
+    if (this.bgMedia && this.bgMediaType === "video") {
+      this.bgMedia.playbackRate = this.playSpeed || 1.0;
+      this.bgMedia.play().catch(() => {});
+    }
     this.updateStatusText();
   }
 
@@ -1280,6 +1610,9 @@ class MapEditor {
     this.isPlaying = false;
     if (this.audio) {
       this.audio.pause();
+    }
+    if (this.bgMedia && this.bgMediaType === "video") {
+      try { this.bgMedia.pause(); } catch (e) {}
     }
     this.updateStatusText();
   }
@@ -1293,6 +1626,9 @@ class MapEditor {
     this.currentTime = clamped;
     if (this.audio) {
       this.audio.currentTime = clamped;
+    }
+    if (this.bgMedia && this.bgMediaType === "video" && this.bgMedia.duration > 0) {
+      try { this.bgMedia.currentTime = clamped % this.bgMedia.duration; } catch (e) {}
     }
     this.updateTimelineUI();
   }
@@ -1312,7 +1648,7 @@ class MapEditor {
 
   /**
    * Sets editor-only playback speed (e.g. 0.25x, 0.5x, 1.0x, 2.0x).
-   * Synchronizes HTML5 audio and UI presets.
+   * Synchronizes HTML5 audio, background video, and UI presets.
    * Note: This strictly affects editor scrubbing/testing and never modifies saved note data.
    * @param {number} speed
    */
@@ -1322,6 +1658,9 @@ class MapEditor {
 
     if (this.audio) {
       this.audio.playbackRate = clampedSpeed;
+    }
+    if (this.bgMedia && this.bgMediaType === "video") {
+      this.bgMedia.playbackRate = clampedSpeed;
     }
 
     this.updateSpeedUI();
@@ -1880,6 +2219,7 @@ class MapEditor {
     }
 
     this.notes.sort((a, b) => a.time - b.time);
+    this.markDirty();
     this.saveMapState();
     this.renderTimeline();
     this.seekTo(clamped);
@@ -1894,6 +2234,7 @@ class MapEditor {
     if (idx !== -1) {
       this.notes.splice(idx, 1);
       this.selectNote(null);
+      this.markDirty();
       this.saveMapState();
       this.renderTimeline();
       if (this.soundManager) this.soundManager.playClick();
@@ -1905,6 +2246,17 @@ class MapEditor {
    */
   saveMapState() {
     if (this.activeMap && this.mapStorage) {
+      // If this is an unmodified default track, never create a copy or save!
+      if (!this.isDirty && this.mapStorage.isDefaultTrack(this.activeMap)) {
+        return this.activeMap;
+      }
+
+      if (this.activeBgConfig) {
+        this.activeMap.background = { ...this.activeBgConfig };
+      } else {
+        this.activeMap.background = null;
+      }
+
       this.activeMap.notes = this.notes.map((n) => {
         const isTriangle = n.type === "triangle" || n.type === "bomb";
         return {
@@ -1922,7 +2274,18 @@ class MapEditor {
         if (this.titleEl) {
           this.titleEl.textContent = `${saved.name} - by ${saved.mapper}`;
         }
+        if (this.paramsTypeBadge) {
+          const isDef = this.mapStorage.isDefaultTrack(saved);
+          this.paramsTypeBadge.textContent = isDef ? "Default Track" : "Custom Track";
+          if (isDef) {
+            this.paramsTypeBadge.classList.add("is-default");
+          } else {
+            this.paramsTypeBadge.classList.remove("is-default");
+          }
+        }
       }
+
+      this.isDirty = false;
 
       if (this.saveIndicatorEl) {
         this.saveIndicatorEl.textContent = "✓ All changes saved";
@@ -1939,7 +2302,9 @@ class MapEditor {
    */
   testMap() {
     this.pause();
-    this.saveMapState();
+    if (this.isDirty) {
+      this.saveMapState();
+    }
     this.unbindEvents();
 
     if (this.animFrameId) {
@@ -1960,6 +2325,7 @@ class MapEditor {
       this.onTestMap(
         {
           ...this.activeMap,
+          background: this.activeBgConfig ? { ...this.activeBgConfig } : null,
           notes: [...this.notes]
         },
         this.playSpeed || 1.0
@@ -1987,6 +2353,29 @@ class MapEditor {
     const s = playArea.size;
     const ox = playArea.offsetX;
     const oy = playArea.offsetY;
+
+    // Draw Custom Track Playfield Background Media (Image or Video) inside square playfield
+    if (this.bgMedia && this.activeBgConfig) {
+      if (this.bgMediaType === "video") {
+        if (this.isPlaying) {
+          this.bgMedia.playbackRate = this.playSpeed || 1.0;
+          if (this.bgMedia.paused) {
+            this.bgMedia.play().catch(() => {});
+          }
+          if (this.bgMedia.duration > 0 && Math.abs(this.bgMedia.currentTime - (time % this.bgMedia.duration)) > 0.15) {
+            try { this.bgMedia.currentTime = time % this.bgMedia.duration; } catch (e) {}
+          }
+        } else {
+          if (!this.bgMedia.paused) {
+            try { this.bgMedia.pause(); } catch (e) {}
+          }
+          if (this.bgMedia.duration > 0 && Math.abs(this.bgMedia.currentTime - (time % this.bgMedia.duration)) > 0.05) {
+            try { this.bgMedia.currentTime = time % this.bgMedia.duration; } catch (e) {}
+          }
+        }
+      }
+      PlayArea.drawBackgroundMedia(ctx, this.bgMedia, ox, oy, s, this.activeBgConfig.fit || "cover", this.activeBgConfig.opacity !== undefined ? this.activeBgConfig.opacity : 0.7);
+    }
 
     ctx.save();
 
@@ -2187,28 +2576,47 @@ class MapEditor {
    * Closes the editor, pauses audio, and returns to map list.
    */
   close() {
-    this.pause();
-    this.saveMapState();
-    this.unbindEvents();
+    if (this._isClosing) return;
+    this._isClosing = true;
 
-    if (this.animFrameId) {
-      cancelAnimationFrame(this.animFrameId);
-      this.animFrameId = null;
-    }
+    try {
+      this.pause();
+      if (this.isDirty) {
+        this.saveMapState();
+      }
+      this.unbindEvents();
 
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.src = "";
-      this.audio = null;
-    }
+      if (this.animFrameId) {
+        cancelAnimationFrame(this.animFrameId);
+        this.animFrameId = null;
+      }
 
-    if (this.view) {
-      this.view.classList.remove("is-active");
-      this.view.setAttribute("aria-hidden", "true");
-    }
+      if (this.audio) {
+        this.audio.pause();
+        this.audio.src = "";
+        this.audio = null;
+      }
 
-    if (typeof this.onExit === "function") {
-      this.onExit();
+      if (this.bgMedia && this.bgMediaType === "video") {
+        try {
+          this.bgMedia.pause();
+          this.bgMedia.src = "";
+        } catch (e) {}
+      }
+      this.bgMedia = null;
+      this.bgMediaType = null;
+      this.activeBgConfig = null;
+
+      if (this.view) {
+        this.view.classList.remove("is-active");
+        this.view.setAttribute("aria-hidden", "true");
+      }
+
+      if (typeof this.onExit === "function") {
+        this.onExit();
+      }
+    } finally {
+      this._isClosing = false;
     }
   }
 

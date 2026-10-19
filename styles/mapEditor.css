@@ -829,3 +829,60 @@
   gap: 0.45rem;
 }
 
+/* ==========================================================================
+   Playfield Background Feature Styles
+   ========================================================================== */
+.btn-editor-bg {
+  border-color: rgba(0, 212, 255, 0.35);
+}
+
+.btn-editor-bg:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: var(--color-accent);
+}
+
+.bg-picker-box {
+  margin-top: 0.35rem;
+}
+
+.btn-bg-remove {
+  background: rgba(255, 71, 87, 0.15);
+  border-color: rgba(255, 71, 87, 0.5);
+  color: #ff4757;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.4rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-bg-remove:hover {
+  background: #ff4757;
+  color: #ffffff;
+}
+
+.bg-options-row {
+  margin-top: 0.5rem;
+}
+
+.bg-selected-card {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.bg-media-container {
+  width: 68px;
+  height: 68px;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background: #060b14;
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+

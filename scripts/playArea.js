@@ -117,6 +117,73 @@ class PlayArea {
       }
     };
   }
+
+  /**
+   * Draws a background image or video inside the square play area.
+   * Supports 'cover' and 'contain' fit modes and custom opacity.
+   * Strictly clips rendering inside the square area bounds [ox, oy, size, size].
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {HTMLImageElement|HTMLVideoElement} media
+   * @param {number} ox
+   * @param {number} oy
+   * @param {number} size
+   * @param {"cover"|"contain"} [fit="cover"]
+   * @param {number} [opacity=0.7]
+   */
+  static drawBackgroundMedia(ctx, media, ox, oy, size, fit = "cover", opacity = 0.7) {
+    if (!ctx || !media || size <= 0) return;
+
+    const mw = media.naturalWidth || media.videoWidth || media.width || 0;
+    const mh = media.naturalHeight || media.videoHeight || media.height || 0;
+    if (mw <= 0 || mh <= 0) return;
+
+    const mediaAspect = mw / mh;
+    let drawX = ox;
+    let drawY = oy;
+    let drawW = size;
+    let drawH = size;
+
+    if (fit === "contain") {
+      // Entire media is visible inside square without cropping
+      if (mediaAspect > 1) {
+        drawW = size;
+        drawH = size / mediaAspect;
+        drawX = ox;
+        drawY = oy + (size - drawH) / 2;
+      } else {
+        drawH = size;
+        drawW = size * mediaAspect;
+        drawX = ox + (size - drawW) / 2;
+        drawY = oy;
+      }
+    } else {
+      // 'cover': fills entire square area, cropped if needed
+      if (mediaAspect > 1) {
+        drawH = size;
+        drawW = size * mediaAspect;
+        drawX = ox - (drawW - size) / 2;
+        drawY = oy;
+      } else {
+        drawW = size;
+        drawH = size / mediaAspect;
+        drawX = ox;
+        drawY = oy - (drawH - size) / 2;
+      }
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(ox, oy, size, size);
+    ctx.clip(); // Strictly clips to the square play area
+
+    ctx.globalAlpha = Math.max(0.05, Math.min(1.0, opacity));
+    try {
+      ctx.drawImage(media, drawX, drawY, drawW, drawH);
+    } catch (e) {
+      // Ignore drawImage errors (e.g. video loading)
+    }
+    ctx.restore();
+  }
 }
 
 // Expose to window / global
