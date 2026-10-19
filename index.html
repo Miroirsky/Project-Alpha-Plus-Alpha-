@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Alpha Plus</title>
+
+  <!-- Modular Stylesheets -->
+  <link rel="stylesheet" href="styles/themes.css">
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/menu.css">
+  <link rel="stylesheet" href="styles/playMenu.css">
+  <link rel="stylesheet" href="styles/createMenu.css">
+  <link rel="stylesheet" href="styles/mapEditor.css">
+  <link rel="stylesheet" href="styles/gameplay.css">
+  <link rel="stylesheet" href="styles/modal.css">
+
+  <!-- Modular Scripts (compatible with file:// direct launch and http:// servers) -->
+  <script defer src="scripts/themeManager.js"></script>
+  <script defer src="scripts/soundManager.js"></script>
+  <script defer src="scripts/songsData.js"></script>
+  <script defer src="scripts/mapData.js"></script>
+  <script defer src="scripts/mapStorage.js"></script>
+  <script defer src="scripts/musicPlayer.js"></script>
+  <script defer src="scripts/playMenu.js"></script>
+  <script defer src="scripts/mapEditor.js"></script>
+  <script defer src="scripts/createMenu.js"></script>
+  <script defer src="scripts/gameEngine.js"></script>
+  <script defer src="scripts/gameView.js"></script>
+  <script defer src="scripts/settingsModal.js"></script>
+  <script defer src="scripts/exitHandler.js"></script>
+  <script defer src="scripts/main.js"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Visual background canvas elements -->
+    <div class="bg-grid" aria-hidden="true"></div>
+    <div class="bg-ambient-glow" aria-hidden="true"></div>
+
+    <!-- Main Menu Card -->
+    <main id="main-menu-card" class="menu-card" role="main">
+      <header class="menu-header">
+        <h1 class="game-title">
+          Project <span class="game-title-highlight">Alpha</span>+
+        </h1>
+        <p class="game-subtitle">Rhythm Arcade &bull; v0.3.0</p>
+      </header>
+
+      <nav class="menu-actions" aria-label="Main Menu Actions">
+        <button id="btn-play" class="menu-btn menu-btn-primary" type="button">
+          Play
+        </button>
+        <button id="btn-create" class="menu-btn" type="button">
+          Create
+        </button>
+        <button id="btn-settings" class="menu-btn" type="button">
+          Settings
+        </button>
+        <button id="btn-exit" class="menu-btn menu-btn-exit" type="button">
+          Exit
+        </button>
+      </nav>
+
+      <footer class="menu-footer">
+        <span>PROJECT ALPHA PLUS &copy; 2026</span>
+      </footer>
+    </main>
+
+    <!-- Play Menu View (Song Selection) -->
+    <section id="play-menu-view" class="play-menu-view" aria-label="Song Selection" aria-hidden="true">
+      <header class="play-header">
+        <button id="btn-back-menu" class="play-back-btn" type="button" aria-label="Return to Main Menu">
+          &larr; Main Menu
+        </button>
+        <div class="play-title-group">
+          <h2 class="play-screen-title">Select Track</h2>
+          <p class="play-screen-subtitle">Hover to preview &bull; Click to prepare</p>
+        </div>
+      </header>
+
+      <div class="play-content">
+        <!-- Left Side: Song Details & Preview Panel -->
+        <section id="song-details-container" class="song-details-panel" aria-label="Song Details">
+          <!-- Dynamically populated by PlayMenu -->
+        </section>
+
+        <!-- Right Side: Song Selection List -->
+        <nav id="song-list-container" class="song-list-panel" aria-label="Available Songs">
+          <!-- Dynamically populated by PlayMenu -->
+        </nav>
+      </div>
+    </section>
+
+    <!-- Create Menu View (Custom Maps & Creation Form) -->
+    <section id="create-menu-view" class="create-menu-view" aria-label="Create Maps" aria-hidden="true">
+      <header class="create-header">
+        <button id="btn-back-create" class="play-back-btn" type="button" aria-label="Return to Main Menu">
+          &larr; Main Menu
+        </button>
+        <div class="play-title-group">
+          <h2 class="play-screen-title">Map Creator</h2>
+          <p class="play-screen-subtitle">Design, edit, and playtest rhythm maps</p>
+        </div>
+      </header>
+
+      <div class="create-content">
+        <!-- Left Panel: Create New Map Form -->
+        <section class="create-form-panel">
+          <h3 class="create-form-title">Create New Map</h3>
+          <p class="create-form-desc">Configure track details and import audio to start mapping.</p>
+
+          <form id="new-map-form">
+            <div class="form-group">
+              <label for="new-map-name" class="form-label">Map Name</label>
+              <input type="text" id="new-map-name" class="form-input" placeholder="e.g. Cyber Rush" required>
+            </div>
+
+            <div class="form-group">
+              <label for="new-map-mapper" class="form-label">Mapper Name</label>
+              <input type="text" id="new-map-mapper" class="form-input" placeholder="e.g. AlphaMaker">
+            </div>
+
+            <div class="form-group">
+              <label for="new-map-creator" class="form-label">Music Creator Name</label>
+              <input type="text" id="new-map-creator" class="form-input" placeholder="e.g. SynthWave Studio">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Import Audio File</label>
+              <div class="file-input-wrapper">
+                <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
+                <label for="new-map-file" class="custom-file-btn">
+                  <span>&#128194; Choose Audio File...</span>
+                </label>
+                <span id="new-map-file-status" class="file-status-text"></span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-map-preset-audio" class="form-label">Or Select Bundled Music</label>
+              <select id="new-map-preset-audio" class="form-select">
+                <option value="">-- Choose existing song --</option>
+                <option value="Assets/Songs/IMG_2449.mp3" data-duration="229">test (IMG_2449.mp3) - 03:49</option>
+                <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">test1 (Sanstitre9juin.mp3) - 02:33</option>
+                <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">test2 (Sanstitre10juin1715.mp3) - 03:37</option>
+                <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">test3 (Sanstitre10juin1744.mp3) - 04:42</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn-create-submit">
+              Create &amp; Open Editor &rarr;
+            </button>
+          </form>
+        </section>
+
+        <!-- Right Panel: Existing Maps List -->
+        <section class="create-list-panel">
+          <h3 class="create-list-title">Existing Maps</h3>
+          <p class="create-list-desc">Select a map using the Play icon (&#9654;) to open the editor.</p>
+
+          <div id="create-maps-list" class="maps-scroll-area">
+            <!-- Dynamically populated with maps and Play icon edit buttons -->
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- Map Editor View -->
+    <section id="map-editor-view" class="map-editor-view" aria-label="Map Editor Workspace" aria-hidden="true">
+      <!-- Top Toolbar -->
+      <header class="editor-top-bar">
+        <div class="editor-bar-left">
+          <button id="btn-editor-back" class="btn-editor-action" type="button">
+            &larr; Back to Maps
+          </button>
+          <span id="editor-map-title" class="editor-map-name">Map Name</span>
+        </div>
+
+        <div class="editor-bar-center">
+          <span id="editor-status-text" class="editor-status-badge">PAUSED</span>
+        </div>
+
+        <div class="editor-bar-right">
+          <button id="btn-editor-clear" class="btn-editor-action" type="button" title="Clear all notes">
+            Clear Notes
+          </button>
+          <!-- Test Button -->
+          <button id="btn-editor-test" class="btn-editor-test" type="button" title="Playtest map (Enter)">
+            <span>Test Map</span>
+            <span class="key-tag">Enter</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Center Placement Canvas -->
+      <div class="editor-canvas-container">
+        <canvas id="editor-canvas" class="editor-canvas"></canvas>
+      </div>
+
+      <!-- Bottom Timeline Dock -->
+      <footer class="editor-bottom-dock">
+        <div class="timeline-controls-row">
+          <div class="timeline-playback-group">
+            <button id="btn-editor-playpause" class="btn-editor-playpause" type="button" aria-label="Play or Pause Timeline">
+              <span id="editor-playpause-icon">&#9654;</span>
+            </button>
+            <span id="editor-time-display" class="editor-time-display">00:00.0 / 00:00.0</span>
+          </div>
+          <span id="editor-notes-count" class="editor-notes-count">Notes: 0</span>
+        </div>
+
+        <!-- Interactive Timeline Track -->
+        <div id="editor-timeline-track" class="editor-timeline-track" title="Click to seek timeline">
+          <div id="editor-timeline-markers" class="editor-timeline-markers"></div>
+          <div id="editor-timeline-scrubber" class="editor-timeline-scrubber"></div>
+        </div>
+
+        <!-- Legend / Shortcuts Help -->
+        <div class="editor-help-legend">
+          <span class="legend-item"><span class="key-tag">Space</span> Play / Pause</span>
+          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Normal Red</span>
+          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Normal Blue</span>
+          <span class="legend-item"><span class="key-tag">Shift + Drag</span> Directional Arrow Note</span>
+          <span class="legend-item"><span class="key-tag">Enter</span> Playtest Map</span>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Gameplay View (Track Interface & Orb Controller) -->
+    <section id="game-view" class="game-view" aria-label="Active Gameplay" aria-hidden="true">
+      <!-- Top HUD Bar -->
+      <header class="game-hud">
+        <div class="game-hud-top">
+          <!-- Left: Exit Button & Song Title -->
+          <div class="game-hud-left">
+            <button id="btn-game-exit" class="btn-game-exit" type="button" aria-label="Exit Track">
+              &larr; Exit Track
+            </button>
+            <div class="game-track-info">
+              <span id="game-track-title" class="game-track-title">Track Name</span>
+              <span id="game-track-artist" class="game-track-meta">By Creator</span>
+            </div>
+          </div>
+
+          <!-- Center: Active Orb Color Indicator -->
+          <div class="game-hud-center">
+            <div class="game-color-indicator">
+              <span id="game-color-dot" class="color-dot blue"></span>
+              <span id="game-color-text" class="color-mode-text">BLUE [Right Click]</span>
+            </div>
+          </div>
+
+          <!-- Right: Remaining Notes & Score -->
+          <div class="game-hud-right">
+            <div class="hud-badge">
+              <span class="hud-badge-label">Remaining Notes</span>
+              <span id="game-remaining-notes" class="hud-badge-value notes-remaining">0</span>
+            </div>
+            <div class="hud-badge">
+              <span class="hud-badge-label">Score</span>
+              <span id="game-score" class="hud-badge-value">0</span>
+            </div>
+            <div class="hud-badge">
+              <span class="hud-badge-label">Combo</span>
+              <span id="game-combo" class="hud-badge-value combo-value">0x</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Song Progress Bar -->
+        <div class="game-progress-wrapper">
+          <div class="game-progress-track">
+            <div id="game-progress-fill" class="game-progress-fill"></div>
+          </div>
+          <span id="game-progress-time" class="game-progress-time">00:00 / 00:00</span>
+        </div>
+      </header>
+
+      <!-- Active Interactive Canvas -->
+      <canvas id="game-canvas" class="game-canvas"></canvas>
+
+      <!-- Bottom Controls Hint -->
+      <footer class="game-controls-overlay" aria-hidden="true">
+        <div class="control-hint-item">
+          <span class="key-pill">Left Click</span> Switch to Red
+        </div>
+        <div class="control-hint-item">
+          <span class="key-pill">Right Click</span> Switch to Blue
+        </div>
+        <div class="control-hint-item">
+          <span class="key-pill">Mouse</span> Move Orb to Hit Notes
+        </div>
+      </footer>
+
+      <!-- Results / Track Summary End Screen -->
+      <div id="game-results-overlay" class="game-results-overlay" role="dialog" aria-modal="true" aria-hidden="true">
+        <div class="results-card">
+          <!-- Header: Status Banner & Song Name -->
+          <div class="results-header">
+            <span id="results-status" class="results-status-banner status-complete">Track Completed</span>
+            <h2 id="results-song-name" class="results-song-title">Track Name</h2>
+          </div>
+
+          <!-- Primary Score Section -->
+          <div class="results-score-section">
+            <div class="score-main-box">
+              <span class="score-label">
+                Total Score
+                <span id="results-new-best-tag" class="tag-new-record" style="display: none;">NEW BEST!</span>
+              </span>
+              <span id="results-score" class="score-number">0</span>
+              <span class="score-sub-meta">
+                Best Score: <strong id="results-best-score">0</strong>
+                <span id="results-record-notice" class="results-record-notice"></span>
+              </span>
+            </div>
+
+            <div class="score-secondary-box">
+              <div class="score-mini-card">
+                <span class="mini-card-label">Accuracy</span>
+                <span id="results-accuracy" class="mini-card-val val-accuracy">100.0%</span>
+              </div>
+              <div class="score-mini-card">
+                <span class="mini-card-label">Score %</span>
+                <span class="mini-card-val"><strong id="results-score-pct">0.0%</strong> / <small id="results-max-score" style="font-size: 0.8em; opacity: 0.7;">0</small></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Detailed Performance Stats Grid -->
+          <div class="results-details-grid">
+            <div class="results-detail-cell">
+              <span class="detail-cell-label">Max Combo</span>
+              <span id="results-max-combo" class="detail-cell-val" style="color: #ffa502;">0x</span>
+            </div>
+            <div class="results-detail-cell">
+              <span class="detail-cell-label">Final Combo</span>
+              <span id="results-final-combo" class="detail-cell-val">0x</span>
+            </div>
+            <div class="results-detail-cell">
+              <span class="detail-cell-label">Notes Hit</span>
+              <span id="results-hits" class="detail-cell-val" style="color: #2ed573;">0</span>
+            </div>
+            <div class="results-detail-cell">
+              <span class="detail-cell-label">Total Notes</span>
+              <span id="results-total-notes" class="detail-cell-val">0</span>
+            </div>
+          </div>
+
+          <!-- Hit Ratings Breakdown -->
+          <div class="ratings-breakdown-row">
+            <div class="rating-badge-item">
+              <span class="rating-title perfect">Perfect (200)</span>
+              <span id="results-perfect" class="rating-count">0</span>
+            </div>
+            <div class="rating-badge-item">
+              <span class="rating-title good">Normal (50–150)</span>
+              <span id="results-good" class="rating-count">0</span>
+            </div>
+            <div class="rating-badge-item">
+              <span class="rating-title wrong">Wrong Dir (-20)</span>
+              <span id="results-wrong-dir" class="rating-count" style="color: #ff4757;">0</span>
+            </div>
+            <div class="rating-badge-item">
+              <span class="rating-title miss">Miss (0)</span>
+              <span id="results-misses" class="rating-count">0</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="results-actions-footer">
+            <button id="btn-results-return" class="btn-results-secondary" type="button">
+              Select Track
+            </button>
+            <button id="btn-results-replay" class="btn-results-primary" type="button">
+              Play Again &#8634;
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="settings-title" aria-hidden="true">
+      <div class="modal-dialog">
+        <header class="modal-header">
+          <h2 id="settings-title" class="modal-title">Settings</h2>
+          <button id="btn-close-settings" class="modal-close-btn" type="button" aria-label="Close Settings">
+            &times;
+          </button>
+        </header>
+
+        <div class="settings-group">
+          <!-- Sound Enabled Toggle -->
+          <div class="settings-item">
+            <div class="settings-label-row">
+              <label for="sound-toggle" class="settings-label">Sound Effects &amp; Music</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="sound-toggle" checked>
+                <span class="slider-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Sound Volume Slider -->
+          <div class="settings-item">
+            <div class="settings-label-row">
+              <label for="sound-volume" class="settings-label">Master Volume</label>
+              <span id="sound-volume-val" class="settings-value-indicator">70%</span>
+            </div>
+            <input type="range" id="sound-volume" class="range-slider" min="0" max="100" value="70">
+          </div>
+
+          <!-- UI Theme Selection -->
+          <div class="settings-item">
+            <div class="settings-label-row">
+              <span class="settings-label">UI Theme</span>
+            </div>
+            <div class="theme-options" role="radiogroup" aria-label="Select UI Theme">
+              <button class="theme-btn" data-theme="dark" type="button" aria-label="Cyber Dark Theme">
+                <span class="theme-preview-dot theme-preview-dark"></span>
+                <span>Dark</span>
+              </button>
+              <button class="theme-btn" data-theme="midnight" type="button" aria-label="Midnight Theme">
+                <span class="theme-preview-dot theme-preview-midnight"></span>
+                <span>Midnight</span>
+              </button>
+              <button class="theme-btn" data-theme="light" type="button" aria-label="Solar Light Theme">
+                <span class="theme-preview-dot theme-preview-light"></span>
+                <span>Light</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exit Fallback Modal (Browser Limitation Handling) -->
+    <div id="exit-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="exit-title" aria-hidden="true">
+      <div class="modal-dialog">
+        <header class="modal-header">
+          <h2 id="exit-title" class="modal-title">Exit Application</h2>
+          <button id="btn-close-exit" class="modal-close-btn" type="button" aria-label="Dismiss">&times;</button>
+        </header>
+
+        <div class="exit-dialog-content">
+          <p class="exit-dialog-desc">
+            Modern web browser security policies prevent web applications from automatically closing tabs that were not opened by a script.
+          </p>
+          <div class="exit-dialog-hint">
+            To exit, please close this browser tab manually or press:
+            <br><strong>Ctrl + W</strong> (Windows/Linux) or <strong>Cmd + W</strong> (macOS).
+          </div>
+          <div class="modal-footer">
+            <button id="btn-return-menu" class="menu-btn menu-btn-primary" type="button">
+              Return to Menu
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

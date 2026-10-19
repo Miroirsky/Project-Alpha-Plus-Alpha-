@@ -1,0 +1,95 @@
+/* ==========================================================================
+   Project Alpha Plus - Themes Stylesheet
+   Responsibility: CSS Custom Properties defining color schemes and theme tokens.
+   ========================================================================== */
+
+/* Default Theme: Dark (Cyber Blue) */
+:root,
+[data-theme="dark"] {
+  --color-bg: #090d16;
+  --color-bg-gradient: radial-gradient(circle at 50% 30%, #111a2e 0%, #080c14 100%);
+  --color-surface: rgba(18, 26, 44, 0.75);
+  --color-surface-hover: rgba(26, 38, 64, 0.9);
+  --color-surface-border: rgba(0, 212, 255, 0.2);
+  --color-surface-border-active: rgba(0, 212, 255, 0.65);
+  
+  --color-text-primary: #f0f6fc;
+  --color-text-secondary: #8b9bb4;
+  --color-text-muted: #4e5d78;
+
+  --color-accent: #00d4ff;
+  --color-accent-hover: #33ddff;
+  --color-accent-glow: rgba(0, 212, 255, 0.45);
+  
+  --color-button-bg: rgba(15, 23, 42, 0.8);
+  --color-button-border: rgba(0, 212, 255, 0.3);
+  --color-button-text: #ffffff;
+  --color-button-hover-bg: rgba(0, 212, 255, 0.15);
+  --color-button-hover-border: #00d4ff;
+  --color-button-shadow: rgba(0, 212, 255, 0.25);
+
+  --color-grid-line: rgba(0, 212, 255, 0.05);
+  --color-modal-backdrop: rgba(4, 7, 13, 0.85);
+  --color-slider-track: #1b263b;
+  --color-slider-fill: #00d4ff;
+}
+
+/* Midnight Theme: Deep Indigo & Neon Purple */
+[data-theme="midnight"] {
+  --color-bg: #0d081b;
+  --color-bg-gradient: radial-gradient(circle at 50% 30%, #1f113a 0%, #0a0614 100%);
+  --color-surface: rgba(31, 19, 56, 0.75);
+  --color-surface-hover: rgba(46, 28, 82, 0.9);
+  --color-surface-border: rgba(179, 102, 255, 0.25);
+  --color-surface-border-active: rgba(179, 102, 255, 0.7);
+  
+  --color-text-primary: #fbf7ff;
+  --color-text-secondary: #b39ecb;
+  --color-text-muted: #6e5987;
+
+  --color-accent: #b366ff;
+  --color-accent-hover: #c485ff;
+  --color-accent-glow: rgba(179, 102, 255, 0.5);
+  
+  --color-button-bg: rgba(25, 14, 46, 0.8);
+  --color-button-border: rgba(179, 102, 255, 0.35);
+  --color-button-text: #ffffff;
+  --color-button-hover-bg: rgba(179, 102, 255, 0.2);
+  --color-button-hover-border: #b366ff;
+  --color-button-shadow: rgba(179, 102, 255, 0.3);
+
+  --color-grid-line: rgba(179, 102, 255, 0.06);
+  --color-modal-backdrop: rgba(7, 4, 15, 0.88);
+  --color-slider-track: #2a1945;
+  --color-slider-fill: #b366ff;
+}
+
+/* Light Theme: Clean Minimal Platinum & Amber */
+[data-theme="light"] {
+  --color-bg: #eef2f6;
+  --color-bg-gradient: radial-gradient(circle at 50% 25%, #ffffff 0%, #dde4ec 100%);
+  --color-surface: rgba(255, 255, 255, 0.85);
+  --color-surface-hover: rgba(255, 255, 255, 0.98);
+  --color-surface-border: rgba(210, 105, 30, 0.25);
+  --color-surface-border-active: rgba(230, 115, 0, 0.7);
+  
+  --color-text-primary: #19202c;
+  --color-text-secondary: #516278;
+  --color-text-muted: #8b9bb4;
+
+  --color-accent: #ea580c;
+  --color-accent-hover: #f97316;
+  --color-accent-glow: rgba(234, 88, 12, 0.35);
+  
+  --color-button-bg: rgba(255, 255, 255, 0.9);
+  --color-button-border: rgba(234, 88, 12, 0.3);
+  --color-button-text: #19202c;
+  --color-button-hover-bg: rgba(234, 88, 12, 0.1);
+  --color-button-hover-border: #ea580c;
+  --color-button-shadow: rgba(234, 88, 12, 0.2);
+
+  --color-grid-line: rgba(100, 116, 139, 0.1);
+  --color-modal-backdrop: rgba(15, 23, 42, 0.55);
+  --color-slider-track: #cbd5e1;
+  --color-slider-fill: #ea580c;
+}

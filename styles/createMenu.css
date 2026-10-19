@@ -1,0 +1,345 @@
+/* ==========================================================================
+   Project Alpha Plus - Create Menu Stylesheet
+   Responsibility: Layout for creating new maps and listing existing maps with
+   Play icon edit buttons.
+   ========================================================================== */
+
+.create-menu-view {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem 3.5rem;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(0.97);
+  transition: opacity var(--transition-speed) ease,
+              transform var(--transition-speed) var(--transition-bounce),
+              visibility var(--transition-speed) ease;
+}
+
+.create-menu-view.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+/* Header */
+.create-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  z-index: 35;
+}
+
+/* Split Content: Form on Left, Existing Maps on Right */
+.create-content {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 2.5rem;
+  min-height: 0;
+  z-index: 35;
+}
+
+/* Left Panel: Create Form */
+.create-form-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 2.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow-y: auto;
+}
+
+.create-form-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.create-form-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.2rem;
+}
+
+.form-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.form-input,
+.form-select {
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1.5px solid var(--color-surface-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all var(--transition-speed) ease;
+}
+
+.form-input:focus,
+.form-select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 15px var(--color-accent-glow);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.file-input-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.custom-file-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--color-surface-hover);
+  border: 1.5px dashed var(--color-surface-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.custom-file-btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text-primary);
+  box-shadow: 0 0 15px var(--color-accent-glow);
+}
+
+.file-status-text {
+  font-size: 0.75rem;
+  font-family: var(--font-family-mono);
+  color: var(--color-accent);
+}
+
+.btn-create-submit {
+  margin-top: 1rem;
+  padding: 0.9rem 1.5rem;
+  background: var(--color-accent);
+  color: #050b14;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  box-shadow: 0 4px 15px var(--color-accent-glow);
+}
+
+.btn-create-submit:hover {
+  background: #ffffff;
+  box-shadow: 0 0 25px #ffffff;
+  transform: translateY(-2px);
+}
+
+/* Right Panel: Existing Maps List */
+.create-list-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 2.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  min-height: 0;
+}
+
+.create-list-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  margin-bottom: 0.35rem;
+}
+
+.create-list-desc {
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.maps-scroll-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Map Card */
+.create-map-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.5rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1.5px solid var(--color-surface-border);
+  border-radius: 0.9rem;
+  transition: all var(--transition-speed) ease;
+}
+
+.create-map-card:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+  transform: translateX(-4px);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+}
+
+.map-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.map-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.map-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.map-tag-custom {
+  padding: 0.15rem 0.55rem;
+  border-radius: 1rem;
+  background: rgba(46, 213, 115, 0.15);
+  border: 1px solid #2ed573;
+  color: #2ed573;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.map-tag-default {
+  padding: 0.15rem 0.55rem;
+  border-radius: 1rem;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.map-card-meta,
+.map-card-stats {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.map-card-meta strong,
+.map-card-stats strong {
+  color: var(--color-text-primary);
+}
+
+/* Actions: Edit (Play icon) & Delete */
+.map-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-map-edit-play {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.2rem;
+  background: rgba(0, 212, 255, 0.15);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 0.6rem;
+  color: var(--color-accent);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-map-edit-play .play-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.btn-map-edit-play:hover {
+  background: var(--color-accent);
+  color: #050b14;
+  box-shadow: 0 0 20px var(--color-accent-glow);
+  transform: scale(1.05);
+}
+
+.btn-map-delete {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 1px solid var(--color-surface-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-map-delete:hover {
+  border-color: #ff4757;
+  color: #ff4757;
+  background: rgba(255, 71, 87, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .create-content {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}

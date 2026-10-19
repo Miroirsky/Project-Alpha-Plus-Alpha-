@@ -1,0 +1,587 @@
+/* ==========================================================================
+   Project Alpha Plus - Gameplay Stylesheet
+   Responsibility: Gameplay canvas overlay, top HUD, color switch indicators,
+   progress bar, and comprehensive End Screen results summary.
+   ========================================================================== */
+
+.game-view {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at center, #0f172a 0%, #060911 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+  overflow: hidden;
+}
+
+.game-view.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* Gameplay Canvas */
+.game-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: none; /* Mouse-following orb acts as cursor */
+  z-index: 55;
+}
+
+/* Top HUD Bar */
+.game-hud {
+  position: relative;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 2.5rem;
+  background: linear-gradient(180deg, rgba(6, 9, 17, 0.85) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.game-hud-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.game-hud-left,
+.game-hud-center,
+.game-hud-right {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  pointer-events: auto;
+}
+
+/* Exit / Back Button */
+.btn-game-exit {
+  padding: 0.55rem 1.1rem;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-game-exit:hover {
+  border-color: #ff4757;
+  color: #ff4757;
+  box-shadow: 0 0 15px rgba(255, 71, 87, 0.3);
+}
+
+/* Track Title & Artist */
+.game-track-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-track-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.game-track-meta {
+  font-size: 0.75rem;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-muted);
+}
+
+/* Center HUD: Color Switcher Indicator */
+.game-color-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 1.1rem;
+  border-radius: 2rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1.5px solid var(--color-surface-border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.color-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.color-dot.red {
+  background: #ff4757;
+  box-shadow: 0 0 12px #ff4757;
+}
+
+.color-dot.blue {
+  background: #00d4ff;
+  box-shadow: 0 0 12px #00d4ff;
+}
+
+.color-mode-text {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+/* Right HUD: Remaining Notes & Score */
+.hud-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.hud-badge-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.hud-badge-value {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-family: var(--font-family-mono);
+  color: var(--color-accent);
+}
+
+.hud-badge-value.notes-remaining {
+  color: #2ed573;
+}
+
+.hud-badge-value.combo-value {
+  color: #ffa502;
+}
+
+/* Bottom Progress Bar in HUD */
+.game-progress-wrapper {
+  margin-top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.game-progress-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.game-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #00d4ff 0%, #2ed573 100%);
+  border-radius: 3px;
+  transition: width 0.1s linear;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.game-progress-time {
+  font-family: var(--font-family-mono);
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  min-width: 95px;
+  text-align: right;
+}
+
+/* Controls Overlay Hint */
+.game-controls-overlay {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  gap: 2rem;
+  padding: 0.75rem 1.75rem;
+  background: rgba(10, 15, 29, 0.85);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 2rem;
+  backdrop-filter: blur(8px);
+  pointer-events: none;
+  animation: fade-pulse 3s infinite alternate;
+}
+
+.control-hint-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+}
+
+.key-pill {
+  padding: 0.2rem 0.6rem;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 0.75rem;
+}
+
+@keyframes fade-pulse {
+  0% { opacity: 0.7; }
+  100% { opacity: 0.95; }
+}
+
+/* ==========================================================================
+   Comprehensive End Screen Results Overlay
+   ========================================================================== */
+.game-results-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 8, 16, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.game-results-overlay.is-active {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.results-card {
+  display: flex;
+  flex-direction: column;
+  padding: 2.25rem 2.5rem;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-surface-border-active);
+  border-radius: 1.5rem;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, 0.6), 0 0 40px var(--color-accent-glow);
+  width: 100%;
+  max-width: 680px;
+  animation: modal-enter 0.4s var(--transition-bounce) forwards;
+}
+
+@keyframes modal-enter {
+  0% { transform: translateY(25px) scale(0.95); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* Header & Status Banner */
+.results-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--color-surface-border);
+  padding-bottom: 1.25rem;
+}
+
+.results-status-banner {
+  display: inline-block;
+  padding: 0.35rem 1.4rem;
+  border-radius: 2rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4);
+}
+
+.results-status-banner.status-all-perfect {
+  background: rgba(255, 211, 42, 0.2);
+  border: 1.5px solid #ffd32a;
+  color: #ffd32a;
+  box-shadow: 0 0 25px rgba(255, 211, 42, 0.4);
+}
+
+.results-status-banner.status-full-combo {
+  background: rgba(0, 212, 255, 0.2);
+  border: 1.5px solid #00d4ff;
+  color: #00d4ff;
+  box-shadow: 0 0 25px rgba(0, 212, 255, 0.4);
+}
+
+.results-status-banner.status-complete {
+  background: rgba(46, 213, 115, 0.2);
+  border: 1.5px solid #2ed573;
+  color: #2ed573;
+  box-shadow: 0 0 25px rgba(46, 213, 115, 0.4);
+}
+
+.results-status-banner.status-abandoned {
+  background: rgba(255, 165, 2, 0.2);
+  border: 1.5px solid #ffa502;
+  color: #ffa502;
+  box-shadow: 0 0 25px rgba(255, 165, 2, 0.4);
+}
+
+.results-status-banner.status-failed {
+  background: rgba(255, 71, 87, 0.2);
+  border: 1.5px solid #ff4757;
+  color: #ff4757;
+}
+
+.results-record-notice {
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.35rem;
+  color: #ffa502;
+  font-family: var(--font-family-sans);
+  font-weight: 600;
+}
+
+.results-song-title {
+  font-size: 2.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  letter-spacing: 0.06em;
+}
+
+/* Primary Score Section */
+.results-score-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.score-main-box {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.5rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1.5px solid var(--color-accent);
+  border-radius: 1rem;
+  box-shadow: 0 0 20px var(--color-accent-glow);
+}
+
+.score-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tag-new-record {
+  padding: 0.15rem 0.5rem;
+  border-radius: 1rem;
+  background: #ff4757;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  animation: pulse-glow 1.5s infinite alternate;
+}
+
+.score-number {
+  font-size: 2.3rem;
+  font-weight: 900;
+  font-family: var(--font-family-mono);
+  color: var(--color-accent);
+  margin-top: 0.25rem;
+}
+
+.score-sub-meta {
+  font-size: 0.78rem;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-muted);
+  margin-top: 0.35rem;
+}
+
+.score-secondary-box {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.score-mini-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.9rem 1.2rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.75rem;
+}
+
+.mini-card-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.mini-card-val {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-primary);
+}
+
+.mini-card-val.val-accuracy {
+  color: #2ed573;
+}
+
+/* Detailed Performance Stats Grid */
+.results-details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.9rem;
+  margin-bottom: 1.5rem;
+}
+
+.results-detail-cell {
+  display: flex;
+  flex-direction: column;
+  padding: 0.85rem 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.75rem;
+  text-align: center;
+}
+
+.detail-cell-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.detail-cell-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-primary);
+  margin-top: 0.2rem;
+}
+
+/* Hit Ratings Breakdown */
+.ratings-breakdown-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.85rem;
+  margin-bottom: 2rem;
+  padding: 1.1rem 1.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed var(--color-surface-border);
+  border-radius: 0.9rem;
+}
+
+.rating-badge-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.5rem;
+}
+
+.rating-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.rating-title.perfect { color: #ffd32a; }
+.rating-title.good { color: #00d4ff; }
+.rating-title.wrong { color: #ff4757; }
+.rating-title.miss { color: #8b9bb4; }
+
+.rating-count {
+  font-family: var(--font-family-mono);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+
+/* Actions Footer */
+.results-actions-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.btn-results-secondary {
+  padding: 0.85rem 1.6rem;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-surface-border);
+  border-radius: 0.6rem;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-results-secondary:hover {
+  border-color: var(--color-accent);
+  background: var(--color-surface-hover);
+  box-shadow: 0 0 15px var(--color-accent-glow);
+}
+
+.btn-results-primary {
+  padding: 0.85rem 1.8rem;
+  background: var(--color-accent);
+  border: none;
+  border-radius: 0.6rem;
+  color: #050b14;
+  font-size: 0.9rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+  box-shadow: 0 0 20px var(--color-accent-glow);
+}
+
+.btn-results-primary:hover {
+  background: #ffffff;
+  box-shadow: 0 0 25px #ffffff;
+  transform: scale(1.04);
+}
+
+/* Responsive */
+@media (max-width: 680px) {
+  .results-score-section {
+    grid-template-columns: 1fr;
+  }
+  .results-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
