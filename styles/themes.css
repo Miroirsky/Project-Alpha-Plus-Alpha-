@@ -3,93 +3,93 @@
    Responsibility: CSS Custom Properties defining color schemes and theme tokens.
    ========================================================================== */
 
-/* Default Theme: Dark (Cyber Blue) */
+/* Default Theme: Dark (Obsidian Cyber) */
 :root,
 [data-theme="dark"] {
-  --color-bg: #090d16;
-  --color-bg-gradient: radial-gradient(circle at 50% 30%, #111a2e 0%, #080c14 100%);
-  --color-surface: rgba(18, 26, 44, 0.75);
-  --color-surface-hover: rgba(26, 38, 64, 0.9);
-  --color-surface-border: rgba(0, 212, 255, 0.2);
-  --color-surface-border-active: rgba(0, 212, 255, 0.65);
+  --color-bg: #070a10;
+  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #0d1527 0%, #06090f 85%);
+  --color-surface: rgba(13, 19, 32, 0.75);
+  --color-surface-hover: rgba(18, 27, 46, 0.88);
+  --color-surface-border: rgba(255, 255, 255, 0.09);
+  --color-surface-border-active: rgba(0, 229, 255, 0.5);
   
-  --color-text-primary: #f0f6fc;
-  --color-text-secondary: #8b9bb4;
-  --color-text-muted: #4e5d78;
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
 
-  --color-accent: #00d4ff;
-  --color-accent-hover: #33ddff;
-  --color-accent-glow: rgba(0, 212, 255, 0.45);
+  --color-accent: #00e5ff;
+  --color-accent-hover: #38bdf8;
+  --color-accent-glow: rgba(0, 229, 255, 0.25);
   
-  --color-button-bg: rgba(15, 23, 42, 0.8);
-  --color-button-border: rgba(0, 212, 255, 0.3);
-  --color-button-text: #ffffff;
-  --color-button-hover-bg: rgba(0, 212, 255, 0.15);
-  --color-button-hover-border: #00d4ff;
-  --color-button-shadow: rgba(0, 212, 255, 0.25);
+  --color-button-bg: rgba(15, 23, 42, 0.7);
+  --color-button-border: rgba(255, 255, 255, 0.1);
+  --color-button-text: #f8fafc;
+  --color-button-hover-bg: rgba(0, 229, 255, 0.1);
+  --color-button-hover-border: #00e5ff;
+  --color-button-shadow: rgba(0, 229, 255, 0.15);
 
-  --color-grid-line: rgba(0, 212, 255, 0.05);
-  --color-modal-backdrop: rgba(4, 7, 13, 0.85);
-  --color-slider-track: #1b263b;
-  --color-slider-fill: #00d4ff;
+  --color-grid-line: rgba(255, 255, 255, 0.025);
+  --color-modal-backdrop: rgba(3, 5, 10, 0.85);
+  --color-slider-track: #151f32;
+  --color-slider-fill: #00e5ff;
 }
 
-/* Midnight Theme: Deep Indigo & Neon Purple */
+/* Midnight Theme: Deep Amethyst & Radiant Violet */
 [data-theme="midnight"] {
-  --color-bg: #0d081b;
-  --color-bg-gradient: radial-gradient(circle at 50% 30%, #1f113a 0%, #0a0614 100%);
-  --color-surface: rgba(31, 19, 56, 0.75);
-  --color-surface-hover: rgba(46, 28, 82, 0.9);
-  --color-surface-border: rgba(179, 102, 255, 0.25);
-  --color-surface-border-active: rgba(179, 102, 255, 0.7);
+  --color-bg: #090613;
+  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #170d2c 0%, #07040f 85%);
+  --color-surface: rgba(24, 15, 42, 0.75);
+  --color-surface-hover: rgba(34, 21, 60, 0.88);
+  --color-surface-border: rgba(255, 255, 255, 0.09);
+  --color-surface-border-active: rgba(168, 85, 247, 0.55);
   
-  --color-text-primary: #fbf7ff;
-  --color-text-secondary: #b39ecb;
-  --color-text-muted: #6e5987;
+  --color-text-primary: #faf5ff;
+  --color-text-secondary: #a894c2;
+  --color-text-muted: #72608a;
 
-  --color-accent: #b366ff;
-  --color-accent-hover: #c485ff;
-  --color-accent-glow: rgba(179, 102, 255, 0.5);
+  --color-accent: #a855f7;
+  --color-accent-hover: #c084fc;
+  --color-accent-glow: rgba(168, 85, 247, 0.28);
   
-  --color-button-bg: rgba(25, 14, 46, 0.8);
-  --color-button-border: rgba(179, 102, 255, 0.35);
-  --color-button-text: #ffffff;
-  --color-button-hover-bg: rgba(179, 102, 255, 0.2);
-  --color-button-hover-border: #b366ff;
-  --color-button-shadow: rgba(179, 102, 255, 0.3);
+  --color-button-bg: rgba(22, 13, 40, 0.7);
+  --color-button-border: rgba(255, 255, 255, 0.1);
+  --color-button-text: #faf5ff;
+  --color-button-hover-bg: rgba(168, 85, 247, 0.12);
+  --color-button-hover-border: #a855f7;
+  --color-button-shadow: rgba(168, 85, 247, 0.18);
 
-  --color-grid-line: rgba(179, 102, 255, 0.06);
-  --color-modal-backdrop: rgba(7, 4, 15, 0.88);
-  --color-slider-track: #2a1945;
-  --color-slider-fill: #b366ff;
+  --color-grid-line: rgba(255, 255, 255, 0.025);
+  --color-modal-backdrop: rgba(5, 3, 9, 0.88);
+  --color-slider-track: #201338;
+  --color-slider-fill: #a855f7;
 }
 
-/* Light Theme: Clean Minimal Platinum & Amber */
+/* Light Theme: High-End Minimalist Studio Paper */
 [data-theme="light"] {
-  --color-bg: #eef2f6;
-  --color-bg-gradient: radial-gradient(circle at 50% 25%, #ffffff 0%, #dde4ec 100%);
-  --color-surface: rgba(255, 255, 255, 0.85);
-  --color-surface-hover: rgba(255, 255, 255, 0.98);
-  --color-surface-border: rgba(210, 105, 30, 0.25);
-  --color-surface-border-active: rgba(230, 115, 0, 0.7);
+  --color-bg: #f8fafc;
+  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #ffffff 0%, #e2e8f0 90%);
+  --color-surface: rgba(255, 255, 255, 0.9);
+  --color-surface-hover: #ffffff;
+  --color-surface-border: rgba(0, 0, 0, 0.09);
+  --color-surface-border-active: rgba(14, 165, 233, 0.6);
   
-  --color-text-primary: #19202c;
-  --color-text-secondary: #516278;
-  --color-text-muted: #8b9bb4;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #94a3b8;
 
-  --color-accent: #ea580c;
-  --color-accent-hover: #f97316;
-  --color-accent-glow: rgba(234, 88, 12, 0.35);
+  --color-accent: #0284c7;
+  --color-accent-hover: #0369a1;
+  --color-accent-glow: rgba(2, 132, 199, 0.2);
   
-  --color-button-bg: rgba(255, 255, 255, 0.9);
-  --color-button-border: rgba(234, 88, 12, 0.3);
-  --color-button-text: #19202c;
-  --color-button-hover-bg: rgba(234, 88, 12, 0.1);
-  --color-button-hover-border: #ea580c;
-  --color-button-shadow: rgba(234, 88, 12, 0.2);
+  --color-button-bg: #ffffff;
+  --color-button-border: rgba(0, 0, 0, 0.12);
+  --color-button-text: #0f172a;
+  --color-button-hover-bg: rgba(2, 132, 199, 0.06);
+  --color-button-hover-border: #0284c7;
+  --color-button-shadow: rgba(0, 0, 0, 0.08);
 
-  --color-grid-line: rgba(100, 116, 139, 0.1);
-  --color-modal-backdrop: rgba(15, 23, 42, 0.55);
-  --color-slider-track: #cbd5e1;
-  --color-slider-fill: #ea580c;
+  --color-grid-line: rgba(0, 0, 0, 0.035);
+  --color-modal-backdrop: rgba(15, 23, 42, 0.45);
+  --color-slider-track: #e2e8f0;
+  --color-slider-fill: #0284c7;
 }

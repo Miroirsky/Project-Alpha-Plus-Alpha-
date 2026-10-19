@@ -15,6 +15,7 @@ class MusicPlayer {
     this.currentAudio = null;
     this.currentSongId = null;
     this.mode = null; // 'preview' | 'game'
+    this.playbackRate = 1.0;
 
     // Listen for volume/enabled changes from SoundManager
     if (this.soundManager) {
@@ -22,6 +23,25 @@ class MusicPlayer {
         this.syncVolume();
       });
     }
+  }
+
+  /**
+   * Sets playback rate/speed for the current audio (editor/playtesting).
+   * @param {number} rate
+   */
+  setPlaybackRate(rate = 1.0) {
+    this.playbackRate = Math.max(0.25, Math.min(2.0, Number(rate) || 1.0));
+    if (this.currentAudio) {
+      this.currentAudio.playbackRate = this.playbackRate;
+    }
+  }
+
+  /**
+   * Returns current playback rate.
+   * @returns {number}
+   */
+  getPlaybackRate() {
+    return this.playbackRate;
   }
 
   /**
@@ -41,6 +61,18 @@ class MusicPlayer {
    */
   playPreview(song) {
     if (!song || !song.file) return;
+
+    // Safety guard: Never play preview music if editor or gameplay view is active
+    if (typeof document !== "undefined") {
+      const editorView = document.getElementById("map-editor-view");
+      if (editorView && editorView.classList.contains("is-active")) {
+        return;
+      }
+      const gameView = document.getElementById("game-view");
+      if (gameView && gameView.classList.contains("is-active")) {
+        return;
+      }
+    }
 
     // If already playing this exact track in preview mode, keep playing
     if (this.mode === "preview" && this.currentSongId === song.id && this.currentAudio && !this.currentAudio.paused) {
@@ -89,6 +121,7 @@ class MusicPlayer {
       audio.loop = false;
       audio.currentTime = 0;
       audio.volume = this.getTargetVolume();
+      audio.playbackRate = this.playbackRate;
       this.currentAudio = audio;
 
       if (onTimeUpdate) {
@@ -161,6 +194,19 @@ class MusicPlayer {
   }
 
   /**
+   * Returns whether audio is actively playing.
+   * @returns {boolean}
+   */
+  isPlaying() {
+    return Boolean(
+      this.currentAudio &&
+      !this.currentAudio.paused &&
+      !this.currentAudio.ended &&
+      this.currentAudio.currentTime > 0
+    );
+  }
+
+  /**
    * Returns current playback time in seconds.
    * @returns {number}
    */
@@ -186,5 +232,10 @@ class MusicPlayer {
   }
 }
 
-// Expose to window
-window.MusicPlayer = MusicPlayer;
+// Expose to window / module
+if (typeof window !== "undefined") {
+  window.MusicPlayer = MusicPlayer;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = MusicPlayer;
+}

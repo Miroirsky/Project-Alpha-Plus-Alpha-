@@ -20,9 +20,11 @@
   <script defer src="scripts/soundManager.js"></script>
   <script defer src="scripts/songsData.js"></script>
   <script defer src="scripts/mapData.js"></script>
+  <script defer src="scripts/importedTracks.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
   <script defer src="scripts/musicPlayer.js"></script>
   <script defer src="scripts/playMenu.js"></script>
+  <script defer src="scripts/playArea.js"></script>
   <script defer src="scripts/mapEditor.js"></script>
   <script defer src="scripts/createMenu.js"></script>
   <script defer src="scripts/gameEngine.js"></script>
@@ -79,27 +81,32 @@
       </header>
 
       <div class="play-content">
-        <!-- Left Side: Song Details & Preview Panel -->
-        <section id="song-details-container" class="song-details-panel" aria-label="Song Details">
-          <!-- Dynamically populated by PlayMenu -->
-        </section>
-
-        <!-- Right Side: Song Selection List -->
+        <!-- Left Side: Large osu!-Style Song Selection List -->
         <nav id="song-list-container" class="song-list-panel" aria-label="Available Songs">
           <!-- Dynamically populated by PlayMenu -->
         </nav>
+
+        <!-- Right Side: Prominent Selected-Song Artwork / Background Showcase -->
+        <section id="song-details-container" class="song-details-panel" aria-label="Song Details">
+          <!-- Dynamically populated by PlayMenu -->
+        </section>
       </div>
     </section>
 
     <!-- Create Menu View (Custom Maps & Creation Form) -->
     <section id="create-menu-view" class="create-menu-view" aria-label="Create Maps" aria-hidden="true">
       <header class="create-header">
-        <button id="btn-back-create" class="play-back-btn" type="button" aria-label="Return to Main Menu">
-          &larr; Main Menu
-        </button>
+        <div class="create-header-left">
+          <button id="btn-back-create" class="play-back-btn" type="button" aria-label="Return to Main Menu">
+            &larr; Main Menu
+          </button>
+          <button id="btn-create-import" class="play-back-btn btn-create-import" type="button" aria-label="Import Track Code">
+            <span>Import Track</span>
+          </button>
+        </div>
         <div class="play-title-group">
           <h2 class="play-screen-title">Map Creator</h2>
-          <p class="play-screen-subtitle">Design, edit, and playtest rhythm maps</p>
+          <p class="play-screen-subtitle">Design, edit, playtest, and share rhythm maps</p>
         </div>
       </header>
 
@@ -130,7 +137,7 @@
               <div class="file-input-wrapper">
                 <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
                 <label for="new-map-file" class="custom-file-btn">
-                  <span>&#128194; Choose Audio File...</span>
+                  <span>Choose Audio File...</span>
                 </label>
                 <span id="new-map-file-status" class="file-status-text"></span>
               </div>
@@ -145,6 +152,48 @@
                 <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">test2 (Sanstitre10juin1715.mp3) - 03:37</option>
                 <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">test3 (Sanstitre10juin1744.mp3) - 04:42</option>
               </select>
+            </div>
+
+            <!-- Track Artwork / Cover Picker -->
+            <div class="form-group">
+              <label class="form-label">Track Artwork / Cover</label>
+              <div class="artwork-picker-box">
+                <span class="artwork-picker-subtitle">Choose from Project Placeholders:</span>
+                <div class="artwork-gallery-grid" id="create-artwork-gallery">
+                  <button type="button" class="artwork-gallery-thumb is-active" data-artwork="Assets/Tracks Placeholders/Default-0.png" title="Default-0 (Prism Blue)">
+                    <img src="Assets/Tracks Placeholders/Default-0.png" alt="Prism Blue">
+                    <span class="thumb-caption">Prism</span>
+                  </button>
+                  <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-1.png" title="Default-1 (Neon Sphere)">
+                    <img src="Assets/Tracks Placeholders/Default-1.png" alt="Neon Sphere">
+                    <span class="thumb-caption">Sphere</span>
+                  </button>
+                  <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-2.png" title="Default-2 (Emerald Matrix)">
+                    <img src="Assets/Tracks Placeholders/Default-2.png" alt="Emerald Matrix">
+                    <span class="thumb-caption">Matrix</span>
+                  </button>
+                  <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-3.png" title="Default-3 (Solar Pulsar)">
+                    <img src="Assets/Tracks Placeholders/Default-3.png" alt="Solar Pulsar">
+                    <span class="thumb-caption">Pulsar</span>
+                  </button>
+                </div>
+
+                <div class="artwork-upload-row">
+                  <input type="file" id="new-map-artwork-file" accept="image/*" style="display: none;">
+                  <label for="new-map-artwork-file" class="custom-file-btn artwork-upload-btn">
+                    <span>Upload Custom Artwork...</span>
+                  </label>
+                  <span id="new-map-artwork-status" class="file-status-text">Using preset artwork</span>
+                </div>
+
+                <div class="artwork-selected-card">
+                  <img id="new-map-artwork-preview" class="artwork-card-img" src="Assets/Tracks Placeholders/Default-0.png" alt="Artwork Preview">
+                  <div class="artwork-card-meta">
+                    <span id="new-map-artwork-title" class="artwork-card-title">Default-0.png</span>
+                    <span class="artwork-card-badge">Selected Artwork</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <button type="submit" class="btn-create-submit">
@@ -170,22 +219,41 @@
       <!-- Top Toolbar -->
       <header class="editor-top-bar">
         <div class="editor-bar-left">
-          <button id="btn-editor-back" class="btn-editor-action" type="button">
-            &larr; Back to Maps
+          <button id="btn-editor-back" class="btn-editor-action btn-editor-back" type="button" title="Back to Map Management">
+            <span class="btn-icon">&larr;</span>
+            <span>Back</span>
           </button>
-          <span id="editor-map-title" class="editor-map-name">Map Name</span>
+          <div class="editor-header-meta">
+            <span id="editor-map-title" class="editor-map-name">Map Name</span>
+            <div class="editor-meta-badges">
+              <span id="editor-meta-audio" class="editor-meta-tag">Audio</span>
+              <span id="editor-save-indicator" class="editor-save-tag saved">✓ All changes saved</span>
+            </div>
+          </div>
         </div>
 
         <div class="editor-bar-center">
-          <span id="editor-status-text" class="editor-status-badge">PAUSED</span>
+          <div class="editor-playback-badge-wrap">
+            <span id="editor-status-text" class="editor-status-badge">PAUSED</span>
+          </div>
         </div>
 
         <div class="editor-bar-right">
-          <button id="btn-editor-clear" class="btn-editor-action" type="button" title="Clear all notes">
-            Clear Notes
+          <button id="btn-editor-params" class="btn-editor-action btn-editor-params" type="button" title="Edit track parameters & metadata">
+            <span class="btn-icon">&#9881;</span>
+            <span>Track Parameters</span>
+          </button>
+          <button id="btn-editor-export" class="btn-editor-action btn-editor-export" type="button" title="Export track code to share">
+            <span class="btn-icon">&uarr;</span>
+            <span>Export Track</span>
+          </button>
+          <button id="btn-editor-clear" class="btn-editor-action btn-editor-clear" type="button" title="Clear all notes">
+            <span class="btn-icon">&times;</span>
+            <span>Clear Notes</span>
           </button>
           <!-- Test Button -->
           <button id="btn-editor-test" class="btn-editor-test" type="button" title="Playtest map (Enter)">
+            <span class="btn-icon">&#9654;</span>
             <span>Test Map</span>
             <span class="key-tag">Enter</span>
           </button>
@@ -204,24 +272,100 @@
             <button id="btn-editor-playpause" class="btn-editor-playpause" type="button" aria-label="Play or Pause Timeline">
               <span id="editor-playpause-icon">&#9654;</span>
             </button>
+
+            <!-- Precise timeline frame stepping buttons -->
+            <div class="timeline-step-buttons">
+              <button id="btn-editor-step-back" class="btn-editor-step" type="button" title="Step backward 0.1s (Left Arrow)">
+                <span>-0.1s</span>
+              </button>
+              <button id="btn-editor-step-fwd" class="btn-editor-step" type="button" title="Step forward 0.1s (Right Arrow)">
+                <span>+0.1s</span>
+              </button>
+            </div>
+
             <span id="editor-time-display" class="editor-time-display">00:00.0 / 00:00.0</span>
           </div>
-          <span id="editor-notes-count" class="editor-notes-count">Notes: 0</span>
+
+          <!-- Zoom Controls (Video-Editor Style) -->
+          <div class="timeline-zoom-controls">
+            <span class="zoom-label">Zoom:</span>
+            <button id="btn-timeline-zoom-out" class="btn-zoom-action" type="button" title="Zoom Out (- or Wheel Down)">-</button>
+            <input type="range" id="timeline-zoom-slider" class="timeline-zoom-slider" min="10" max="400" step="10" value="50" title="Timeline Zoom (px/sec)">
+            <button id="btn-timeline-zoom-in" class="btn-zoom-action" type="button" title="Zoom In (+ or Wheel Up)">+</button>
+            <button id="btn-timeline-zoom-fit" class="btn-zoom-action btn-zoom-fit" type="button" title="Fit Entire Song">Fit</button>
+            <span id="timeline-zoom-display" class="timeline-zoom-display">50 px/s</span>
+          </div>
+
+          <!-- Play Speed Slider (Editor & Playtesting Only) -->
+          <div class="editor-speed-control-group">
+            <span class="speed-label">Speed:</span>
+            <input type="range" id="editor-speed-slider" class="editor-speed-slider" min="0.25" max="2.0" step="0.25" value="1.0" title="Editor Playback Speed">
+            <span id="editor-speed-display" class="editor-speed-display">1.0x</span>
+            <div class="speed-presets">
+              <button type="button" class="btn-speed-preset" data-speed="0.5">0.5x</button>
+              <button type="button" class="btn-speed-preset is-active" data-speed="1.0">1.0x</button>
+              <button type="button" class="btn-speed-preset" data-speed="1.5">1.5x</button>
+              <button type="button" class="btn-speed-preset" data-speed="2.0">2.0x</button>
+            </div>
+          </div>
+
+          <div class="timeline-stats-group">
+            <span id="editor-notes-count" class="editor-notes-count">Notes: 0</span>
+            <span id="editor-nps-display" class="editor-nps-count">0.0 NPS</span>
+          </div>
         </div>
 
-        <!-- Interactive Timeline Track -->
-        <div id="editor-timeline-track" class="editor-timeline-track" title="Click to seek timeline">
-          <div id="editor-timeline-markers" class="editor-timeline-markers"></div>
-          <div id="editor-timeline-scrubber" class="editor-timeline-scrubber"></div>
+        <!-- Video-Editing Style Timeline Workstation -->
+        <div id="video-timeline-wrapper" class="video-timeline-wrapper">
+          <!-- Timeline Viewport (Scrollable horizontally) -->
+          <div id="video-timeline-scroll" class="video-timeline-scroll">
+            <div id="video-timeline-content" class="video-timeline-content">
+              <!-- Time Ruler Canvas (Tick marks, timestamp labels: 00:01, 00:02...) -->
+              <canvas id="video-timeline-ruler" class="video-timeline-ruler"></canvas>
+
+              <!-- Tracks Area: Notes Lane & Two-Ball Direction Vectors -->
+              <div id="video-timeline-tracks" class="video-timeline-tracks">
+                <canvas id="video-timeline-canvas" class="video-timeline-canvas"></canvas>
+              </div>
+
+              <!-- Draggable Video Playhead Bar with Head Badge -->
+              <div id="video-timeline-playhead" class="video-timeline-playhead">
+                <div class="playhead-badge">
+                  <span id="playhead-badge-text">00:00.0</span>
+                </div>
+                <div class="playhead-line"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floating Note Inspector Panel (when a note is selected on timeline) -->
+          <div id="timeline-note-inspector" class="timeline-note-inspector" style="display: none;">
+            <div class="inspector-badge">
+              <span id="inspector-note-type">Note Selected</span>
+            </div>
+            <div class="inspector-controls">
+              <label for="inspector-note-time">Time (s):</label>
+              <input type="number" id="inspector-note-time" class="inspector-input" step="0.05" min="0">
+              <button id="btn-inspector-nudge-left" class="btn-inspector-action" type="button" title="Nudge -0.05s">&larr;</button>
+              <button id="btn-inspector-nudge-right" class="btn-inspector-action" type="button" title="Nudge +0.05s">&rarr;</button>
+              <button id="btn-inspector-snap-playhead" class="btn-inspector-action" type="button" title="Snap to current playhead">Snap to Head</button>
+              <button id="btn-inspector-delete" class="btn-inspector-action delete" type="button" title="Delete selected note">&times; Delete</button>
+              <button id="btn-inspector-close" class="btn-inspector-action close" type="button" title="Deselect">&times;</button>
+            </div>
+          </div>
         </div>
 
         <!-- Legend / Shortcuts Help -->
         <div class="editor-help-legend">
           <span class="legend-item"><span class="key-tag">Space</span> Play / Pause</span>
-          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Normal Red</span>
-          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Normal Blue</span>
-          <span class="legend-item"><span class="key-tag">Shift + Drag</span> Directional Arrow Note</span>
-          <span class="legend-item"><span class="key-tag">Enter</span> Playtest Map</span>
+          <span class="legend-item"><span class="key-tag">&larr; / &rarr;</span> Step 0.1s</span>
+          <span class="legend-item"><span class="key-tag">Mouse Wheel</span> Scroll Timeline</span>
+          <span class="legend-item"><span class="key-tag">Ctrl + Wheel</span> Zoom Timeline</span>
+          <span class="legend-item"><span class="key-tag">Click Note</span> Select &amp; Edit Time</span>
+          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Red Note</span>
+          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Blue Note</span>
+          <span class="legend-item"><strong style="color: #ffd32a;">[Shift + Click]</strong> Triangle Bomb</span>
+          <span class="legend-item"><span class="key-tag">Enter</span> Test Map</span>
         </div>
       </footer>
     </section>
@@ -301,64 +445,65 @@
             <h2 id="results-song-name" class="results-song-title">Track Name</h2>
           </div>
 
-          <!-- Primary Score Section -->
+          <!-- Hero Section: Left Hero Rank Emblem, Right Score Showcase -->
           <div class="results-score-section">
-            <div class="score-main-box">
-              <span class="score-label">
-                Total Score
-                <span id="results-new-best-tag" class="tag-new-record" style="display: none;">NEW BEST!</span>
-              </span>
-              <span id="results-score" class="score-number">0</span>
-              <span class="score-sub-meta">
-                Best Score: <strong id="results-best-score">0</strong>
-                <span id="results-record-notice" class="results-record-notice"></span>
-              </span>
+            <div class="results-rank-hero-card">
+              <span class="rank-hero-label">Rank</span>
+              <div id="results-rank-badge" class="results-rank-badge rank-s">S</div>
+              <span id="results-rank-pill" class="results-rank-pill rank-s">S</span>
+              <div id="results-main-rank-badge" style="display: none;" aria-hidden="true"></div>
             </div>
 
-            <div class="score-secondary-box">
-              <div class="score-mini-card">
-                <span class="mini-card-label">Accuracy</span>
-                <span id="results-accuracy" class="mini-card-val val-accuracy">100.0%</span>
+            <div class="score-main-box">
+              <div class="score-header-row">
+                <span class="score-label">
+                  Total Score
+                  <span id="results-new-best-tag" class="tag-new-record" style="display: none;">NEW BEST!</span>
+                </span>
+                <span class="score-pct-badge"><strong id="results-score-pct">0.0%</strong></span>
               </div>
-              <div class="score-mini-card">
-                <span class="mini-card-label">Score %</span>
-                <span class="mini-card-val"><strong id="results-score-pct">0.0%</strong> / <small id="results-max-score" style="font-size: 0.8em; opacity: 0.7;">0</small></span>
+              <span id="results-score" class="score-number">0</span>
+              <div class="score-sub-meta">
+                <span>Max: <strong id="results-max-score">0</strong></span>
+                <span>&bull;</span>
+                <span>Best: <strong id="results-best-score">0</strong></span>
               </div>
+              <span id="results-record-notice" class="results-record-notice"></span>
             </div>
           </div>
 
           <!-- Detailed Performance Stats Grid -->
           <div class="results-details-grid">
             <div class="results-detail-cell">
+              <span class="detail-cell-label">Accuracy</span>
+              <span id="results-accuracy" class="detail-cell-val val-accuracy">100.0%</span>
+            </div>
+            <div class="results-detail-cell">
               <span class="detail-cell-label">Max Combo</span>
-              <span id="results-max-combo" class="detail-cell-val" style="color: #ffa502;">0x</span>
+              <span id="results-max-combo" class="detail-cell-val val-combo">0x</span>
+            </div>
+            <div class="results-detail-cell">
+              <span class="detail-cell-label">Notes Hit</span>
+              <span class="detail-cell-val"><strong id="results-hits">0</strong> / <small id="results-total-notes" class="val-total-muted">0</small></span>
             </div>
             <div class="results-detail-cell">
               <span class="detail-cell-label">Final Combo</span>
               <span id="results-final-combo" class="detail-cell-val">0x</span>
-            </div>
-            <div class="results-detail-cell">
-              <span class="detail-cell-label">Notes Hit</span>
-              <span id="results-hits" class="detail-cell-val" style="color: #2ed573;">0</span>
-            </div>
-            <div class="results-detail-cell">
-              <span class="detail-cell-label">Total Notes</span>
-              <span id="results-total-notes" class="detail-cell-val">0</span>
             </div>
           </div>
 
           <!-- Hit Ratings Breakdown -->
           <div class="ratings-breakdown-row">
             <div class="rating-badge-item">
-              <span class="rating-title perfect">Perfect (200)</span>
+              <span class="rating-title perfect">Perfect (+200)</span>
               <span id="results-perfect" class="rating-count">0</span>
             </div>
             <div class="rating-badge-item">
-              <span class="rating-title good">Normal (50–150)</span>
+              <span class="rating-title good">Normal (+50..150)</span>
               <span id="results-good" class="rating-count">0</span>
             </div>
             <div class="rating-badge-item">
-              <span class="rating-title wrong">Wrong Dir (-20)</span>
+              <span class="rating-title wrong">Bomb (-200)</span>
               <span id="results-wrong-dir" class="rating-count" style="color: #ff4757;">0</span>
             </div>
             <div class="rating-badge-item">
@@ -457,6 +602,207 @@
             </button>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Export Track Modal -->
+    <div id="export-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" aria-hidden="true">
+      <div class="modal-dialog export-modal-dialog">
+        <header class="modal-header">
+          <h2 id="export-modal-title" class="modal-title">Export Track Code</h2>
+          <button id="btn-close-export" class="modal-close-btn" type="button" aria-label="Close Export Dialog">&times;</button>
+        </header>
+
+        <div class="export-modal-content">
+          <div class="export-track-summary">
+            <div class="export-summary-badge">
+              <span class="summary-label">Track</span>
+              <strong id="export-track-name" class="summary-val">Track Name</strong>
+            </div>
+            <div class="export-summary-badge">
+              <span class="summary-label">Notes</span>
+              <strong id="export-track-notes" class="summary-val">0 notes</strong>
+            </div>
+            <div class="export-summary-badge">
+              <span class="summary-label">Duration</span>
+              <strong id="export-track-duration" class="summary-val">00:00</strong>
+            </div>
+            <div class="export-summary-badge">
+              <span class="summary-label">NPS</span>
+              <strong id="export-track-nps" class="summary-val">0.0</strong>
+            </div>
+          </div>
+
+          <p class="export-desc">
+            Copy this unique code to share your mapped track with other players. It contains complete note coordinates, timings, directions, and song metadata.
+          </p>
+
+          <div class="code-container">
+            <textarea id="export-code-area" class="export-textarea" readonly spellcheck="false" placeholder="Generating export code..."></textarea>
+          </div>
+
+          <div class="export-actions-row">
+            <div class="export-actions-left">
+              <button id="btn-copy-export-code" class="menu-btn menu-btn-primary btn-copy-export" type="button">
+                <span id="copy-btn-icon"></span>
+                <span id="copy-btn-text">Copy Code</span>
+              </button>
+              <button id="btn-download-export-json" class="btn-editor-action btn-download-export" type="button">
+                <span>Download .alpha</span>
+              </button>
+            </div>
+            <span id="export-copy-feedback" class="export-feedback-toast" style="display: none;">Copied to clipboard! ✓</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Track Modal -->
+    <div id="import-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="import-modal-title" aria-hidden="true">
+      <div class="modal-dialog import-modal-dialog">
+        <header class="modal-header">
+          <h2 id="import-modal-title" class="modal-title">Import Track Code</h2>
+          <button id="btn-close-import" class="modal-close-btn" type="button" aria-label="Close Import Dialog">&times;</button>
+        </header>
+
+        <div class="import-modal-content">
+          <p class="import-desc">
+            Paste an exported track code (starting with <code>ALPHA_TRACK_V1:</code> or valid JSON) below to import and play it:
+          </p>
+
+          <div class="code-container">
+            <textarea id="import-code-area" class="import-textarea" spellcheck="false" placeholder="Paste ALPHA_TRACK_V1:... code or JSON here"></textarea>
+          </div>
+
+          <div id="import-error-banner" class="import-error-alert" style="display: none;"></div>
+
+          <div class="modal-footer import-actions-footer">
+            <button id="btn-cancel-import" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-confirm-import" class="menu-btn menu-btn-primary btn-confirm-import" type="button">
+              <span>Validate &amp; Import</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Track Parameters Modal -->
+    <div id="params-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="params-modal-title" aria-hidden="true">
+      <div class="modal-dialog params-modal-dialog">
+        <header class="modal-header">
+          <div class="modal-header-title-group">
+            <h2 id="params-modal-title" class="modal-title">Track Parameters</h2>
+            <span id="params-track-type-badge" class="track-type-badge">Custom Track</span>
+          </div>
+          <button id="btn-close-params" class="modal-close-btn" type="button" aria-label="Close Track Parameters Dialog">&times;</button>
+        </header>
+
+        <form id="track-params-form" class="params-modal-content">
+          <div class="params-note-callout" id="params-note-info">
+            Modify track name, mapper, artist, and theme. Updates appear across all menus and in exported track codes.
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="params-track-name" class="form-label">Track Name</label>
+              <input type="text" id="params-track-name" class="form-input" required placeholder="e.g. Cyber Pulse">
+            </div>
+            <div class="form-group">
+              <label for="params-track-mapper" class="form-label">Mapper Name</label>
+              <input type="text" id="params-track-mapper" class="form-input" required placeholder="e.g. MasterMapper">
+            </div>
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="params-track-creator" class="form-label">Music Creator / Artist</label>
+              <input type="text" id="params-track-creator" class="form-input" required placeholder="e.g. SynthWave Producer">
+            </div>
+            <div class="form-group">
+              <label for="params-track-difficulty" class="form-label">Difficulty / Tag</label>
+              <select id="params-track-difficulty" class="form-select">
+                <option value="Normal">Normal</option>
+                <option value="Hard">Hard</option>
+                <option value="Expert">Expert</option>
+                <option value="Master">Master</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Theme / Accent Color</label>
+            <div class="color-picker-row">
+              <input type="color" id="params-track-color" class="form-color-input" value="#00d4ff">
+              <div class="swatch-group">
+                <button type="button" class="swatch-btn" data-color="#00d4ff" style="background:#00d4ff;" title="Cyan"></button>
+                <button type="button" class="swatch-btn" data-color="#ff4757" style="background:#ff4757;" title="Red"></button>
+                <button type="button" class="swatch-btn" data-color="#2ed573" style="background:#2ed573;" title="Green"></button>
+                <button type="button" class="swatch-btn" data-color="#ffa502" style="background:#ffa502;" title="Amber"></button>
+                <button type="button" class="swatch-btn" data-color="#a55eea" style="background:#a55eea;" title="Purple"></button>
+                <button type="button" class="swatch-btn" data-color="#ff6b81" style="background:#ff6b81;" title="Pink"></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="params-track-audio" class="form-label">Audio Track Source</label>
+            <select id="params-track-audio" class="form-select">
+              <option value="Assets/Songs/IMG_2449.mp3" data-duration="180">IMG_2449.mp3 (Default)</option>
+              <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">Sanstitre9juin20251019.mp3 (02:33)</option>
+              <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">Sanstitre10juin20251715.mp3 (03:37)</option>
+              <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">Sanstitre10juin20251744.mp3 (04:42)</option>
+            </select>
+          </div>
+
+          <!-- Track Artwork in Parameters Modal -->
+          <div class="form-group">
+            <label class="form-label">Track Artwork / Cover</label>
+            <div class="artwork-picker-box">
+              <span class="artwork-picker-subtitle">Choose from Project Placeholders:</span>
+              <div class="artwork-gallery-grid" id="params-artwork-gallery">
+                <button type="button" class="artwork-gallery-thumb is-active" data-artwork="Assets/Tracks Placeholders/Default-0.png" title="Default-0 (Prism Blue)">
+                  <img src="Assets/Tracks Placeholders/Default-0.png" alt="Prism Blue">
+                  <span class="thumb-caption">Prism</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-1.png" title="Default-1 (Neon Sphere)">
+                  <img src="Assets/Tracks Placeholders/Default-1.png" alt="Neon Sphere">
+                  <span class="thumb-caption">Sphere</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-2.png" title="Default-2 (Emerald Matrix)">
+                  <img src="Assets/Tracks Placeholders/Default-2.png" alt="Emerald Matrix">
+                  <span class="thumb-caption">Matrix</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-3.png" title="Default-3 (Solar Pulsar)">
+                  <img src="Assets/Tracks Placeholders/Default-3.png" alt="Solar Pulsar">
+                  <span class="thumb-caption">Pulsar</span>
+                </button>
+              </div>
+
+              <div class="artwork-upload-row">
+                <input type="file" id="params-track-artwork-file" accept="image/*" style="display: none;">
+                <label for="params-track-artwork-file" class="custom-file-btn artwork-upload-btn">
+                  <span>Upload Custom Artwork...</span>
+                </label>
+                <span id="params-artwork-status" class="file-status-text"></span>
+              </div>
+
+              <div class="artwork-selected-card">
+                <img id="params-artwork-preview" class="artwork-card-img" src="Assets/Tracks Placeholders/Default-0.png" alt="Artwork Preview">
+                <div class="artwork-card-meta">
+                  <span id="params-artwork-title" class="artwork-card-title">Default-0.png</span>
+                  <span class="artwork-card-badge">Selected Artwork</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="params-modal-footer">
+            <button id="btn-cancel-params" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-save-params" class="menu-btn menu-btn-primary" type="submit">
+              <span>Save Parameters</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </div>

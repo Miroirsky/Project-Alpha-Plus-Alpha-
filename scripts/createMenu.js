@@ -31,6 +31,23 @@ class CreateMenu {
     this.presetSelect = document.getElementById("new-map-preset-audio");
     this.fileStatusEl = document.getElementById("new-map-file-status");
 
+    // Artwork Picker Elements
+    this.artworkGallery = document.getElementById("create-artwork-gallery");
+    this.artworkFileInput = document.getElementById("new-map-artwork-file");
+    this.artworkStatusEl = document.getElementById("new-map-artwork-status");
+    this.artworkPreviewImg = document.getElementById("new-map-artwork-preview");
+    this.artworkPreviewTitle = document.getElementById("new-map-artwork-title");
+    this.selectedArtwork = "Assets/Tracks Placeholders/Default-0.png";
+
+    // Import Modal Elements
+    this.importBtn = document.getElementById("btn-create-import");
+    this.importModal = document.getElementById("import-modal");
+    this.closeImportBtn = document.getElementById("btn-close-import");
+    this.cancelImportBtn = document.getElementById("btn-cancel-import");
+    this.confirmImportBtn = document.getElementById("btn-confirm-import");
+    this.importCodeArea = document.getElementById("import-code-area");
+    this.importErrorBanner = document.getElementById("import-error-banner");
+
     this.importedFileUrl = null;
     this.importedDuration = 180;
   }
@@ -99,12 +116,166 @@ class CreateMenu {
       });
     }
 
+    // Preset artwork gallery buttons
+    if (this.artworkGallery) {
+      const thumbs = this.artworkGallery.querySelectorAll(".artwork-gallery-thumb");
+      thumbs.forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const artworkPath = btn.getAttribute("data-artwork");
+          if (artworkPath) {
+            this.setArtwork(artworkPath, btn.getAttribute("title") || "Preset Artwork");
+            thumbs.forEach((b) => b.classList.remove("is-active"));
+            btn.classList.add("is-active");
+            if (this.artworkStatusEl) {
+              this.artworkStatusEl.textContent = "Using preset artwork";
+            }
+            if (this.soundManager) this.soundManager.playClick();
+          }
+        });
+      });
+    }
+
+    // Custom artwork file upload listener
+    if (this.artworkFileInput) {
+      this.artworkFileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const dataUrl = evt.target.result;
+            this.setArtwork(dataUrl, `Custom: ${file.name}`);
+            if (this.artworkStatusEl) {
+              this.artworkStatusEl.textContent = `Custom: ${file.name}`;
+            }
+            if (this.artworkGallery) {
+              const thumbs = this.artworkGallery.querySelectorAll(".artwork-gallery-thumb");
+              thumbs.forEach((b) => b.classList.remove("is-active"));
+            }
+            if (this.soundManager) this.soundManager.playClick();
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+
     // Form submission
     if (this.form) {
       this.form.addEventListener("submit", (e) => {
         e.preventDefault();
         this.handleCreateMap();
       });
+    }
+
+    // Import Modal listeners
+    if (this.importBtn) {
+      this.importBtn.addEventListener("click", () => {
+        this.openImportModal();
+      });
+    }
+
+    if (this.closeImportBtn) {
+      this.closeImportBtn.addEventListener("click", () => {
+        this.closeImportModal();
+      });
+    }
+
+    if (this.cancelImportBtn) {
+      this.cancelImportBtn.addEventListener("click", () => {
+        this.closeImportModal();
+      });
+    }
+
+    if (this.confirmImportBtn) {
+      this.confirmImportBtn.addEventListener("click", () => {
+        this.confirmImport();
+      });
+    }
+
+    if (this.importModal) {
+      this.importModal.addEventListener("click", (e) => {
+        if (e.target === this.importModal) {
+          this.closeImportModal();
+        }
+      });
+    }
+  }
+
+  /**
+   * Opens the Import Track modal dialog.
+   */
+  openImportModal() {
+    if (this.importCodeArea) this.importCodeArea.value = "";
+    if (this.importErrorBanner) {
+      this.importErrorBanner.textContent = "";
+      this.importErrorBanner.style.display = "none";
+    }
+    if (this.importModal) {
+      this.importModal.classList.add("is-active");
+      this.importModal.setAttribute("aria-hidden", "false");
+    }
+    if (this.soundManager) this.soundManager.playClick();
+  }
+
+  /**
+   * Closes the Import Track modal dialog.
+   */
+  closeImportModal() {
+    if (this.importModal) {
+      this.importModal.classList.remove("is-active");
+      this.importModal.setAttribute("aria-hidden", "true");
+    }
+    if (this.soundManager) this.soundManager.playClick();
+  }
+
+  /**
+   * Validates and imports the track code into storage.
+   */
+  confirmImport() {
+    if (!this.importCodeArea || !this.mapStorage) return;
+
+    const rawCode = this.importCodeArea.value.trim();
+    const result = this.mapStorage.validateAndParseTrackCode(rawCode);
+
+    if (!result.valid) {
+      if (this.importErrorBanner) {
+        this.importErrorBanner.textContent = `⚠ ${result.error || "Invalid track code."}`;
+        this.importErrorBanner.style.display = "block";
+      }
+      return;
+    }
+
+    try {
+      const importedMap = this.mapStorage.importTrack(result.track);
+      this.closeImportModal();
+      this.renderMapsList();
+
+      if (this.soundManager) this.soundManager.playTestTone();
+
+      // Launch editor with imported track immediately!
+      if (typeof this.onEditMap === "function") {
+        this.hide();
+        this.onEditMap(importedMap);
+      }
+    } catch (err) {
+      if (this.importErrorBanner) {
+        this.importErrorBanner.textContent = `⚠ Import failed: ${err.message}`;
+        this.importErrorBanner.style.display = "block";
+      }
+    }
+  }
+
+  /**
+   * Updates the selected artwork source and preview element.
+   * @param {string} src
+   * @param {string} title
+   */
+  setArtwork(src, title = "") {
+    this.selectedArtwork = src;
+    if (this.artworkPreviewImg) {
+      this.artworkPreviewImg.src = src;
+    }
+    if (this.artworkPreviewTitle) {
+      this.artworkPreviewTitle.textContent = title || "Selected Artwork";
     }
   }
 
@@ -149,7 +320,8 @@ class CreateMenu {
         creator: creator || "Unknown Artist",
         file: audioSource,
         duration: durationFormatted,
-        durationSeconds
+        durationSeconds,
+        cover: this.selectedArtwork || "Assets/Tracks Placeholders/Default-0.png"
       });
 
       if (this.soundManager) this.soundManager.playClick();
@@ -193,8 +365,10 @@ class CreateMenu {
       card.className = "create-map-card";
 
       const noteCount = (map.notes && map.notes.length) || 0;
+      const coverUrl = map.cover || map.image || map.artwork || "Assets/Tracks Placeholders/Default-0.png";
 
       card.innerHTML = `
+        <div class="map-card-thumb" style="background-image: url('${coverUrl}');"></div>
         <div class="map-card-info">
           <div class="map-card-header">
             <span class="map-name">${map.name}</span>

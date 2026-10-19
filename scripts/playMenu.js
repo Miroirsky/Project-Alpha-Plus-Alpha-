@@ -1,7 +1,13 @@
 /**
  * @file playMenu.js
- * @description Manages the Song Selection Menu view, song cards with Title/NPS/Duration,
- * hover preview loop (showing only title & creator), and click selection (showing full metadata).
+ * @description osu!-Inspired Song Selection Menu for Project Alpha Plus.
+ * Features:
+ * - Large song list on the left with compact horizontal rows (cover thumb, title, artist, mapper, difficulty badge, NPS, duration, personal best).
+ * - Prominent selected-song showcase on the right with full-bleed artwork background, dark translucent overlay, hero typography, metadata grid, and "Play Track" CTA.
+ * - Looped music preview on hover; smooth click selection.
+ * - Double-click on song row launches track immediately.
+ * - Full keyboard navigation: ArrowUp, ArrowDown to navigate; Enter to launch track; Escape to return to main menu.
+ * - Auto-scrolls list to keep the highlighted/selected track visible.
  */
 
 class PlayMenu {
@@ -9,16 +15,19 @@ class PlayMenu {
    * @param {Object} dependencies
    * @param {SoundManager} dependencies.soundManager
    * @param {MusicPlayer} dependencies.musicPlayer
+   * @param {MapStorage} dependencies.mapStorage
    * @param {Array} dependencies.songs
    * @param {Function} dependencies.onStartTrack
    */
-  constructor({ soundManager, musicPlayer, songs = [], onStartTrack = null }) {
+  constructor({ soundManager, musicPlayer, mapStorage = null, songs = [], onStartTrack = null }) {
     this.soundManager = soundManager;
     this.musicPlayer = musicPlayer;
+    this.mapStorage = mapStorage;
     this.songs = songs;
     this.onStartTrack = onStartTrack;
 
     this.selectedSong = null;
+    this.selectedIndex = -1;
     this.hoveredSong = null;
 
     // DOM Elements
@@ -27,6 +36,8 @@ class PlayMenu {
     this.backBtn = document.getElementById("btn-back-menu");
     this.songListContainer = document.getElementById("song-list-container");
     this.songDetailsContainer = document.getElementById("song-details-container");
+
+    this.boundKeyDown = this.onKeyDown.bind(this);
   }
 
   /**
@@ -35,7 +46,11 @@ class PlayMenu {
   init() {
     this.renderSongList();
     this.bindEvents();
-    this.renderDefaultDetails();
+    if (this.songs && this.songs.length > 0) {
+      this.selectSongByIndex(0, false);
+    } else {
+      this.renderDefaultDetails();
+    }
   }
 
   /**
@@ -45,58 +60,113 @@ class PlayMenu {
   updateSongs(newSongs) {
     if (Array.isArray(newSongs)) {
       this.songs = newSongs;
+      const prevId = this.selectedSong ? this.selectedSong.id : null;
       this.renderSongList();
+
+      if (this.songs.length > 0) {
+        let targetIdx = this.songs.findIndex((s) => s.id === prevId);
+        if (targetIdx === -1) targetIdx = 0;
+        // Never play preview audio or click sound during background updates
+        this.selectSongByIndex(targetIdx, false, false);
+      } else {
+        this.selectedSong = null;
+        this.selectedIndex = -1;
+        this.renderDefaultDetails();
+      }
     }
   }
 
   /**
-   * Renders the song list on the right side of the screen.
-   * Displays each song's title, NPS, and duration.
+   * Renders the song list on the left side of the screen in compact osu!-style rows.
    */
   renderSongList() {
     if (!this.songListContainer) return;
 
     this.songListContainer.innerHTML = "";
 
-    this.songs.forEach((song) => {
+    if (!this.songs || this.songs.length === 0) {
+      const emptyState = document.createElement("div");
+      emptyState.className = "song-list-empty";
+      emptyState.innerHTML = `
+        <div class="empty-state-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        </div>
+        <h4 class="empty-state-title">No Tracks Available</h4>
+        <p class="empty-state-desc">
+          Paste exported track codes into <code>scripts/importedTracks.js</code> to load tracks automatically, or build a new map in the <strong>Create</strong> menu.
+        </p>
+      `;
+      this.songListContainer.appendChild(emptyState);
+      return;
+    }
+
+    this.songs.forEach((song, idx) => {
       const card = document.createElement("article");
       card.className = "song-card";
       card.setAttribute("role", "button");
       card.setAttribute("tabindex", "0");
       card.setAttribute("data-song-id", song.id);
+      card.setAttribute("data-song-index", idx);
       card.style.setProperty("--song-accent-color", song.color || "var(--color-accent)");
 
-      // Show title, NPS, and duration
+      const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+      const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id) : 0;
+      const bestScoreLabel = bestScore > 0 ? `PB: ${bestScore.toLocaleString()}` : "Unplayed";
+
       card.innerHTML = `
+        <div class="song-card-thumb-wrapper">
+          <img class="song-card-thumb" src="${coverSrc}" alt="${song.name}" loading="lazy">
+        </div>
         <div class="song-card-main">
-          <span class="song-card-name">${song.name}</span>
-          <div class="song-card-stats">
-            <span class="song-card-nps">${song.nps} NPS</span>
-            <span class="song-card-duration">${song.duration || "03:00"}</span>
+          <div class="song-card-header-row">
+            <span class="song-card-name" title="${song.name}">${song.name}</span>
+            <span class="song-card-diff-badge" style="border-color: ${song.color || 'var(--color-accent)'}; color: ${song.color || 'var(--color-accent)'};">
+              ${song.difficulty || "Normal"}
+            </span>
+          </div>
+          <div class="song-card-sub-row">
+            <span class="song-card-artist" title="${song.creator}">${song.creator || "Unknown Artist"}</span>
+            <span class="song-card-mapper" title="Mapped by ${song.mapper}">// ${song.mapper || "Anonymous"}</span>
+          </div>
+          <div class="song-card-stats-row">
+            <span class="song-card-stat-pill nps">${this.getSongNps(song)} NPS</span>
+            <span class="song-card-stat-pill duration">${song.duration || "03:00"}</span>
+            <span class="song-card-stat-pill score ${bestScore > 0 ? 'has-score' : ''}">${bestScoreLabel}</span>
           </div>
         </div>
       `;
 
-      // Hover: play preview in loop and display only title and creator
+      // Hover: play preview in loop and display preview details
       card.addEventListener("mouseenter", () => {
         this.handleSongHover(song, card);
       });
 
-      // Click: select song, keep music playing, display additional info
+      // Click: select song, keep music playing, display full metadata
       card.addEventListener("click", () => {
-        this.handleSongClick(song, card);
+        this.selectSongByIndex(idx, true);
+      });
+
+      // Double-click: immediately start game
+      card.addEventListener("dblclick", () => {
+        this.selectSongByIndex(idx, false);
+        this.launchCurrentSong();
       });
 
       // Keyboard accessibility (Enter / Space)
       card.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter") {
           e.preventDefault();
-          this.handleSongClick(song, card);
+          this.launchCurrentSong();
+        } else if (e.key === " ") {
+          e.preventDefault();
+          this.selectSongByIndex(idx, true);
         }
       });
 
       this.songListContainer.appendChild(card);
     });
+
+    this.updateActiveCardHighlight();
   }
 
   /**
@@ -118,57 +188,154 @@ class PlayMenu {
       });
     }
 
-    // Escape key returns to main menu
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && this.isOpen()) {
-        this.close();
+    // Window keyboard listener for ArrowUp, ArrowDown, Enter, Escape
+    if (typeof window !== "undefined" && window.addEventListener) {
+      window.addEventListener("keydown", this.boundKeyDown);
+    }
+  }
+
+  /**
+   * Keyboard listener for osu!-style navigation.
+   * @param {KeyboardEvent} e
+   */
+  onKeyDown(e) {
+    if (!this.isOpen()) return;
+
+    // Ignore keyboard nav when typing inside an input or textarea
+    const activeEl = document.activeElement;
+    if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA" || activeEl.isContentEditable)) {
+      return;
+    }
+
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.close();
+      return;
+    }
+
+    if (!this.songs || this.songs.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      this.selectNextSong();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      this.selectPreviousSong();
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      this.launchCurrentSong();
+    }
+  }
+
+  /**
+   * Selects the next song in the list.
+   */
+  selectNextSong() {
+    if (!this.songs || this.songs.length === 0) return;
+    const nextIdx = (this.selectedIndex + 1) % this.songs.length;
+    this.selectSongByIndex(nextIdx, true);
+  }
+
+  /**
+   * Selects the previous song in the list.
+   */
+  selectPreviousSong() {
+    if (!this.songs || this.songs.length === 0) return;
+    const prevIdx = (this.selectedIndex - 1 + this.songs.length) % this.songs.length;
+    this.selectSongByIndex(prevIdx, true);
+  }
+
+  /**
+   * Selects song by index and scrolls card into view.
+   * @param {number} idx
+   * @param {boolean} playSound
+   * @param {boolean} playPreview
+   */
+  selectSongByIndex(idx, playSound = true, playPreview = true) {
+    if (!this.songs || idx < 0 || idx >= this.songs.length) return;
+
+    this.selectedIndex = idx;
+    this.selectedSong = this.songs[idx];
+
+    if (playSound && this.soundManager) {
+      this.soundManager.playClick();
+    }
+
+    // STRICT CHECK: Only play music preview if explicitly requested AND the play menu is actively open on screen!
+    if (playPreview && this.musicPlayer && this.isOpen()) {
+      this.musicPlayer.playPreview(this.selectedSong);
+    }
+
+    this.updateActiveCardHighlight();
+    this.renderSelectedSongDetails(this.selectedSong);
+
+    // Auto-scroll card into view smoothly (only when play menu is open)
+    if (this.songListContainer && this.isOpen()) {
+      const activeCard = this.songListContainer.querySelector(`.song-card[data-song-index="${idx}"]`);
+      if (activeCard && typeof activeCard.scrollIntoView === "function") {
+        activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
+    }
+  }
+
+  /**
+   * Synchronizes `.is-selected` class across all song cards in DOM.
+   */
+  updateActiveCardHighlight() {
+    if (!this.songListContainer) return;
+    const cards = this.songListContainer.querySelectorAll(".song-card");
+    cards.forEach((card) => {
+      const cardIdx = Number(card.getAttribute("data-song-index"));
+      if (cardIdx === this.selectedIndex) {
+        card.classList.add("is-selected");
+      } else {
+        card.classList.remove("is-selected");
       }
     });
   }
 
   /**
-   * Handles hovering over a song.
-   * On hover: show ONLY song title and music creator, and play its music preview in a loop.
-   * Only hovering does NOT select a song.
+   * Handles hovering over a song card.
+   * Plays music preview in a loop.
    * @param {Object} song
    * @param {HTMLElement} cardEl
    */
   handleSongHover(song, cardEl) {
+    if (!this.isOpen()) return;
     this.hoveredSong = song;
 
     if (this.soundManager) {
       this.soundManager.playHover();
     }
 
-    // Start music preview for this track in a loop
-    if (this.musicPlayer) {
+    // Start music preview for this track in a loop (only when menu is open)
+    if (this.musicPlayer && this.isOpen()) {
       this.musicPlayer.playPreview(song);
     }
 
-    // If this hovered song is already the selected song, render its full view
+    // If hovered song is already the selected song, keep showing full view
     if (this.selectedSong && this.selectedSong.id === song.id) {
       this.renderSelectedSongDetails(this.selectedSong);
     } else {
-      // Hovering an unselected song: show ONLY title and music creator
+      // Show preview badge while keeping rich artwork of hovered track
       this.renderHoverDetails(song);
     }
   }
 
   /**
    * Handles leaving the song list.
-   * Stops preview when hovering another song or leaving the list.
+   * Stops preview or restores selected song preview.
    */
   handleListLeave() {
+    if (!this.isOpen()) return;
     this.hoveredSong = null;
 
     if (this.selectedSong) {
-      // Return to selected song's music and full information
-      if (this.musicPlayer) {
+      if (this.musicPlayer && this.isOpen()) {
         this.musicPlayer.playPreview(this.selectedSong);
       }
       this.renderSelectedSongDetails(this.selectedSong);
     } else {
-      // No song selected: stop preview completely
       if (this.musicPlayer) {
         this.musicPlayer.stop();
       }
@@ -177,137 +344,179 @@ class PlayMenu {
   }
 
   /**
-   * Handles clicking a song card.
-   * On click: select the song, keep its music playing, and display additional info
-   * (mapper, creation date, and other metadata).
-   * @param {Object} song
-   * @param {HTMLElement} cardEl
+   * Launches gameplay for currently selected song.
    */
-  handleSongClick(song, cardEl) {
-    if (this.soundManager) {
-      this.soundManager.playClick();
+  launchCurrentSong() {
+    if (!this.selectedSong) return;
+    if (this.soundManager) this.soundManager.playClick();
+    if (typeof this.onStartTrack === "function") {
+      this.onStartTrack(this.selectedSong);
     }
-
-    this.selectedSong = song;
-
-    // Keep music preview playing in loop
-    if (this.musicPlayer) {
-      this.musicPlayer.playPreview(song);
-    }
-
-    // Update selected class on cards
-    const allCards = this.songListContainer.querySelectorAll(".song-card");
-    allCards.forEach((c) => c.classList.remove("is-selected"));
-    cardEl.classList.add("is-selected");
-
-    // Display additional information (mapper, creation date, etc.)
-    this.renderSelectedSongDetails(song);
   }
 
   /**
-   * Renders hover-only details (shows ONLY song title and music creator).
+   * Renders hover-only details (title, creator, and preview status with background art).
    * @param {Object} song
    */
   renderHoverDetails(song) {
     if (!this.songDetailsContainer) return;
 
+    const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+
     this.songDetailsContainer.innerHTML = `
-      <div class="hover-preview-view">
-        <div class="song-info-header">
-          <span class="preview-mode-tag">Previewing</span>
-          <h2 class="song-info-title">${song.name}</h2>
-          <p class="song-hover-creator">Music Creator: <strong>${song.creator}</strong></p>
-        </div>
-
-        <div class="audio-preview-indicator">
-          <div class="equalizer-bars" aria-hidden="true">
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
+      <div class="selected-song-view hover-mode" style="background-image: url('${coverSrc}');">
+        <div class="song-details-backdrop-overlay"></div>
+        <div class="song-details-content">
+          <div class="song-info-header">
+            <span class="preview-mode-tag">Previewing Track</span>
+            <div class="song-info-badges">
+              <span class="badge-difficulty" style="color: ${song.color || 'var(--color-accent)'}; border-color: ${song.color || 'var(--color-accent)'};">
+                ${song.difficulty || "Standard"}
+              </span>
+              <span class="badge-nps-preview">${this.getSongNps(song)} NPS</span>
+              <span class="badge-duration-preview">${song.duration || "03:00"}</span>
+            </div>
+            <h2 class="song-info-title">${song.name}</h2>
+            <p class="song-hover-creator">Music Creator: <strong>${song.creator || "Unknown Artist"}</strong></p>
+            <p class="song-hover-mapper">Mapped by: <strong>${song.mapper || "Anonymous"}</strong></p>
           </div>
-          <span class="preview-status-text">Playing Preview (Looped)</span>
-        </div>
 
-        <div class="hover-tip-container">
-          <p class="hover-tip-text">Click song to select and view map details &amp; launch track</p>
+          <div class="audio-preview-indicator">
+            <div class="equalizer-bars" aria-hidden="true">
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+            </div>
+            <span class="preview-status-text">Playing Preview (Looped)</span>
+          </div>
+
+          <div class="hover-tip-container">
+            <p class="hover-tip-text">Click to select &bull; Double-click or press Enter to launch track</p>
+          </div>
         </div>
       </div>
     `;
   }
 
   /**
-   * Renders full selected song details (mapper, creation date, duration, NPS, and Start Track button).
+   * Calculates density (Notes Per Second) dynamically for a song.
+   * @param {Object} song
+   * @returns {string}
+   */
+  getSongNps(song) {
+    if (!song) return "0.0";
+    if (typeof song.nps === "number" && song.nps > 0) {
+      return song.nps.toFixed(1);
+    }
+    const notesCount = (song.notes && song.notes.length) || 0;
+    if (notesCount === 0) return "0.0";
+    let dur = Number(song.durationSeconds);
+    if (!dur || dur <= 0) {
+      if (typeof song.duration === "string") {
+        const parts = song.duration.split(":");
+        if (parts.length === 2) {
+          dur = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        }
+      }
+    }
+    if (!dur || dur <= 0) {
+      dur = 180;
+    }
+    return (notesCount / dur).toFixed(1);
+  }
+
+  /**
+   * Renders full selected song details with osu!-style background artwork and metadata.
    * @param {Object} song
    */
   renderSelectedSongDetails(song) {
     if (!this.songDetailsContainer) return;
 
+    const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+    const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id) : 0;
+    const bestScoreDisplay = bestScore > 0 ? bestScore.toLocaleString() : "--";
+    const notesCount = song.notes ? song.notes.length : (window.SAMPLE_MAPS && window.SAMPLE_MAPS[song.id] ? window.SAMPLE_MAPS[song.id].length : 0);
+
     this.songDetailsContainer.innerHTML = `
-      <div class="selected-song-view">
-        <div class="song-info-header">
-          <div class="song-info-badges">
-            <span class="badge-difficulty" style="color: ${song.color || 'var(--color-accent)'}; border-color: ${song.color || 'var(--color-accent)'};">
-              ${song.difficulty || "Standard"}
-            </span>
-            <span class="badge-nps-preview">${song.nps} NPS</span>
-            <span class="badge-duration-preview">${song.duration || "03:00"}</span>
+      <div class="selected-song-view" style="background-image: url('${coverSrc}');">
+        <div class="song-details-backdrop-overlay"></div>
+        <div class="song-details-content">
+          <div class="song-info-header">
+            <div class="song-info-badges">
+              <span class="badge-difficulty" style="color: ${song.color || 'var(--color-accent)'}; border-color: ${song.color || 'var(--color-accent)'};">
+                ${song.difficulty || "Standard"}
+              </span>
+              <span class="badge-nps-preview">${this.getSongNps(song)} NPS</span>
+              <span class="badge-duration-preview">${song.duration || "03:00"}</span>
+              <span class="badge-notes-preview">${notesCount} Notes</span>
+            </div>
+            <h2 class="song-info-title">${song.name}</h2>
+            <p class="song-selected-creator">Music Creator: <strong>${song.creator || "Unknown Artist"}</strong></p>
           </div>
-          <h2 class="song-info-title">${song.name}</h2>
-          <p class="song-selected-creator">Music Creator: <strong>${song.creator}</strong></p>
-        </div>
 
-        <!-- Additional Information Grid -->
-        <div class="song-meta-grid">
-          <div class="meta-field">
-            <span class="meta-label">Mapper</span>
-            <span class="meta-value">${song.mapper}</span>
+          <!-- Additional Information Grid -->
+          <div class="song-meta-grid">
+            <div class="meta-field">
+              <span class="meta-label">Mapper</span>
+              <span class="meta-value">${song.mapper || "Anonymous"}</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Length</span>
+              <span class="meta-value">${song.duration || "03:00"}</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Personal Best</span>
+              <span class="meta-value highlight-score">${bestScoreDisplay}</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Date Added</span>
+              <span class="meta-value">${song.date || "Recent"}</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Density</span>
+              <span class="meta-value">${this.getSongNps(song)} NPS</span>
+            </div>
+            <div class="meta-field">
+              <span class="meta-label">Track Type</span>
+              <span class="meta-value">${song.isDefault ? "Default Map" : "Custom Map"}</span>
+            </div>
           </div>
-          <div class="meta-field">
-            <span class="meta-label">Creation Date</span>
-            <span class="meta-value">${song.date}</span>
-          </div>
-          <div class="meta-field">
-            <span class="meta-label">Length</span>
-            <span class="meta-value">${song.duration}</span>
-          </div>
-        </div>
 
-        <div class="audio-preview-indicator">
-          <div class="equalizer-bars" aria-hidden="true">
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
-            <span class="eq-bar"></span>
+          <div class="audio-preview-indicator">
+            <div class="equalizer-bars" aria-hidden="true">
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+              <span class="eq-bar"></span>
+            </div>
+            <span class="preview-status-text">Preview Playing &bull; Selected</span>
           </div>
-          <span class="preview-status-text">Preview Playing &bull; Selected</span>
-        </div>
-      </div>
 
-      <!-- Start Track Action -->
-      <div class="song-action-container">
-        <div class="selected-status-badge ready">
-          <div>
-            <div class="selected-status-title">Track Selected: ${song.name}</div>
-            <div class="selected-status-note">Ready to play with mouse orb &bull; 2 Colors</div>
+          <!-- Start Track Action -->
+          <div class="song-action-container">
+            <div class="selected-status-badge ready">
+              <div class="selected-status-textgroup">
+                <div class="selected-status-title">Track Ready: ${song.name}</div>
+                <div class="selected-status-note">Dual Orb System &bull; Press Enter or Click to Play</div>
+              </div>
+              <button id="btn-start-gameplay" class="btn-start-action" type="button">
+                <span>Play Track</span>
+                <span class="btn-arrow">&rarr;</span>
+              </button>
+            </div>
           </div>
-          <button id="btn-start-gameplay" class="btn-start-action" type="button">
-            Play Track &rarr;
-          </button>
         </div>
       </div>
     `;
 
     // Connect Start Track button
-    const startBtn = this.songDetailsContainer.querySelector("#btn-start-gameplay") || document.getElementById("btn-start-gameplay");
+    const startBtn = this.songDetailsContainer.querySelector("#btn-start-gameplay");
     if (startBtn) {
       startBtn.addEventListener("click", () => {
-        if (this.soundManager) this.soundManager.playClick();
-        if (typeof this.onStartTrack === "function") {
-          this.onStartTrack(song);
-        }
+        this.launchCurrentSong();
       });
     }
   }
@@ -322,7 +531,7 @@ class PlayMenu {
       <div class="song-details-empty">
         <div class="song-details-empty-icon">&#9835;</div>
         <h3>Select a Track</h3>
-        <p>Hover over a song on the right to hear a looped preview, or click to select and prepare for play.</p>
+        <p>Use &uarr; &darr; keys or mouse to explore songs. Press Enter or click Play Track to start.</p>
       </div>
     `;
   }
@@ -337,6 +546,11 @@ class PlayMenu {
     if (this.view) {
       this.view.classList.add("is-active");
       this.view.setAttribute("aria-hidden", "false");
+    }
+
+    if (this.songs && this.songs.length > 0) {
+      const idx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
+      this.selectSongByIndex(idx, false, true);
     }
   }
 
@@ -375,5 +589,10 @@ class PlayMenu {
   }
 }
 
-// Expose to window
-window.PlayMenu = PlayMenu;
+// Expose to window / module
+if (typeof window !== "undefined") {
+  window.PlayMenu = PlayMenu;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = PlayMenu;
+}

@@ -69,7 +69,8 @@ function initApp() {
     },
     onReplay: () => {
       if (currentTestedMap) {
-        launchTrackGameplay(currentTestedMap, gameReturnTarget);
+        const replaySpeed = gameReturnTarget === "editor" && mapEditor ? (mapEditor.playSpeed || 1.0) : 1.0;
+        launchTrackGameplay(currentTestedMap, gameReturnTarget, replaySpeed);
       }
     }
   });
@@ -81,6 +82,10 @@ function initApp() {
     if (activeGameEngine) {
       activeGameEngine.stop();
       activeGameEngine = null;
+    }
+    // Always reset music player playback rate back to 1.0x when leaving game view
+    if (musicPlayer && typeof musicPlayer.setPlaybackRate === "function") {
+      musicPlayer.setPlaybackRate(1.0);
     }
     gameView.hide();
 
@@ -96,25 +101,43 @@ function initApp() {
    * Transitions to the active Gameplay track.
    * @param {Object} song
    * @param {'select' | 'editor'} returnTarget
+   * @param {number} speedMultiplier
    */
-  function launchTrackGameplay(song, returnTarget = "select") {
+  function launchTrackGameplay(song, returnTarget = "select", speedMultiplier = 1.0) {
     gameReturnTarget = returnTarget;
     currentTestedMap = song;
+
+    // Apply speed multiplier ONLY in editor playtesting; normal gameplay is strictly 1.0x
+    const effectiveSpeed = returnTarget === "editor" ? (Number(speedMultiplier) || 1.0) : 1.0;
+    if (musicPlayer && typeof musicPlayer.setPlaybackRate === "function") {
+      musicPlayer.setPlaybackRate(effectiveSpeed);
+    }
+
+    if (activeGameEngine) {
+      activeGameEngine.stop();
+      activeGameEngine = null;
+    }
 
     // Hide any open menus
     playMenu.hideForGame();
     createMenu.hide();
 
+    // Ensure latest map data is queried from mapStorage
+    const freshSong = (mapStorage && song.id && mapStorage.getMap(song.id)) || song;
+    currentTestedMap = freshSong;
+
     // Prepare game view with track metadata
-    gameView.setupSong(song);
+    gameView.setupSong(freshSong);
     gameView.show();
 
     // Use notes from the map
-    const trackNotes = song.notes || (window.SAMPLE_MAPS && window.SAMPLE_MAPS[song.id]) || [];
+    const trackNotes = (freshSong.notes && Array.isArray(freshSong.notes))
+      ? freshSong.notes
+      : ((window.SAMPLE_MAPS && window.SAMPLE_MAPS[freshSong.id]) || []);
 
     // Instantiate and launch game engine
     activeGameEngine = new GameEngineClass({
-      song,
+      song: freshSong,
       notes: trackNotes,
       musicPlayer,
       soundManager,
@@ -135,8 +158,9 @@ function initApp() {
   const mapEditor = new MapEditorClass({
     mapStorage,
     soundManager,
-    onTestMap: (mapToTest) => {
-      launchTrackGameplay(mapToTest, "editor");
+    musicPlayer,
+    onTestMap: (mapToTest, playSpeed = 1.0) => {
+      launchTrackGameplay(mapToTest, "editor", playSpeed);
     },
     onExit: () => {
       createMenu.open();
@@ -157,6 +181,7 @@ function initApp() {
   const playMenu = new PlayMenuClass({
     soundManager,
     musicPlayer,
+    mapStorage,
     songs: mapStorage.getAllMaps(),
     onStartTrack: (selectedSong) => {
       launchTrackGameplay(selectedSong, "select");
@@ -164,9 +189,11 @@ function initApp() {
   });
   playMenu.init();
 
-  // Keep play menu updated whenever map storage changes
+  // Keep play menu updated whenever map storage changes (if open)
   mapStorage.onChange((updatedMaps) => {
-    playMenu.updateSongs(updatedMaps);
+    if (playMenu.isOpen()) {
+      playMenu.updateSongs(updatedMaps);
+    }
   });
 
   // 7. Connect Main Menu Buttons

@@ -1,107 +1,11 @@
 /**
  * @file mapData.js
- * @description Sample mapped notes for Project Alpha Plus tracks.
- * Each note has a timestamp (in seconds), required color ('red' | 'blue'),
- * and normalized screen position coordinates (x, y from 0.1 to 0.9).
+ * @description Preset mapped notes for Project Alpha Plus tracks.
+ * Initial sample tracks have been removed. Tracks are now imported from
+ * the dedicated `importedTracks.js` file or created via the Create menu.
  */
 
-const SAMPLE_MAPS = {
-  test: [
-    { time: 1.8, color: "red", x: 0.35, y: 0.40, direction: "left" },
-    { time: 2.6, color: "blue", x: 0.65, y: 0.40, direction: "right" },
-    { time: 3.4, color: "red", x: 0.40, y: 0.60, direction: "up" },
-    { time: 4.2, color: "blue", x: 0.60, y: 0.60, direction: "down" },
-    { time: 5.0, color: "red", x: 0.50, y: 0.30, direction: "up" },
-    { time: 5.8, color: "blue", x: 0.50, y: 0.70, direction: "down" },
-    { time: 6.6, color: "red", x: 0.30, y: 0.50, direction: "left" },
-    { time: 7.4, color: "blue", x: 0.70, y: 0.50, direction: "right" },
-    { time: 8.2, color: "red", x: 0.38, y: 0.35, direction: "up" },
-    { time: 9.0, color: "red", x: 0.62, y: 0.35, direction: "right" },
-    { time: 9.8, color: "blue", x: 0.62, y: 0.65, direction: "down" },
-    { time: 10.6, color: "blue", x: 0.38, y: 0.65, direction: "left" },
-    { time: 11.4, color: "red", x: 0.50, y: 0.45, direction: "up" },
-    { time: 12.2, color: "blue", x: 0.50, y: 0.55, direction: "down" },
-    { time: 13.0, color: "red", x: 0.28, y: 0.40, direction: "left" },
-    { time: 13.8, color: "blue", x: 0.72, y: 0.40, direction: "right" },
-    { time: 14.6, color: "red", x: 0.35, y: 0.65, direction: "down" },
-    { time: 15.4, color: "blue", x: 0.65, y: 0.65, direction: "up" },
-    { time: 16.2, color: "red", x: 0.50, y: 0.30, direction: "left" },
-    { time: 17.0, color: "blue", x: 0.50, y: 0.70, direction: "right" },
-    { time: 17.8, color: "red", x: 0.42, y: 0.48, direction: "up" },
-    { time: 18.6, color: "blue", x: 0.58, y: 0.52, direction: "down" },
-    { time: 19.4, color: "red", x: 0.30, y: 0.35, direction: "left" },
-    { time: 20.2, color: "blue", x: 0.70, y: 0.65, direction: "right" }
-  ],
-  test1: [
-    { time: 1.5, color: "blue", x: 0.50, y: 0.35, direction: "up" },
-    { time: 2.2, color: "red", x: 0.35, y: 0.50, direction: "left" },
-    { time: 2.9, color: "blue", x: 0.65, y: 0.50, direction: "right" },
-    { time: 3.6, color: "red", x: 0.50, y: 0.65, direction: "down" },
-    { time: 4.3, color: "blue", x: 0.30, y: 0.40, direction: "left" },
-    { time: 5.0, color: "red", x: 0.70, y: 0.40, direction: "right" },
-    { time: 5.7, color: "blue", x: 0.30, y: 0.60, direction: "down" },
-    { time: 6.4, color: "red", x: 0.70, y: 0.60, direction: "up" },
-    { time: 7.1, color: "blue", x: 0.45, y: 0.30, direction: "left" },
-    { time: 7.8, color: "red", x: 0.55, y: 0.30, direction: "right" },
-    { time: 8.5, color: "blue", x: 0.45, y: 0.70, direction: "down" },
-    { time: 9.2, color: "red", x: 0.55, y: 0.70, direction: "up" },
-    { time: 9.9, color: "blue", x: 0.50, y: 0.50, direction: "left" },
-    { time: 10.6, color: "red", x: 0.32, y: 0.45, direction: "up" },
-    { time: 11.3, color: "blue", x: 0.68, y: 0.45, direction: "right" },
-    { time: 12.0, color: "red", x: 0.50, y: 0.32, direction: "up" },
-    { time: 12.7, color: "blue", x: 0.50, y: 0.68, direction: "down" },
-    { time: 13.4, color: "red", x: 0.38, y: 0.58, direction: "left" },
-    { time: 14.1, color: "blue", x: 0.62, y: 0.42, direction: "right" },
-    { time: 14.8, color: "red", x: 0.50, y: 0.50, direction: "down" }
-  ],
-  test2: [
-    { time: 1.4, color: "red", x: 0.40, y: 0.35, direction: "left" },
-    { time: 2.0, color: "red", x: 0.60, y: 0.35, direction: "right" },
-    { time: 2.6, color: "blue", x: 0.50, y: 0.65, direction: "down" },
-    { time: 3.2, color: "blue", x: 0.35, y: 0.50, direction: "left" },
-    { time: 3.8, color: "red", x: 0.65, y: 0.50, direction: "right" },
-    { time: 4.4, color: "red", x: 0.50, y: 0.30, direction: "up" },
-    { time: 5.0, color: "blue", x: 0.30, y: 0.65, direction: "down" },
-    { time: 5.6, color: "blue", x: 0.70, y: 0.65, direction: "right" },
-    { time: 6.2, color: "red", x: 0.50, y: 0.50, direction: "up" },
-    { time: 6.8, color: "blue", x: 0.40, y: 0.40, direction: "left" },
-    { time: 7.4, color: "red", x: 0.60, y: 0.60, direction: "right" },
-    { time: 8.0, color: "blue", x: 0.30, y: 0.35, direction: "up" },
-    { time: 8.6, color: "red", x: 0.70, y: 0.35, direction: "right" },
-    { time: 9.2, color: "blue", x: 0.50, y: 0.70, direction: "down" },
-    { time: 9.8, color: "red", x: 0.35, y: 0.55, direction: "left" },
-    { time: 10.4, color: "blue", x: 0.65, y: 0.45, direction: "right" },
-    { time: 11.0, color: "red", x: 0.50, y: 0.35, direction: "up" },
-    { time: 11.6, color: "blue", x: 0.50, y: 0.65, direction: "down" },
-    { time: 12.2, color: "red", x: 0.32, y: 0.50, direction: "left" },
-    { time: 12.8, color: "blue", x: 0.68, y: 0.50, direction: "right" },
-    { time: 13.4, color: "red", x: 0.45, y: 0.45, direction: "up" },
-    { time: 14.0, color: "blue", x: 0.55, y: 0.55, direction: "down" }
-  ],
-  test3: [
-    { time: 1.2, color: "red", x: 0.30, y: 0.30, direction: "left" },
-    { time: 1.7, color: "blue", x: 0.70, y: 0.30, direction: "up" },
-    { time: 2.2, color: "red", x: 0.70, y: 0.70, direction: "right" },
-    { time: 2.7, color: "blue", x: 0.30, y: 0.70, direction: "down" },
-    { time: 3.2, color: "red", x: 0.50, y: 0.35, direction: "up" },
-    { time: 3.7, color: "blue", x: 0.65, y: 0.50, direction: "right" },
-    { time: 4.2, color: "red", x: 0.50, y: 0.65, direction: "down" },
-    { time: 4.7, color: "blue", x: 0.35, y: 0.50, direction: "left" },
-    { time: 5.2, color: "red", x: 0.42, y: 0.42, direction: "up" },
-    { time: 5.7, color: "blue", x: 0.58, y: 0.42, direction: "right" },
-    { time: 6.2, color: "red", x: 0.58, y: 0.58, direction: "down" },
-    { time: 6.7, color: "blue", x: 0.42, y: 0.58, direction: "left" },
-    { time: 7.2, color: "red", x: 0.50, y: 0.30, direction: "up" },
-    { time: 7.7, color: "blue", x: 0.50, y: 0.70, direction: "down" },
-    { time: 8.2, color: "red", x: 0.28, y: 0.50, direction: "left" },
-    { time: 8.7, color: "blue", x: 0.72, y: 0.50, direction: "right" },
-    { time: 9.2, color: "red", x: 0.40, y: 0.35, direction: "up" },
-    { time: 9.7, color: "blue", x: 0.60, y: 0.65, direction: "down" },
-    { time: 10.2, color: "red", x: 0.60, y: 0.35, direction: "right" },
-    { time: 10.7, color: "blue", x: 0.40, y: 0.65, direction: "left" },
-    { time: 11.2, color: "red", x: 0.50, y: 0.50, direction: "up" }
-  ]
-};
+const SAMPLE_MAPS = {};
 
-// Expose to window
+// Expose globally
 window.SAMPLE_MAPS = SAMPLE_MAPS;

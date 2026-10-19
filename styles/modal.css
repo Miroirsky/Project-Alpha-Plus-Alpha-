@@ -30,11 +30,11 @@
   width: 90%;
   max-width: 480px;
   background: var(--color-surface);
-  border: 1px solid var(--color-surface-border-active);
-  border-radius: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.15rem;
   padding: 2.25rem 2rem;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5), 0 0 35px var(--color-accent-glow);
-  transform: translateY(20px) scale(0.96);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65), 0 0 24px rgba(0, 0, 0, 0.4);
+  transform: translateY(20px) scale(0.97);
   transition: transform var(--transition-speed) var(--transition-bounce);
 }
 
@@ -49,13 +49,13 @@
   justify-content: space-between;
   margin-bottom: 2rem;
   padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--color-surface-border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .modal-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-primary);
 }
@@ -272,4 +272,281 @@
 .modal-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 1rem;
+}
+
+/* ==========================================================================
+   Export & Import Track Modals
+   ========================================================================== */
+.export-modal-dialog,
+.import-modal-dialog {
+  max-width: 540px;
+  width: 92%;
+}
+
+.export-track-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1.25rem;
+}
+
+.export-summary-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.4rem;
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+}
+
+.summary-val {
+  font-size: 0.85rem;
+  color: var(--color-accent);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.export-desc,
+.import-desc {
+  font-size: 0.88rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 0.9rem;
+}
+
+.export-desc code,
+.import-desc code {
+  color: var(--color-accent);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.3rem;
+  font-family: var(--font-family-mono);
+  font-size: 0.82rem;
+}
+
+.code-container {
+  position: relative;
+  margin-bottom: 1.25rem;
+}
+
+.export-textarea,
+.import-textarea {
+  width: 100%;
+  height: 110px;
+  background: rgba(4, 7, 14, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.55rem;
+  padding: 0.8rem 1rem;
+  color: var(--color-text-primary);
+  font-family: var(--font-family-mono);
+  font-size: 0.82rem;
+  line-height: 1.4;
+  resize: vertical;
+  outline: none;
+  transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.export-textarea:focus,
+.import-textarea:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+.export-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.export-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-copy-export {
+  padding: 0.65rem 1.4rem;
+  font-size: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-download-export {
+  padding: 0.65rem 1rem;
+  font-size: 0.82rem;
+}
+
+.export-feedback-toast {
+  font-size: 0.85rem;
+  color: #2ed573;
+  font-weight: 700;
+  font-family: var(--font-family-mono);
+  text-shadow: 0 0 8px rgba(46, 213, 115, 0.5);
+  animation: feedback-pop 0.3s ease;
+}
+
+@keyframes feedback-pop {
+  0% { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.import-error-alert {
+  padding: 0.65rem 1rem;
+  background: rgba(255, 71, 87, 0.15);
+  border: 1px solid #ff4757;
+  border-radius: 0.5rem;
+  color: #ff6b81;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  animation: shake 0.3s ease;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+.import-actions-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+}
+
+.btn-confirm-import {
+  padding: 0.65rem 1.5rem;
+  font-size: 0.88rem;
+}
+
+/* ==========================================================================
+   Track Parameters Modal
+   ========================================================================== */
+.params-modal-dialog {
+  max-width: 580px;
+  width: 92%;
+}
+
+.modal-header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.track-type-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: var(--font-family-mono);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+  border: 1px solid rgba(0, 212, 255, 0.4);
+}
+
+.track-type-badge.is-default {
+  background: rgba(255, 165, 2, 0.15);
+  color: #ffa502;
+  border-color: rgba(255, 165, 2, 0.4);
+}
+
+.params-note-callout {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  background: rgba(0, 212, 255, 0.08);
+  border-left: 3px solid var(--color-accent);
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+@media (max-width: 600px) {
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.color-picker-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-color-input {
+  width: 44px;
+  height: 38px;
+  border: 1.5px solid var(--color-surface-border);
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.form-color-input:focus {
+  border-color: var(--color-accent);
+}
+
+.swatch-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.swatch-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.swatch-btn:hover {
+  transform: scale(1.15);
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.6);
+}
+
+.swatch-btn.is-active {
+  border-color: #ffffff;
+  box-shadow: 0 0 12px currentColor;
+  transform: scale(1.15);
+}
+
+.params-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 1.5rem;
 }

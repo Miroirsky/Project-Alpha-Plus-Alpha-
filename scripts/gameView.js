@@ -51,8 +51,13 @@ class GameView {
     this.resultsGood = document.getElementById("results-good");
     this.resultsWrongDir = document.getElementById("results-wrong-dir");
     this.resultsRecordNotice = document.getElementById("results-record-notice");
+    this.resultsRankBadge = document.getElementById("results-rank-badge");
+    this.resultsMainRankBadge = document.getElementById("results-main-rank-badge");
+    this.resultsRankPill = document.getElementById("results-rank-pill");
     this.resultsReplayBtn = document.getElementById("btn-results-replay");
     this.resultsReturnBtn = document.getElementById("btn-results-return");
+
+    this.orbTrail = [];
 
     this.boundResize = this.resizeCanvas.bind(this);
     if (typeof window !== "undefined" && window.addEventListener) {
@@ -94,6 +99,12 @@ class GameView {
         if (this.onReplay) this.onReplay();
       });
     }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && this.isOpen()) {
+        if (this.onExit) this.onExit();
+      }
+    });
   }
 
   /**
@@ -156,7 +167,7 @@ class GameView {
   }
 
   /**
-   * Draws scene on canvas.
+   * Draws scene on canvas with polished visual effects and smooth motion trails.
    * @param {Object} state
    */
   drawScene(state) {
@@ -165,6 +176,20 @@ class GameView {
     const ctx = this.ctx;
     const width = this.canvas.width;
     const height = this.canvas.height;
+
+    // Track motion trail points for smooth fluid orb movement
+    if (state.playerOrb) {
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      this.orbTrail.push({
+        x: state.playerOrb.x,
+        y: state.playerOrb.y,
+        color: state.playerOrb.color,
+        time: now
+      });
+      while (this.orbTrail.length > 7 || (this.orbTrail.length > 0 && now - this.orbTrail[0].time > 140)) {
+        this.orbTrail.shift();
+      }
+    }
 
     ctx.clearRect(0, 0, width, height);
 
@@ -175,213 +200,421 @@ class GameView {
   }
 
   /**
-   * Draws ambient rhythmic arena background.
+   * Draws ambient rhythmic arena background with square playfield boundary and subtle pulses.
    */
   drawTrackBackground(ctx, width, height, time) {
+    const playArea = PlayArea.getMetrics(width, height);
     const cx = width / 2;
     const cy = height / 2;
+    const s = playArea.size;
+    const ox = playArea.offsetX;
+    const oy = playArea.offsetY;
 
     ctx.save();
-    ctx.strokeStyle = "rgba(0, 212, 255, 0.06)";
+
+    // 1. Subtle square play area boundary & corner brackets
+    ctx.strokeStyle = "rgba(0, 212, 255, 0.12)";
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(ox, oy, s, s);
+
+    // Corner accents
+    const cornerLen = Math.min(28, s * 0.07);
+    ctx.strokeStyle = "rgba(0, 212, 255, 0.4)";
+    ctx.lineWidth = 2.5;
+
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + cornerLen);
+    ctx.lineTo(ox, oy);
+    ctx.lineTo(ox + cornerLen, oy);
+    ctx.stroke();
+
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(ox + s - cornerLen, oy);
+    ctx.lineTo(ox + s, oy);
+    ctx.lineTo(ox + s, oy + cornerLen);
+    ctx.stroke();
+
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(ox, oy + s - cornerLen);
+    ctx.lineTo(ox, oy + s);
+    ctx.lineTo(ox + cornerLen, oy + s);
+    ctx.stroke();
+
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(ox + s - cornerLen, oy + s);
+    ctx.lineTo(ox + s, oy + s);
+    ctx.lineTo(ox + s, oy + s - cornerLen);
+    ctx.stroke();
+
+    // 2. Dual concentric rhythmic breathing pulse rings inside square play area
+    const maxPulse = s * 0.44;
+    const pulse1 = ((time * 70) % maxPulse) + 20;
+    const pulse2 = (((time * 70) + maxPulse * 0.5) % maxPulse) + 20;
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, pulse1, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0, 212, 255, ${Math.max(0, 0.07 * (1 - pulse1 / maxPulse))})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, pulse2, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0, 212, 255, ${Math.max(0, 0.07 * (1 - pulse2 / maxPulse))})`;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Circular arena boundary inside square
+    ctx.beginPath();
+    ctx.arc(cx, cy, s * 0.44, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 212, 255, 0.08)";
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Crosshairs centered in square
+    ctx.strokeStyle = "rgba(0, 212, 255, 0.05)";
     ctx.lineWidth = 1;
-
-    const pulseRadius = ((time * 60) % 200) + 40;
     ctx.beginPath();
-    ctx.arc(cx, cy, pulseRadius, 0, Math.PI * 2);
+    ctx.moveTo(ox, cy);
+    ctx.lineTo(ox + s, cy);
+    ctx.moveTo(cx, oy);
+    ctx.lineTo(cx, oy + s);
     ctx.stroke();
 
+    // Center rhythmic diamond focal indicator
     ctx.beginPath();
-    ctx.moveTo(cx - 300, cy);
-    ctx.lineTo(cx + 300, cy);
-    ctx.moveTo(cx, cy - 200);
-    ctx.lineTo(cx, cy + 200);
-    ctx.stroke();
+    ctx.moveTo(cx, cy - 6);
+    ctx.lineTo(cx + 6, cy);
+    ctx.lineTo(cx, cy + 6);
+    ctx.lineTo(cx - 6, cy);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(0, 212, 255, 0.22)";
+    ctx.fill();
 
     ctx.restore();
   }
 
   /**
-   * Draws active notes across 3 phases:
-   * 1. 1.0s Grow-In Phase (grows from 20% to full size; awards 200pt Perfect when approaching from required direction)
-   * 2. 1.0s Full-Size Hittable Phase (with circular countdown ring; awards 150–50pt Normal)
-   * 3. 0.5s Fadeout Phase on Miss
+   * Draws active notes across 3 phases in the square play area:
+   * 1. 1.0s Grow-In Phase (grows from 20% to full size; strictly immune to hits/penalties)
+   * 2. 1.0s Full-Size Active Phase (with circular countdown ring; normal notes hittable, triangle bomb notes hazard)
+   * 3. 0.5s Fadeout Phase on Miss / safe expiration
+   * Supports normal round notes (red/blue) and triangle bomb hazard notes (yellow/amber).
    */
   drawNotes(ctx, width, height, notes, currentTime) {
     if (!notes) return;
 
+    const playArea = PlayArea.getMetrics(width, height);
     const growDuration = 1.0;
     const fullDuration = 1.0;
-    const baseRadius = 26;
+    const baseRadius = playArea.noteRadius || playArea.bigRadius;
+    const triangleRadius = playArea.triangleRadius || (baseRadius * 1.05);
 
     notes.forEach((note) => {
       if (note.hit || note.isExpired) return;
 
-      const elapsed = currentTime - note.time;
-      if (elapsed < 0) return; // Not yet spawned
+      const spawnTime = note.time - growDuration;
+      if (currentTime < spawnTime) return; // Not yet spawned
 
-      const noteX = note.x * width;
-      const noteY = note.y * height;
-      const colorHex = note.color === "red" ? "#ff4757" : "#00d4ff";
+      const isTriangle = note.type === "triangle" || note.type === "bomb";
+      const noteRadius = isTriangle ? triangleRadius : baseRadius;
+      const noteX = playArea.toScreenX(note.x);
+      const noteY = playArea.toScreenY(note.y);
+      const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : "#00d4ff");
 
-      // Phase 1: Grow-In Phase (0 <= elapsed < 1.0s)
-      if (elapsed < growDuration) {
-        const growProgress = elapsed / growDuration; // 0 to 1
-        const currentRadius = note.currentRadius || Math.max(6, baseRadius * (0.2 + 0.8 * growProgress));
+      // Phase 1: Grow-In Phase (spawnTime <= currentTime < note.time)
+      // Note finishes growing to 100% full size at exactly note.time (editor placement beat)
+      if (currentTime < note.time) {
+        const growProgress = Math.max(0, Math.min(1, (currentTime - spawnTime) / growDuration)); // 0 to 1
+        const minRadius = Math.max(5, noteRadius * 0.2);
+        const currentRadius = note.currentRadius || (minRadius + (noteRadius - minRadius) * growProgress);
 
         ctx.save();
 
-        // Outer target outline (showing the target full size they are growing toward)
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, baseRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = colorHex;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([4, 4]);
-        ctx.globalAlpha = 0.35 + 0.35 * growProgress;
-        ctx.stroke();
-        ctx.setLineDash([]);
+        if (isTriangle) {
+          this.drawTriangleNote(
+            ctx,
+            noteX,
+            noteY,
+            currentRadius,
+            noteRadius,
+            "growing",
+            growProgress,
+            1.0
+          );
+        } else {
+          // Normal single-ball note
+          // Target outline
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, baseRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.globalAlpha = 0.35 + 0.35 * growProgress;
+          ctx.stroke();
+          ctx.setLineDash([]);
 
-        // Expanding note core
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, currentRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = colorHex;
-        ctx.lineWidth = 3;
-        ctx.shadowColor = colorHex;
-        ctx.shadowBlur = 18;
-        ctx.stroke();
+          // Expanding note core
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, currentRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = 3.2;
+          ctx.shadowColor = colorHex;
+          ctx.shadowBlur = 20;
+          ctx.stroke();
 
-        ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.4)" : "rgba(0, 212, 255, 0.4)";
-        ctx.fill();
-
-        // Radiant golden "PERFECT (200)" hint ring during grow window
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, currentRadius + 3, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255, 211, 42, 0.75)";
-        ctx.lineWidth = 1.5;
-        ctx.shadowColor = "#ffd32a";
-        ctx.shadowBlur = 10;
-        ctx.stroke();
-
-        // Directional arrow and entry guide (only drawn for arrow notes)
-        this.drawDirectionalArrow(ctx, noteX, noteY, currentRadius, note.direction, colorHex, note.angle);
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.42)" : "rgba(0, 212, 255, 0.42)";
+          ctx.fill();
+        }
 
         ctx.restore();
       }
-      // Phase 2: Full-Size Hittable Phase (1.0s <= elapsed <= 2.0s)
-      else if (elapsed <= growDuration + fullDuration) {
-        const hittableProgress = (elapsed - growDuration) / fullDuration; // 0 to 1
+      // Phase 2: Full-Size Active Phase (note.time <= currentTime <= note.time + fullDuration)
+      else if (currentTime <= note.time + fullDuration) {
+        const hittableProgress = Math.max(0, Math.min(1, (currentTime - note.time) / fullDuration)); // 0 to 1
         const remainingFraction = Math.max(0, 1 - hittableProgress);
 
         ctx.save();
 
-        // Target Hit Circle (Full size)
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, baseRadius, 0, Math.PI * 2);
-        ctx.strokeStyle = colorHex;
-        ctx.lineWidth = 3;
-        ctx.shadowColor = colorHex;
-        ctx.shadowBlur = 18;
-        ctx.stroke();
+        if (isTriangle) {
+          this.drawTriangleNote(
+            ctx,
+            noteX,
+            noteY,
+            noteRadius,
+            noteRadius,
+            "full",
+            1.0,
+            remainingFraction
+          );
+        } else {
+          // Normal single-ball note
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, baseRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = 3.2;
+          ctx.shadowColor = colorHex;
+          ctx.shadowBlur = 20;
+          ctx.stroke();
 
-        // Translucent core
-        ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : "rgba(0, 212, 255, 0.3)";
-        ctx.fill();
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.32)" : "rgba(0, 212, 255, 0.32)";
+          ctx.fill();
 
-        // Directional arrow and entry guide (only drawn for arrow notes)
-        this.drawDirectionalArrow(ctx, noteX, noteY, baseRadius, note.direction, colorHex, note.angle);
+          // Circular countdown ring
+          const arcStart = -Math.PI / 2;
+          const arcEnd = -Math.PI / 2 + Math.PI * 2 * remainingFraction;
 
-        // Circular countdown ring indicating remaining hittable window
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, baseRadius + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * remainingFraction);
-        ctx.strokeStyle = colorHex;
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, baseRadius + 6, arcStart, arcEnd);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+
+          if (remainingFraction > 0.02) {
+            const tipX = noteX + Math.cos(arcEnd) * (baseRadius + 6);
+            const tipY = noteY + Math.sin(arcEnd) * (baseRadius + 6);
+            ctx.beginPath();
+            ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+            ctx.fillStyle = "#ffffff";
+            ctx.shadowColor = colorHex;
+            ctx.shadowBlur = 8;
+            ctx.fill();
+          }
+        }
 
         ctx.restore();
       }
-      // Phase 3: Fading out on miss (elapsed > 2.0s)
-      else if (note.isFading || note.phase === "fading") {
-        const opacity = Math.max(0, note.fadeOpacity != null ? note.fadeOpacity : 0);
+      // Phase 3: Fading out on miss / avoidance (currentTime > note.time + fullDuration)
+      else if (note.isFading || note.phase === "fading" || (currentTime > note.time + fullDuration && !note.hit)) {
+        const fadeElapsed = currentTime - (note.time + fullDuration);
+        const opacity = Math.max(0, note.fadeOpacity != null ? note.fadeOpacity : Math.max(0, 1 - fadeElapsed / 0.5));
 
         ctx.save();
         ctx.globalAlpha = opacity;
-        ctx.beginPath();
-        ctx.arc(noteX, noteY, baseRadius * (0.8 + 0.2 * opacity), 0, Math.PI * 2);
-        ctx.strokeStyle = "#8b9bb4";
-        ctx.fillStyle = "rgba(139, 155, 180, 0.15)";
-        ctx.lineWidth = 1.5;
-        ctx.fill();
-        ctx.stroke();
+
+        if (isTriangle) {
+          // Fading triangle
+          const r = noteRadius * (0.8 + 0.2 * opacity);
+          const topX = noteX;
+          const topY = noteY - r;
+          const brX = noteX + r * Math.cos(Math.PI / 6);
+          const brY = noteY + r * Math.sin(Math.PI / 6);
+          const blX = noteX - r * Math.cos(Math.PI / 6);
+          const blY = noteY + r * Math.sin(Math.PI / 6);
+
+          ctx.beginPath();
+          ctx.moveTo(topX, topY);
+          ctx.lineTo(brX, brY);
+          ctx.lineTo(blX, blY);
+          ctx.closePath();
+          ctx.strokeStyle = "#8b9bb4";
+          ctx.fillStyle = "rgba(139, 155, 180, 0.15)";
+          ctx.lineWidth = 1.5;
+          ctx.fill();
+          ctx.stroke();
+        } else {
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, baseRadius * (0.8 + 0.2 * opacity), 0, Math.PI * 2);
+          ctx.strokeStyle = "#8b9bb4";
+          ctx.fillStyle = "rgba(139, 155, 180, 0.15)";
+          ctx.lineWidth = 1.5;
+          ctx.fill();
+          ctx.stroke();
+        }
+
         ctx.restore();
       }
     });
   }
 
   /**
-   * Draws a clear, stylish directional arrow and entry gate indicating the required approach direction.
-   * If note is a normal note (no direction and no angle), nothing is drawn.
+   * Draws a clearly recognizable Triangle Bomb Note.
+   * Visually distinct from round and square notes with hazard warning stripes and pulsing hazard aura.
+   * Must be avoided during its active phase!
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} x
    * @param {number} y
-   * @param {number} radius
-   * @param {string} [direction]
-   * @param {string} colorHex
-   * @param {number} [angle]
+   * @param {number} currentRadius
+   * @param {number} targetRadius
+   * @param {string} phase
+   * @param {number} growProgress
+   * @param {number} remainingFraction
    */
-  drawDirectionalArrow(ctx, x, y, radius, direction, colorHex, angle) {
-    const hasDirection = Boolean(direction && direction !== "any");
-    const hasAngle = typeof angle === "number";
+  drawTriangleNote(
+    ctx,
+    x,
+    y,
+    currentRadius,
+    targetRadius,
+    phase,
+    growProgress,
+    remainingFraction
+  ) {
+    const isGrowing = phase === "growing";
 
-    // Normal notes have no directional arrow
-    if (!hasDirection && !hasAngle) return;
+    // Compute vertices of equilateral triangle (pointing upwards)
+    const computeTriangleVertices = (r) => {
+      const topX = x;
+      const topY = y - r;
+      const brX = x + r * Math.cos(Math.PI / 6);
+      const brY = y + r * Math.sin(Math.PI / 6);
+      const blX = x - r * Math.cos(Math.PI / 6);
+      const blY = y + r * Math.sin(Math.PI / 6);
+      return { topX, topY, brX, brY, blX, blY };
+    };
+
+    const targetVerts = computeTriangleVertices(targetRadius);
+    const currVerts = computeTriangleVertices(currentRadius);
 
     ctx.save();
-    ctx.translate(x, y);
 
-    let targetAngle = 0;
-    if (hasAngle) {
-      targetAngle = angle;
+    if (isGrowing) {
+      // 1. Dashed target boundary outline indicating where full size will be at note.time
+      ctx.beginPath();
+      ctx.moveTo(targetVerts.topX, targetVerts.topY);
+      ctx.lineTo(targetVerts.brX, targetVerts.brY);
+      ctx.lineTo(targetVerts.blX, targetVerts.blY);
+      ctx.closePath();
+      ctx.strokeStyle = "rgba(255, 211, 42, 0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.globalAlpha = 0.3 + 0.4 * growProgress;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1.0;
+
+      // 2. Growing triangle body
+      ctx.beginPath();
+      ctx.moveTo(currVerts.topX, currVerts.topY);
+      ctx.lineTo(currVerts.brX, currVerts.brY);
+      ctx.lineTo(currVerts.blX, currVerts.blY);
+      ctx.closePath();
+      ctx.strokeStyle = "#ffd32a";
+      ctx.lineWidth = 2.8;
+      ctx.shadowColor = "#ffa502";
+      ctx.shadowBlur = 16;
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255, 165, 2, 0.28)";
+      ctx.fill();
+
+      // Top label indicating hazard
+      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText("BOMB", x, y + 2);
     } else {
-      const dirMap = {
-        left: 0,           // Approach from left (moves rightward ->)
-        right: Math.PI,    // Approach from right (moves leftward <-)
-        up: Math.PI / 2,   // Approach from top (moves downward \/)
-        down: -Math.PI / 2 // Approach from bottom (moves upward /\)
-      };
-      targetAngle = dirMap[direction.toLowerCase()] ?? 0;
+      // Full active phase: High-voltage hazard triangle bomb
+      // 1. Pulsing hazard aura
+      ctx.beginPath();
+      ctx.moveTo(currVerts.topX, currVerts.topY);
+      ctx.lineTo(currVerts.brX, currVerts.brY);
+      ctx.lineTo(currVerts.blX, currVerts.blY);
+      ctx.closePath();
+      ctx.strokeStyle = "#ff4757";
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = "#ff4757";
+      ctx.shadowBlur = 22;
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(255, 71, 87, 0.35)";
+      ctx.fill();
+
+      // Inner amber triangle
+      const innerVerts = computeTriangleVertices(currentRadius * 0.6);
+      ctx.beginPath();
+      ctx.moveTo(innerVerts.topX, innerVerts.topY);
+      ctx.lineTo(innerVerts.brX, innerVerts.brY);
+      ctx.lineTo(innerVerts.blX, innerVerts.blY);
+      ctx.closePath();
+      ctx.strokeStyle = "#ffd32a";
+      ctx.lineWidth = 2.0;
+      ctx.fillStyle = "rgba(255, 211, 42, 0.45)";
+      ctx.fill();
+      ctx.stroke();
+
+      // Exclamation mark / Warning glyph inside
+      ctx.font = `bold ${Math.max(11, Math.round(targetRadius * 0.55))}px monospace`;
+      ctx.fillStyle = "#ffffff";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.shadowColor = "#ffffff";
+      ctx.shadowBlur = 8;
+      ctx.fillText("!", x, y + 3);
+
+      // Warning text tag above triangle
+      ctx.font = "bold 9px monospace";
+      ctx.fillStyle = "#ff4757";
+      ctx.shadowColor = "#ff4757";
+      ctx.shadowBlur = 8;
+      ctx.fillText("AVOID", x, y - targetRadius - 8);
+
+      // Circular countdown ring around the triangle (showing remaining active time)
+      const arcStart = -Math.PI / 2;
+      const arcEnd = -Math.PI / 2 + Math.PI * 2 * remainingFraction;
+      const ringRadius = targetRadius + 6;
+
+      ctx.beginPath();
+      ctx.arc(x, y + 2, ringRadius, arcStart, arcEnd);
+      ctx.strokeStyle = "#ffa502";
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      if (remainingFraction > 0.02) {
+        const tipX = x + Math.cos(arcEnd) * ringRadius;
+        const tipY = y + 2 + Math.sin(arcEnd) * ringRadius;
+        ctx.beginPath();
+        ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = "#ffa502";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+      }
     }
-
-    ctx.rotate(targetAngle);
-
-    // Central movement indicator arrow
-    const arrowLen = Math.max(8, radius * 0.5);
-    const arrowWing = Math.max(5, radius * 0.35);
-
-    ctx.strokeStyle = "#ffffff";
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowColor = colorHex;
-    ctx.shadowBlur = 12;
-    ctx.lineWidth = 2.5;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-
-    ctx.beginPath();
-    ctx.moveTo(-arrowLen * 0.5, 0);
-    ctx.lineTo(arrowLen * 0.6, 0);
-    ctx.lineTo(arrowLen * 0.6 - arrowWing, -arrowWing);
-    ctx.moveTo(arrowLen * 0.6, 0);
-    ctx.lineTo(arrowLen * 0.6 - arrowWing, arrowWing);
-    ctx.stroke();
-
-    // Exterior entry chevron on the perimeter showing entry side
-    ctx.fillStyle = colorHex;
-    ctx.shadowBlur = 8;
-    ctx.beginPath();
-    ctx.moveTo(-radius - 2, 0);
-    ctx.lineTo(-radius - 10, -6);
-    ctx.lineTo(-radius - 7, 0);
-    ctx.lineTo(-radius - 10, 6);
-    ctx.closePath();
-    ctx.fill();
 
     ctx.restore();
   }
@@ -404,13 +637,13 @@ class GameView {
         ctx.shadowColor = fx.color || "#ffd32a";
         ctx.shadowBlur = 24;
         ctx.stroke();
-      } else if (fx.type === "wrong-ripple") {
+      } else if (fx.type === "bomb-shockwave" || fx.type === "wrong-ripple") {
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
-        ctx.strokeStyle = "#ff4757";
+        ctx.strokeStyle = fx.color || "#ff4757";
         ctx.globalAlpha = Math.max(0, fx.opacity);
         ctx.lineWidth = 4;
-        ctx.shadowColor = "#ff4757";
+        ctx.shadowColor = fx.color || "#ff4757";
         ctx.shadowBlur = 20;
         ctx.stroke();
       } else if (fx.type === "sparkle") {
@@ -474,7 +707,80 @@ class GameView {
   }
 
   /**
-   * Draws mouse-following player orb.
+   * Calculates performance rank grade based on score percentage = (total score / max possible score) * 100.
+   * Checks thresholds strictly from highest to lowest:
+   * - SSS: Exactly 100%
+   * - SS:  Greater than 95% and below 100%
+   * - S:   Greater than 90% and up to 95%
+   * - A:   Greater than 80% and up to 90%
+   * - B:   Greater than 65% and up to 80%
+   * - C:   Greater than 50% and up to 65%
+   * - D:   Greater than 35% and up to 50%
+   * - E:   Greater than 20% and up to 35%
+   * - F:   20% or below
+   *
+   * Uses unrounded percentage to determine rank.
+   *
+   * @param {number|Object} input Raw unrounded percentage OR results object
+   * @returns {{ grade: string, label: string, percentage: number }}
+   */
+  computeRank(input) {
+    return GameView.computeRank(input);
+  }
+
+  static computeRank(input) {
+    let unroundedPct = 0;
+    if (typeof input === "number") {
+      unroundedPct = input;
+    } else if (input && typeof input.rawScorePercentage === "number") {
+      unroundedPct = input.rawScorePercentage;
+    } else if (input && typeof input.score === "number" && typeof input.highestPossibleScore === "number") {
+      unroundedPct = input.highestPossibleScore > 0 ? (input.score / input.highestPossibleScore) * 100 : 0;
+    } else if (input && input.scorePercentage != null) {
+      unroundedPct = parseFloat(input.scorePercentage) || 0;
+    }
+
+    if (isNaN(unroundedPct)) {
+      unroundedPct = 0;
+    }
+
+    let label;
+    let grade;
+
+    if (unroundedPct >= 100) {
+      label = "SSS";
+      grade = "sss";
+    } else if (unroundedPct > 95) {
+      label = "SS";
+      grade = "ss";
+    } else if (unroundedPct > 90) {
+      label = "S";
+      grade = "s";
+    } else if (unroundedPct > 80) {
+      label = "A";
+      grade = "a";
+    } else if (unroundedPct > 65) {
+      label = "B";
+      grade = "b";
+    } else if (unroundedPct > 50) {
+      label = "C";
+      grade = "c";
+    } else if (unroundedPct > 35) {
+      label = "D";
+      grade = "d";
+    } else if (unroundedPct > 20) {
+      label = "E";
+      grade = "e";
+    } else {
+      label = "F";
+      grade = "f";
+    }
+
+    return { label, grade, percentage: unroundedPct };
+  }
+
+  /**
+   * Draws mouse-following player orb with dynamic motion trail and multi-layer neon aura.
    */
   drawPlayerOrb(ctx, orb) {
     if (!orb) return;
@@ -485,28 +791,66 @@ class GameView {
 
     ctx.save();
 
-    // Outer glow aura
-    const gradient = ctx.createRadialGradient(orb.x, orb.y, 4, orb.x, orb.y, radius * 1.8);
+    // 1. Draw smooth dynamic motion trail
+    if (this.orbTrail && this.orbTrail.length > 1) {
+      for (let i = 0; i < this.orbTrail.length - 1; i++) {
+        const pt = this.orbTrail[i];
+        const nextPt = this.orbTrail[i + 1];
+        const progress = (i + 1) / this.orbTrail.length; // 0 to 1
+        const trailRadius = radius * (0.28 + 0.5 * progress);
+        const trailColor = pt.color === "red" ? "rgba(255, 71, 87, " : "rgba(0, 212, 255, ";
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, trailRadius, 0, Math.PI * 2);
+        ctx.fillStyle = `${trailColor}${0.14 * progress})`;
+        ctx.shadowColor = colorHex;
+        ctx.shadowBlur = 8 * progress;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(pt.x, pt.y);
+        ctx.lineTo(nextPt.x, nextPt.y);
+        ctx.strokeStyle = `${trailColor}${0.18 * progress})`;
+        ctx.lineWidth = trailRadius * 1.5;
+        ctx.lineCap = "round";
+        ctx.stroke();
+      }
+    }
+
+    // 2. Multi-layer ambient radial glow aura
+    const gradient = ctx.createRadialGradient(orb.x, orb.y, 4, orb.x, orb.y, radius * 2.1);
     gradient.addColorStop(0, colorHex);
-    gradient.addColorStop(0.5, orb.color === "red" ? "rgba(255, 71, 87, 0.4)" : "rgba(0, 212, 255, 0.4)");
+    gradient.addColorStop(0.35, orb.color === "red" ? "rgba(255, 71, 87, 0.45)" : "rgba(0, 212, 255, 0.45)");
+    gradient.addColorStop(0.75, orb.color === "red" ? "rgba(255, 71, 87, 0.12)" : "rgba(0, 212, 255, 0.12)");
     gradient.addColorStop(1, "transparent");
 
     ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(orb.x, orb.y, radius * 1.8, 0, Math.PI * 2);
+    ctx.arc(orb.x, orb.y, radius * 2.1, 0, Math.PI * 2);
     ctx.fill();
 
-    // Solid core
+    // 3. Neon stroke ring with intense glow
     ctx.beginPath();
     ctx.arc(orb.x, orb.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = "#ffffff";
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 3.5;
     ctx.shadowColor = colorHex;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 24;
+    ctx.stroke();
+
+    // 4. Luminous white core
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, Math.max(3, radius * 0.72), 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 14;
     ctx.fill();
 
-    ctx.strokeStyle = colorHex;
-    ctx.lineWidth = 3;
-    ctx.stroke();
+    // 5. Center tint pip
+    ctx.beginPath();
+    ctx.arc(orb.x, orb.y, Math.max(1.5, radius * 0.28), 0, Math.PI * 2);
+    ctx.fillStyle = colorHex;
+    ctx.fill();
 
     ctx.restore();
   }
@@ -533,6 +877,20 @@ class GameView {
     if (this.resultsStatus) {
       this.resultsStatus.textContent = results.completionStatus;
       this.resultsStatus.className = `results-status-banner ${results.statusClass || ""}`;
+    }
+
+    const rankInfo = this.computeRank(results);
+    if (this.resultsRankBadge) {
+      this.resultsRankBadge.textContent = rankInfo.label;
+      this.resultsRankBadge.className = `results-rank-badge rank-${rankInfo.grade}`;
+    }
+    if (this.resultsMainRankBadge) {
+      this.resultsMainRankBadge.textContent = rankInfo.label;
+      this.resultsMainRankBadge.className = `results-rank-badge rank-${rankInfo.grade}`;
+    }
+    if (this.resultsRankPill) {
+      this.resultsRankPill.textContent = rankInfo.label;
+      this.resultsRankPill.className = `mini-card-val val-rank rank-${rankInfo.grade}`;
     }
 
     if (this.resultsScore) this.resultsScore.textContent = (results.score || 0).toLocaleString();
@@ -605,7 +963,20 @@ class GameView {
       this.container.setAttribute("aria-hidden", "true");
     }
   }
+
+  /**
+   * Returns whether the gameplay view is currently active.
+   * @returns {boolean}
+   */
+  isOpen() {
+    return this.container ? this.container.classList.contains("is-active") : false;
+  }
 }
 
-// Expose to window
-window.GameView = GameView;
+// Expose to window / global
+if (typeof window !== "undefined") {
+  window.GameView = GameView;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = GameView;
+}

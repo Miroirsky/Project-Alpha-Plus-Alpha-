@@ -36,6 +36,25 @@
   z-index: 35;
 }
 
+.create-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-create-import {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background: rgba(0, 212, 255, 0.08);
+}
+
+.btn-create-import:hover {
+  background: var(--color-accent);
+  color: #050b14;
+  box-shadow: 0 0 20px var(--color-accent-glow);
+  transform: translateY(-2px);
+}
+
 /* Split Content: Form on Left, Existing Maps on Right */
 .create-content {
   flex: 1;
@@ -83,38 +102,38 @@
 }
 
 .form-label {
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
 .form-input,
 .form-select {
-  padding: 0.75rem 1rem;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1.5px solid var(--color-surface-border);
-  border-radius: 0.6rem;
+  padding: 0.7rem 0.95rem;
+  background: rgba(8, 14, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.55rem;
   color: var(--color-text-primary);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   outline: none;
-  transition: all var(--transition-speed) ease;
+  transition: all 0.2s ease;
 }
 
 .form-input:focus,
 .form-select:focus {
   border-color: var(--color-accent);
-  box-shadow: 0 0 15px var(--color-accent-glow);
-  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+  background: rgba(12, 20, 36, 0.85);
 }
 
 .file-input-wrapper {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.45rem;
 }
 
 .custom-file-btn {
@@ -122,21 +141,21 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: var(--color-surface-hover);
-  border: 1.5px dashed var(--color-surface-border);
-  border-radius: 0.6rem;
+  padding: 0.7rem 1rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 0.55rem;
   color: var(--color-text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all var(--transition-speed) ease;
+  transition: all 0.2s ease;
 }
 
 .custom-file-btn:hover {
   border-color: var(--color-accent);
   color: var(--color-text-primary);
-  box-shadow: 0 0 15px var(--color-accent-glow);
+  background: rgba(0, 212, 255, 0.06);
 }
 
 .file-status-text {
@@ -147,23 +166,23 @@
 
 .btn-create-submit {
   margin-top: 1rem;
-  padding: 0.9rem 1.5rem;
+  padding: 0.85rem 1.4rem;
   background: var(--color-accent);
   color: #050b14;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   border: none;
-  border-radius: 0.75rem;
+  border-radius: 0.6rem;
   cursor: pointer;
-  transition: all var(--transition-speed) ease;
-  box-shadow: 0 4px 15px var(--color-accent-glow);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px var(--color-accent-glow);
 }
 
 .btn-create-submit:hover {
   background: #ffffff;
-  box-shadow: 0 0 25px #ffffff;
+  box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
   transform: translateY(-2px);
 }
 
@@ -342,4 +361,151 @@
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
+}
+
+/* ==========================================================================
+   Track Artwork Picker Styles (Create Menu & Parameters Modal)
+   ========================================================================== */
+.artwork-picker-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  background: rgba(8, 14, 26, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+
+.artwork-picker-subtitle {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.artwork-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+}
+
+.artwork-gallery-thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  background: #000;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.artwork-gallery-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.25s ease;
+}
+
+.artwork-gallery-thumb .thumb-caption {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 0.2rem 0.3rem;
+  background: linear-gradient(to top, rgba(6, 10, 18, 0.9), transparent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.artwork-gallery-thumb:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.artwork-gallery-thumb:hover img {
+  transform: scale(1.06);
+}
+
+.artwork-gallery-thumb.is-active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent-glow), inset 0 0 0 1px var(--color-accent);
+}
+
+.artwork-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.artwork-upload-btn {
+  font-size: 0.82rem;
+  padding: 0.55rem 1rem;
+}
+
+.artwork-selected-card {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.7rem;
+}
+
+.artwork-card-img {
+  width: 72px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 0.45rem;
+  border: 1px solid var(--color-surface-border);
+  flex-shrink: 0;
+  background: #000;
+}
+
+.artwork-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  overflow: hidden;
+}
+
+.artwork-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artwork-card-badge {
+  font-size: 0.7rem;
+  font-family: var(--font-family-mono);
+  color: var(--color-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.map-card-thumb {
+  width: 64px;
+  height: 44px;
+  object-fit: cover;
+  border-radius: 0.45rem;
+  border: 1px solid var(--color-surface-border);
+  flex-shrink: 0;
+  background: #000;
 }
