@@ -90,11 +90,8 @@ class MusicPlayer {
       audio.volume = this.getTargetVolume();
       this.currentAudio = audio;
 
-      audio.addEventListener("error", () => {
-        if (song.file && song.file !== "Assets/Songs/IMG_2449.mp3") {
-          song.file = "Assets/Songs/IMG_2449.mp3";
-          this.playPreview(song);
-        }
+      audio.addEventListener("error", (err) => {
+        console.warn(`Audio preview play issue for ${song.name}:`, err);
       });
 
       const playPromise = audio.play();
@@ -141,11 +138,8 @@ class MusicPlayer {
         audio.addEventListener("ended", onEnded);
       }
 
-      audio.addEventListener("error", () => {
-        if (song.file && song.file !== "Assets/Songs/IMG_2449.mp3") {
-          song.file = "Assets/Songs/IMG_2449.mp3";
-          this.playSong(song, { onTimeUpdate, onEnded });
-        }
+      audio.addEventListener("error", (err) => {
+        console.warn(`Gameplay audio play issue for ${song.name}:`, err);
       });
 
       const playPromise = audio.play();

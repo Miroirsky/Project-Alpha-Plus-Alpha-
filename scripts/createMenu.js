@@ -34,9 +34,17 @@ class CreateMenu {
     this.mapperInput = document.getElementById("new-map-mapper");
     this.creatorInput = document.getElementById("new-map-creator");
     this.difficultyInput = document.getElementById("new-map-difficulty");
+    this.initialDiffChips = document.getElementById("create-initial-diff-chips");
     this.fileInput = document.getElementById("new-map-file");
     this.presetSelect = document.getElementById("new-map-preset-audio");
     this.fileStatusEl = document.getElementById("new-map-file-status");
+
+    // Catalog Filter & Stats Elements
+    this.statsBadge = document.getElementById("create-stats-badge");
+    this.searchInput = document.getElementById("create-search-input");
+    this.filterPills = document.getElementById("create-filter-pills");
+    this.searchQuery = "";
+    this.filterType = "all";
 
     // Creation Artwork Picker Elements
     this.artworkGallery = document.getElementById("create-artwork-gallery");
@@ -103,6 +111,14 @@ class CreateMenu {
     this.songParamNameInput = document.getElementById("create-song-param-name");
     this.songParamMapperInput = document.getElementById("create-song-param-mapper");
     this.songParamCreatorInput = document.getElementById("create-song-param-creator");
+    this.songParamColorInput = document.getElementById("create-song-param-color");
+    this.songParamSwatches = document.getElementById("create-song-swatches");
+    this.songParamBpmInput = document.getElementById("create-song-param-bpm");
+    this.songParamAudioSelect = document.getElementById("create-song-param-audio");
+    this.songParamAudioFileInput = document.getElementById("create-song-param-audio-file");
+    this.songParamAudioStatus = document.getElementById("create-song-param-audio-status");
+    this.selectedSongAudioUrl = null;
+    this.selectedSongDuration = null;
     this.songArtworkGallery = document.getElementById("create-song-artwork-gallery");
     this.songArtworkFileInput = document.getElementById("create-song-artwork-file");
     this.songArtworkStatusEl = document.getElementById("create-song-artwork-status");
@@ -155,6 +171,53 @@ class CreateMenu {
       this.backBtn.addEventListener("click", () => {
         if (this.soundManager) this.soundManager.playClick();
         this.close();
+      });
+    }
+
+    // Initial difficulty preset chips for creation form
+    if (this.initialDiffChips && this.difficultyInput) {
+      this.initialDiffChips.addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip-btn");
+        if (chip) {
+          const diff = chip.getAttribute("data-diff");
+          if (diff) {
+            this.difficultyInput.value = diff;
+            this.initialDiffChips.querySelectorAll(".chip-btn").forEach((c) => c.classList.remove("is-selected"));
+            chip.classList.add("is-selected");
+            if (this.soundManager) this.soundManager.playClick();
+          }
+        }
+      });
+
+      this.difficultyInput.addEventListener("input", () => {
+        const val = this.difficultyInput.value.trim().toLowerCase();
+        this.initialDiffChips.querySelectorAll(".chip-btn").forEach((c) => {
+          const chipDiff = (c.getAttribute("data-diff") || "").toLowerCase();
+          c.classList.toggle("is-selected", chipDiff === val);
+        });
+      });
+    }
+
+    // Catalog search input
+    if (this.searchInput) {
+      this.searchInput.addEventListener("input", () => {
+        this.searchQuery = this.searchInput.value.trim().toLowerCase();
+        this.renderMapsList();
+      });
+    }
+
+    // Catalog filter pills (All / Default / Custom)
+    if (this.filterPills) {
+      this.filterPills.addEventListener("click", (e) => {
+        const pill = e.target.closest(".filter-pill");
+        if (pill) {
+          const filter = pill.getAttribute("data-filter") || "all";
+          this.filterType = filter;
+          this.filterPills.querySelectorAll(".filter-pill").forEach((p) => p.classList.remove("is-active"));
+          pill.classList.add("is-active");
+          if (this.soundManager) this.soundManager.playClick();
+          this.renderMapsList();
+        }
       });
     }
 
@@ -436,6 +499,57 @@ class CreateMenu {
       });
     }
 
+    // Color Swatches in song parameters modal
+    if (this.songParamSwatches) {
+      this.songParamSwatches.addEventListener("click", (e) => {
+        const btn = e.target.closest(".swatch-btn");
+        if (btn) {
+          const color = btn.getAttribute("data-color");
+          if (color && this.songParamColorInput) {
+            this.songParamColorInput.value = color;
+            if (this.soundManager) this.soundManager.playClick();
+          }
+        }
+      });
+    }
+
+    // Preset audio dropdown in song parameters modal
+    if (this.songParamAudioSelect) {
+      this.songParamAudioSelect.addEventListener("change", (e) => {
+        this.selectedSongAudioUrl = e.target.value;
+        const opt = e.target.selectedOptions && e.target.selectedOptions[0];
+        if (opt) {
+          const dur = Number(opt.getAttribute("data-duration"));
+          if (dur > 0) this.selectedSongDuration = dur;
+        }
+        if (this.songParamAudioStatus) {
+          this.songParamAudioStatus.textContent = `Using preset: ${e.target.value.split("/").pop()}`;
+        }
+        if (this.soundManager) this.soundManager.playClick();
+      });
+    }
+
+    // Custom audio file upload in song parameters modal
+    if (this.songParamAudioFileInput) {
+      this.songParamAudioFileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          const objUrl = URL.createObjectURL(file);
+          this.selectedSongAudioUrl = objUrl;
+          if (this.songParamAudioStatus) {
+            this.songParamAudioStatus.textContent = `Custom audio: ${file.name}`;
+          }
+          const tempAudio = new Audio(objUrl);
+          tempAudio.addEventListener("loadedmetadata", () => {
+            if (tempAudio.duration) {
+              this.selectedSongDuration = Math.round(tempAudio.duration);
+            }
+          });
+          if (this.soundManager) this.soundManager.playClick();
+        }
+      });
+    }
+
     // Artwork gallery buttons in song parameters modal
     if (this.songArtworkGallery) {
       this.songArtworkGallery.addEventListener("click", (e) => {
@@ -584,6 +698,9 @@ class CreateMenu {
       this.closeImportModal();
       this.expandedSongIds.add(importedMap.id);
       this.renderMapsList();
+      if (this.mapStorage) {
+        this.mapStorage.setSelectedSongId(importedMap.id);
+      }
 
       if (this.soundManager) this.soundManager.playTestTone();
 
@@ -609,7 +726,10 @@ class CreateMenu {
 
     try {
       const exportResult = this.mapStorage.exportTrack(song);
-      this.lastExportData = exportResult;
+      this.lastExportData = { ...exportResult, songId: song.id };
+      if (this.mapStorage) {
+        this.mapStorage.setSelectedSongId(song.id);
+      }
 
       const diffKeys = Object.keys(song.difficulties || {});
       if (this.exportTrackName) this.exportTrackName.textContent = song.name || "Untitled Song";
@@ -675,6 +795,9 @@ class CreateMenu {
    */
   downloadExportFile() {
     if (!this.lastExportData || !this.lastExportData.json) return;
+    if (this.mapStorage && this.lastExportData.songId) {
+      this.mapStorage.setSelectedSongId(this.lastExportData.songId);
+    }
     try {
       const blob = new Blob([this.lastExportData.json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
@@ -791,6 +914,17 @@ class CreateMenu {
 
     const allMaps = this.mapStorage.getAllMaps();
 
+    // Update Catalog Stats Badge
+    let totalDifficultiesCount = 0;
+    allMaps.forEach((m) => {
+      const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(m)) || m.difficulties || {};
+      totalDifficultiesCount += Object.keys(diffs).length || 1;
+    });
+
+    if (this.statsBadge) {
+      this.statsBadge.textContent = `${allMaps.length} Song${allMaps.length === 1 ? "" : "s"} • ${totalDifficultiesCount} Track${totalDifficultiesCount === 1 ? "" : "s"}`;
+    }
+
     if (allMaps.length === 0) {
       const loadErrors = this.mapStorage ? this.mapStorage.getLoadErrors() : [];
       const errorHtml = loadErrors.length > 0
@@ -841,13 +975,58 @@ class CreateMenu {
       return;
     }
 
+    // Filter maps by type and search query
+    let filteredMaps = allMaps;
+    if (this.filterType === "default") {
+      filteredMaps = filteredMaps.filter((m) => !m.isCustom);
+    } else if (this.filterType === "custom") {
+      filteredMaps = filteredMaps.filter((m) => m.isCustom);
+    }
+
+    if (this.searchQuery) {
+      filteredMaps = filteredMaps.filter((m) => {
+        const name = (m.name || "").toLowerCase();
+        const mapper = (m.mapper || "").toLowerCase();
+        const creator = (m.creator || "").toLowerCase();
+        const diffs = Object.keys(this.mapStorage.getSongDifficulties(m) || m.difficulties || {}).join(" ").toLowerCase();
+        return name.includes(this.searchQuery) || mapper.includes(this.searchQuery) || creator.includes(this.searchQuery) || diffs.includes(this.searchQuery);
+      });
+    }
+
+    if (filteredMaps.length === 0) {
+      this.mapsListContainer.innerHTML = `
+        <div class="empty-maps-notice" style="text-align: center; padding: 2rem 1.5rem;">
+          <p style="margin: 0 0 8px 0; font-weight: 700; font-size: 1rem;">No matching songs found</p>
+          <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">No songs in your catalog match the current search or filter criteria.</p>
+          <div style="margin-top: 14px;">
+            <button type="button" class="chip-btn" id="btn-clear-catalog-filter" style="padding: 0.5rem 1rem;">
+              <span>Clear Filter &amp; Show All</span>
+            </button>
+          </div>
+        </div>
+      `;
+      const clearBtn = this.mapsListContainer.querySelector("#btn-clear-catalog-filter");
+      if (clearBtn) {
+        clearBtn.addEventListener("click", () => {
+          this.searchQuery = "";
+          this.filterType = "all";
+          if (this.searchInput) this.searchInput.value = "";
+          if (this.filterPills) {
+            this.filterPills.querySelectorAll(".filter-pill").forEach((p) => p.classList.toggle("is-active", p.getAttribute("data-filter") === "all"));
+          }
+          this.renderMapsList();
+        });
+      }
+      return;
+    }
+
     // On initial load, expand all songs by default so user immediately sees all difficulty tracks
     if (!this.hasInitializedExpanded) {
       allMaps.forEach((m) => this.expandedSongIds.add(m.id));
       this.hasInitializedExpanded = true;
     }
 
-    allMaps.forEach((map) => {
+    filteredMaps.forEach((map) => {
       const card = document.createElement("article");
       card.className = "song-tree-card";
       card.setAttribute("data-song-id", map.id);
@@ -1323,6 +1502,38 @@ class CreateMenu {
     if (this.songParamCreatorInput) {
       this.songParamCreatorInput.value = song.creator || "";
     }
+    if (this.songParamColorInput) {
+      this.songParamColorInput.value = song.color || "#954132";
+    }
+    if (this.songParamBpmInput) {
+      this.songParamBpmInput.value = song.bpm || "";
+    }
+
+    this.selectedSongAudioUrl = song.file || "Assets/Songs/IMG_2449.mp3";
+    this.selectedSongDuration = song.durationSeconds || null;
+
+    if (this.songParamAudioSelect) {
+      let foundOption = false;
+      for (let i = 0; i < this.songParamAudioSelect.options.length; i++) {
+        if (this.songParamAudioSelect.options[i].value === song.file) {
+          this.songParamAudioSelect.selectedIndex = i;
+          foundOption = true;
+          break;
+        }
+      }
+      if (!foundOption && song.file) {
+        const customOpt = document.createElement("option");
+        customOpt.value = song.file;
+        customOpt.textContent = song.file.split("/").pop() || "Custom Audio";
+        this.songParamAudioSelect.appendChild(customOpt);
+        this.songParamAudioSelect.value = song.file;
+      }
+    }
+    if (this.songParamAudioStatus) {
+      this.songParamAudioStatus.textContent = song.file
+        ? (song.file.startsWith("blob:") || song.file.startsWith("data:") ? "Custom uploaded audio" : `Using preset: ${song.file.split("/").pop()}`)
+        : "Using preset audio track";
+    }
 
     // Cover Artwork Setup
     const currentArtwork = song.cover || song.image || song.artwork || "Assets/Tracks Placeholders/Default-0.png";
@@ -1485,6 +1696,24 @@ class CreateMenu {
     song.name = name;
     song.mapper = mapper || "Anonymous";
     song.creator = creator || "Unknown Artist";
+    if (this.songParamColorInput) {
+      song.color = this.songParamColorInput.value || "#954132";
+    }
+    if (this.songParamBpmInput) {
+      const bpmVal = Number(this.songParamBpmInput.value);
+      if (bpmVal > 0) {
+        song.bpm = bpmVal;
+      }
+    }
+    if (this.selectedSongAudioUrl) {
+      song.file = this.selectedSongAudioUrl;
+    }
+    if (this.selectedSongDuration) {
+      song.durationSeconds = this.selectedSongDuration;
+      const m = Math.floor(this.selectedSongDuration / 60);
+      const s = Math.floor(this.selectedSongDuration % 60);
+      song.duration = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
     if (this.selectedSongArtwork) {
       song.cover = this.selectedSongArtwork;
     }
@@ -1498,6 +1727,10 @@ class CreateMenu {
     this.closeSongParamsModal();
     this.expandedSongIds.add(savedSong.id);
     this.renderMapsList();
+    if (this.mapStorage) {
+      this.mapStorage.setSelectedSongId(savedSong.id);
+      this.mapStorage.notify();
+    }
 
     if (this.soundManager) this.soundManager.playClick();
   }

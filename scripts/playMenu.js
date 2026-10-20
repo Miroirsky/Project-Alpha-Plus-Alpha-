@@ -19,12 +19,13 @@ class PlayMenu {
    * @param {Array} dependencies.songs
    * @param {Function} dependencies.onStartTrack
    */
-  constructor({ soundManager, musicPlayer, mapStorage = null, songs = [], onStartTrack = null }) {
+  constructor({ soundManager, musicPlayer, mapStorage = null, songs = [], onStartTrack = null, onEditSongParams = null }) {
     this.soundManager = soundManager;
     this.musicPlayer = musicPlayer;
     this.mapStorage = mapStorage;
     this.songs = songs;
     this.onStartTrack = onStartTrack;
+    this.onEditSongParams = onEditSongParams;
 
     this.selectedSong = null;
     this.selectedIndex = -1;
@@ -48,7 +49,10 @@ class PlayMenu {
     this.renderSongList();
     this.bindEvents();
     if (this.songs && this.songs.length > 0) {
-      this.selectSongByIndex(0, false, false);
+      const activeId = (this.mapStorage && this.mapStorage.getSelectedSongId()) || null;
+      let targetIdx = activeId ? this.songs.findIndex((s) => s.id === activeId) : 0;
+      if (targetIdx === -1) targetIdx = 0;
+      this.selectSongByIndex(targetIdx, false, false);
     } else {
       this.renderDefaultDetails();
     }
@@ -61,12 +65,14 @@ class PlayMenu {
   updateSongs(newSongs) {
     if (Array.isArray(newSongs)) {
       this.songs = newSongs;
-      const prevId = this.selectedSong ? this.selectedSong.id : null;
+      const activeId = (this.mapStorage && this.mapStorage.getSelectedSongId()) || (this.selectedSong ? this.selectedSong.id : null);
       this.renderSongList();
 
       if (this.songs.length > 0) {
-        let targetIdx = this.songs.findIndex((s) => s.id === prevId);
-        if (targetIdx === -1) targetIdx = 0;
+        let targetIdx = activeId ? this.songs.findIndex((s) => s.id === activeId) : -1;
+        if (targetIdx === -1) {
+          targetIdx = (this.selectedIndex >= 0 && this.selectedIndex < this.songs.length) ? this.selectedIndex : 0;
+        }
         // Never play preview audio or click sound during background updates
         this.selectSongByIndex(targetIdx, false, false);
       } else {
@@ -340,6 +346,10 @@ class PlayMenu {
     const previousSongId = this.selectedSong ? this.selectedSong.id : null;
     this.selectedIndex = idx;
     this.selectedSong = this.songs[idx];
+
+    if (this.selectedSong && this.mapStorage) {
+      this.mapStorage.setSelectedSongId(this.selectedSong.id);
+    }
 
     // Synchronize difficulty selection to one of this song's mapped difficulties
     const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(this.selectedSong)) || this.selectedSong.difficulties || {};
@@ -642,10 +652,15 @@ class PlayMenu {
                 <div class="selected-status-title">Track Ready: ${song.name} [${this.selectedDifficulty}]</div>
                 <div class="selected-status-note">Dual Orb System &bull; Press Enter or Click to Play</div>
               </div>
-              <button id="btn-start-gameplay" class="btn-start-action" type="button">
-                <span>Play Track</span>
-                <span class="btn-arrow">&rarr;</span>
-              </button>
+              <div class="selected-status-actions" style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
+                <button id="btn-song-edit-params" class="btn-song-params-action" type="button" title="Edit song parameters & metadata">
+                  <span>⚙ Parameters</span>
+                </button>
+                <button id="btn-start-gameplay" class="btn-start-action" type="button">
+                  <span>Play Track</span>
+                  <span class="btn-arrow">&rarr;</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -664,6 +679,17 @@ class PlayMenu {
         }
       });
     });
+
+    // Connect Song Parameters button
+    const paramsBtn = this.songDetailsContainer.querySelector("#btn-song-edit-params");
+    if (paramsBtn) {
+      paramsBtn.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (typeof this.onEditSongParams === "function") {
+          this.onEditSongParams(song);
+        }
+      });
+    }
 
     // Connect Start Track button
     const startBtn = this.songDetailsContainer.querySelector("#btn-start-gameplay");
@@ -708,7 +734,11 @@ class PlayMenu {
     }
 
     if (this.songs && this.songs.length > 0) {
-      const idx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
+      const activeId = (this.mapStorage && this.mapStorage.getSelectedSongId()) || (this.selectedSong ? this.selectedSong.id : null);
+      let idx = activeId ? this.songs.findIndex((s) => s.id === activeId) : -1;
+      if (idx === -1) {
+        idx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
+      }
       this.selectSongByIndex(idx, false, false);
     }
   }

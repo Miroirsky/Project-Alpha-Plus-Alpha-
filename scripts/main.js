@@ -89,6 +89,10 @@ function initApp() {
     }
     gameView.hide();
 
+    if (currentTestedMap && mapStorage && currentTestedMap.id) {
+      mapStorage.setSelectedSongId(currentTestedMap.id);
+    }
+
     if (gameReturnTarget === "editor" && currentTestedMap) {
       mapEditor.open(currentTestedMap);
     } else {
@@ -106,6 +110,9 @@ function initApp() {
   function launchTrackGameplay(song, returnTarget = "select", speedMultiplier = 1.0) {
     gameReturnTarget = returnTarget;
     currentTestedMap = song;
+    if (mapStorage && song && song.id) {
+      mapStorage.setSelectedSongId(song.id);
+    }
 
     // Apply speed multiplier ONLY in editor playtesting; normal gameplay is strictly 1.0x
     const effectiveSpeed = returnTarget === "editor" ? (Number(speedMultiplier) || 1.0) : 1.0;
@@ -197,6 +204,9 @@ function initApp() {
     songs: mapStorage.getAllMaps(),
     onStartTrack: (selectedSong) => {
       launchTrackGameplay(selectedSong, "select");
+    },
+    onEditSongParams: (songToEdit) => {
+      createMenu.openSongParams(songToEdit);
     }
   });
   playMenu.init();

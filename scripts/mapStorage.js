@@ -10,6 +10,7 @@ const MAP_OVERRIDES_STORAGE_KEY = "project_alpha_map_overrides";
 const HIGHSCORES_STORAGE_KEY = "project_alpha_highscores";
 const DEFAULT_TRACKS_CACHE_KEY = "project_alpha_default_tracks_cache";
 const DEFAULT_TRACKS_FILES_KEY = "project_alpha_default_tracks_filenames";
+const SELECTED_SONG_STORAGE_KEY = "project_alpha_selected_song_id";
 
 class MapStorage {
   constructor() {
@@ -19,6 +20,7 @@ class MapStorage {
     this.listeners = new Set();
     this.loadErrors = [];
     this.defaultTracks = this.loadDefaultTracksCache();
+    this.selectedSongId = this.loadSelectedSongId();
 
     // In browser environment running under file:/// protocol (or if cache is empty),
     // immediately initialize with bundled fallback tracks so songs appear with zero delay
@@ -98,14 +100,9 @@ class MapStorage {
             for (const m of parsed) {
               if (m && m.id && !seenIds.has(m.id)) {
                 seenIds.add(m.id);
-                // Clean up expired blob URLs from previous browser sessions
-                let audioFile = m.file;
-                if (audioFile && typeof audioFile === "string" && audioFile.startsWith("blob:")) {
-                  audioFile = "Assets/Songs/IMG_2449.mp3";
-                }
                 const customMap = {
                   ...m,
-                  file: audioFile || "Assets/Songs/IMG_2449.mp3",
+                  file: m.file || "Assets/Songs/IMG_2449.mp3",
                   isCustom: true,
                   isDefault: false
                 };
@@ -121,6 +118,54 @@ class MapStorage {
       console.warn("Unable to load custom maps from localStorage:", err);
     }
     return [];
+  }
+
+  /**
+   * Loads selected song ID from localStorage.
+   * @returns {string|null}
+   */
+  loadSelectedSongId() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(SELECTED_SONG_STORAGE_KEY);
+        if (saved && typeof saved === "string" && saved.trim()) {
+          return saved.trim();
+        }
+      }
+    } catch (err) {
+      // localStorage restricted
+    }
+    return null;
+  }
+
+  /**
+   * Retrieves the currently selected song ID across all menus and gameplay.
+   * @returns {string|null}
+   */
+  getSelectedSongId() {
+    if (this.selectedSongId) {
+      return this.selectedSongId;
+    }
+    this.selectedSongId = this.loadSelectedSongId();
+    return this.selectedSongId;
+  }
+
+  /**
+   * Sets and persists the selected song ID across all menus and gameplay.
+   * @param {string} songId
+   */
+  setSelectedSongId(songId) {
+    if (!songId) return;
+    const cleanId = String(songId).trim();
+    if (!cleanId) return;
+    this.selectedSongId = cleanId;
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(SELECTED_SONG_STORAGE_KEY, cleanId);
+      }
+    } catch (err) {
+      // localStorage restricted
+    }
   }
 
   /**
@@ -787,6 +832,7 @@ class MapStorage {
 
     this.customMaps.unshift(newMap);
     this.saveCustomMapsToStorage();
+    this.setSelectedSongId(newMap.id);
     return newMap;
   }
 
@@ -898,6 +944,7 @@ class MapStorage {
         difficulties: sanitizedDifficulties
       };
       this.saveCustomMapsToStorage();
+      this.setSelectedSongId(this.customMaps[customIndex].id);
       return this.customMaps[customIndex];
     }
 
@@ -926,6 +973,7 @@ class MapStorage {
 
       this.customMaps.unshift(copyMap);
       this.saveCustomMapsToStorage();
+      this.setSelectedSongId(copyMap.id);
       return copyMap;
     }
 
@@ -943,6 +991,7 @@ class MapStorage {
     };
     this.customMaps.unshift(newCustomMap);
     this.saveCustomMapsToStorage();
+    this.setSelectedSongId(newCustomMap.id);
     return newCustomMap;
   }
 
@@ -974,6 +1023,10 @@ class MapStorage {
   deleteMap(id) {
     this.customMaps = this.customMaps.filter((m) => m.id !== id);
     this.saveCustomMapsToStorage();
+    if (this.selectedSongId === id) {
+      const all = this.getAllMaps();
+      this.setSelectedSongId(all.length > 0 ? all[0].id : null);
+    }
   }
 
   /**
@@ -1365,6 +1418,7 @@ class MapStorage {
       }
       this.normalizeSongDifficulties(existing);
       this.saveCustomMapsToStorage();
+      this.setSelectedSongId(existing.id);
       return existing;
     }
 
@@ -1385,6 +1439,7 @@ class MapStorage {
 
     this.customMaps.unshift(importedSong);
     this.saveCustomMapsToStorage();
+    this.setSelectedSongId(importedSong.id);
     return importedSong;
   }
 

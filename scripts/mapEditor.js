@@ -260,6 +260,10 @@ class MapEditor {
     this.isDirty = false;
     this.setTool("note");
 
+    if (this.mapStorage && this.activeMap && this.activeMap.id) {
+      this.mapStorage.setSelectedSongId(this.activeMap.id);
+    }
+
     if (this.saveIndicatorEl) {
       this.saveIndicatorEl.textContent = "✓ All changes saved";
       this.saveIndicatorEl.className = "editor-save-tag saved";
@@ -577,18 +581,8 @@ class MapEditor {
       audio.volume = soundVol;
       audio.playbackRate = this.playSpeed || 1.0;
 
-      audio.addEventListener("error", () => {
-        // Fallback to default bundled track if source fails to load (e.g. expired blob URL)
-        if (safeFile !== "Assets/Songs/IMG_2449.mp3") {
-          console.warn(`Audio loading failed for "${safeFile}". Falling back to default track.`);
-          if (this.activeMap) {
-            this.activeMap.file = "Assets/Songs/IMG_2449.mp3";
-            if (this.mapStorage) {
-              this.mapStorage.saveMap(this.activeMap);
-            }
-          }
-          this.initAudio("Assets/Songs/IMG_2449.mp3");
-        }
+      audio.addEventListener("error", (err) => {
+        console.warn(`Audio loading issue for "${safeFile}":`, err);
       });
 
       audio.addEventListener("loadedmetadata", () => {
@@ -1771,6 +1765,10 @@ class MapEditor {
 
     const savedMap = this.mapStorage.saveMap(updated);
     this.activeMap = savedMap;
+    if (this.mapStorage) {
+      this.mapStorage.setSelectedSongId(savedMap.id);
+      this.mapStorage.notify();
+    }
     if (savedMap.difficulties) {
       this.difficulties = { ...savedMap.difficulties };
     }
@@ -2161,13 +2159,7 @@ class MapEditor {
       const playPromise = this.audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
-          if (err && err.name === "NotSupportedError" && this.activeMap && this.activeMap.file !== "Assets/Songs/IMG_2449.mp3") {
-            this.activeMap.file = "Assets/Songs/IMG_2449.mp3";
-            if (this.mapStorage) {
-              this.mapStorage.saveMap(this.activeMap);
-            }
-            this.initAudio("Assets/Songs/IMG_2449.mp3");
-          }
+          console.warn(`Audio playback issue in editor:`, err);
         });
       }
     }
@@ -2973,6 +2965,10 @@ class MapEditor {
       this.view.setAttribute("aria-hidden", "true");
     }
 
+    if (this.mapStorage && this.activeMap && this.activeMap.id) {
+      this.mapStorage.setSelectedSongId(this.activeMap.id);
+    }
+
     if (typeof this.onTestMap === "function") {
       this.onTestMap(
         {
@@ -3477,6 +3473,10 @@ class MapEditor {
       if (this.view) {
         this.view.classList.remove("is-active");
         this.view.setAttribute("aria-hidden", "true");
+      }
+
+      if (this.mapStorage && this.activeMap && this.activeMap.id) {
+        this.mapStorage.setSelectedSongId(this.activeMap.id);
       }
 
       if (typeof this.onExit === "function") {
