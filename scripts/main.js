@@ -124,20 +124,32 @@ function initApp() {
 
     // Ensure latest map data is queried from mapStorage
     const freshSong = (mapStorage && song.id && mapStorage.getMap(song.id)) || song;
-    currentTestedMap = freshSong;
+    const diffs = (mapStorage && mapStorage.getSongDifficulties(freshSong)) || freshSong.difficulties || {};
+    const chosenDiff = song.selectedDifficulty || freshSong.selectedDifficulty || freshSong.difficulty || Object.keys(diffs)[0] || "Normal";
+    const diffData = diffs[chosenDiff] || {};
+
+    // Use notes from selected difficulty
+    const trackNotes = (Array.isArray(song.notes) && song.selectedDifficulty === chosenDiff && song.notes.length > 0)
+      ? song.notes
+      : (diffData.notes || freshSong.notes || ((window.SAMPLE_MAPS && window.SAMPLE_MAPS[freshSong.id]) || []));
+
+    const songForGame = {
+      ...freshSong,
+      difficulty: chosenDiff,
+      selectedDifficulty: chosenDiff,
+      notes: trackNotes,
+      nps: diffData.nps !== undefined ? diffData.nps : freshSong.nps
+    };
+
+    currentTestedMap = songForGame;
 
     // Prepare game view with track metadata
-    gameView.setupSong(freshSong);
+    gameView.setupSong(songForGame);
     gameView.show();
-
-    // Use notes from the map
-    const trackNotes = (freshSong.notes && Array.isArray(freshSong.notes))
-      ? freshSong.notes
-      : ((window.SAMPLE_MAPS && window.SAMPLE_MAPS[freshSong.id]) || []);
 
     // Instantiate and launch game engine
     activeGameEngine = new GameEngineClass({
-      song: freshSong,
+      song: songForGame,
       notes: trackNotes,
       musicPlayer,
       soundManager,
@@ -145,8 +157,8 @@ function initApp() {
         gameView.render(state);
       },
       onSongEnd: (results) => {
-        // Record high score (completed runs only) and display comprehensive End Screen
-        const scoreRecord = mapStorage.recordScore(results.songId, results.score, results.isCompleted);
+        // Record high score (completed runs only) for the chosen difficulty and display comprehensive End Screen
+        const scoreRecord = mapStorage.recordScore(results.songId, results.score, results.isCompleted, chosenDiff);
         gameView.showResults(results, scoreRecord);
       }
     });
@@ -171,8 +183,8 @@ function initApp() {
   const createMenu = new CreateMenuClass({
     mapStorage,
     soundManager,
-    onEditMap: (mapToEdit) => {
-      mapEditor.open(mapToEdit);
+    onEditMap: (mapToEdit, difficulty = null) => {
+      mapEditor.open(mapToEdit, difficulty);
     }
   });
   createMenu.init();

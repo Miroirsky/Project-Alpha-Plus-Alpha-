@@ -29,6 +29,7 @@ class PlayMenu {
     this.selectedSong = null;
     this.selectedIndex = -1;
     this.hoveredSong = null;
+    this.selectedDifficulty = null;
 
     // DOM Elements
     this.view = document.getElementById("play-menu-view");
@@ -110,7 +111,17 @@ class PlayMenu {
       card.style.setProperty("--song-accent-color", song.color || "var(--color-accent)");
 
       const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
-      const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id) : 0;
+      const songDiffs = (this.mapStorage && this.mapStorage.getSongDifficulties(song)) || song.difficulties || {};
+      const diffKeys = Object.keys(songDiffs);
+      const diffBadgeText = diffKeys.length > 1
+        ? `${diffKeys.length} Difficulties`
+        : (diffKeys[0] || song.difficulty || "Normal");
+      const primaryDiffKey = song.selectedDifficulty && songDiffs[song.selectedDifficulty]
+        ? song.selectedDifficulty
+        : (diffKeys[0] || song.difficulty || "Normal");
+      const badgeColor = this.getDifficultyColor(primaryDiffKey, song.color);
+
+      const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id, primaryDiffKey) : 0;
       const bestScoreLabel = bestScore > 0 ? `PB: ${bestScore.toLocaleString()}` : "Unplayed";
 
       card.innerHTML = `
@@ -120,8 +131,8 @@ class PlayMenu {
         <div class="song-card-main">
           <div class="song-card-header-row">
             <span class="song-card-name" title="${song.name}">${song.name}</span>
-            <span class="song-card-diff-badge" style="border-color: ${song.color || 'var(--color-accent)'}; color: ${song.color || 'var(--color-accent)'};">
-              ${song.difficulty || "Normal"}
+            <span class="song-card-diff-badge" style="border-color: ${badgeColor}; color: ${badgeColor};">
+              ${diffBadgeText}
             </span>
           </div>
           <div class="song-card-sub-row">
@@ -246,6 +257,21 @@ class PlayMenu {
   }
 
   /**
+   * Helper to resolve accent color for a difficulty tier.
+   * @param {string} diffName
+   * @param {string} fallbackColor
+   * @returns {string}
+   */
+  getDifficultyColor(diffName, fallbackColor = "var(--color-accent)") {
+    const lower = String(diffName || "").toLowerCase();
+    if (lower.includes("easy")) return "#00e676";
+    if (lower.includes("normal") || lower.includes("standard")) return "#00d4ff";
+    if (lower.includes("hard")) return "#ff9100";
+    if (lower.includes("expert") || lower.includes("insane") || lower.includes("master")) return "#ff1744";
+    return fallbackColor || "var(--color-accent)";
+  }
+
+  /**
    * Selects song by index and scrolls card into view.
    * @param {number} idx
    * @param {boolean} playSound
@@ -256,6 +282,13 @@ class PlayMenu {
 
     this.selectedIndex = idx;
     this.selectedSong = this.songs[idx];
+
+    // Synchronize difficulty selection to one of this song's mapped difficulties
+    const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(this.selectedSong)) || this.selectedSong.difficulties || {};
+    const avail = Object.keys(diffs);
+    if (!this.selectedDifficulty || !avail.includes(this.selectedDifficulty)) {
+      this.selectedDifficulty = this.selectedSong.selectedDifficulty || this.selectedSong.difficulty || avail[0] || "Normal";
+    }
 
     if (playSound && this.soundManager) {
       this.soundManager.playClick();
@@ -344,13 +377,24 @@ class PlayMenu {
   }
 
   /**
-   * Launches gameplay for currently selected song.
+   * Launches gameplay for currently selected song and chosen difficulty.
    */
   launchCurrentSong() {
     if (!this.selectedSong) return;
     if (this.soundManager) this.soundManager.playClick();
     if (typeof this.onStartTrack === "function") {
-      this.onStartTrack(this.selectedSong);
+      const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(this.selectedSong)) || this.selectedSong.difficulties || {};
+      const chosenDiff = this.selectedDifficulty || this.selectedSong.difficulty || Object.keys(diffs)[0] || "Normal";
+      const diffData = diffs[chosenDiff] || {};
+      const activeNotes = diffData.notes || this.selectedSong.notes || [];
+      const launchPayload = {
+        ...this.selectedSong,
+        selectedDifficulty: chosenDiff,
+        difficulty: chosenDiff,
+        notes: activeNotes,
+        nps: diffData.nps !== undefined ? diffData.nps : this.selectedSong.nps
+      };
+      this.onStartTrack(launchPayload);
     }
   }
 
@@ -428,16 +472,28 @@ class PlayMenu {
   }
 
   /**
-   * Renders full selected song details with osu!-style background artwork and metadata.
+   * Renders full selected song details with osu!-style background artwork and metadata,
+   * including difficulty selector that shows only difficulties with mapped tracks.
    * @param {Object} song
    */
   renderSelectedSongDetails(song) {
     if (!this.songDetailsContainer) return;
 
     const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
-    const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id) : 0;
+    const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(song)) || song.difficulties || {};
+    const availableDiffKeys = Object.keys(diffs);
+
+    if (!availableDiffKeys.includes(this.selectedDifficulty)) {
+      this.selectedDifficulty = song.selectedDifficulty || song.difficulty || availableDiffKeys[0] || "Normal";
+    }
+
+    const activeDiffData = diffs[this.selectedDifficulty] || { difficulty: this.selectedDifficulty, notes: song.notes || [], nps: song.nps || 0 };
+    const activeNotes = activeDiffData.notes || [];
+    const notesCount = activeNotes.length;
+    const activeNps = this.getSongNps({ ...song, notes: activeNotes, nps: activeDiffData.nps });
+    const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id, this.selectedDifficulty) : 0;
     const bestScoreDisplay = bestScore > 0 ? bestScore.toLocaleString() : "--";
-    const notesCount = song.notes ? song.notes.length : (window.SAMPLE_MAPS && window.SAMPLE_MAPS[song.id] ? window.SAMPLE_MAPS[song.id].length : 0);
+    const activeDiffColor = this.getDifficultyColor(this.selectedDifficulty, song.color);
 
     this.songDetailsContainer.innerHTML = `
       <div class="selected-song-view" style="background-image: url('${coverSrc}');">
@@ -445,15 +501,35 @@ class PlayMenu {
         <div class="song-details-content">
           <div class="song-info-header">
             <div class="song-info-badges">
-              <span class="badge-difficulty" style="color: ${song.color || 'var(--color-accent)'}; border-color: ${song.color || 'var(--color-accent)'};">
-                ${song.difficulty || "Standard"}
+              <span class="badge-difficulty" style="color: ${activeDiffColor}; border-color: ${activeDiffColor};">
+                ${this.selectedDifficulty}
               </span>
-              <span class="badge-nps-preview">${this.getSongNps(song)} NPS</span>
+              <span class="badge-nps-preview">${activeNps} NPS</span>
               <span class="badge-duration-preview">${song.duration || "03:00"}</span>
               <span class="badge-notes-preview">${notesCount} Notes</span>
             </div>
             <h2 class="song-info-title">${song.name}</h2>
             <p class="song-selected-creator">Music Creator: <strong>${song.creator || "Unknown Artist"}</strong></p>
+
+            <!-- Difficulty Track Selector: only shows difficulties that have a mapped track for this song -->
+            <div class="song-difficulty-picker" role="radiogroup" aria-label="Select Difficulty Track">
+              <span class="diff-picker-label">Difficulty:</span>
+              <div class="diff-picker-buttons">
+                ${availableDiffKeys.map((diffKey) => {
+                  const dData = diffs[diffKey];
+                  const dNotes = (dData && dData.notes) ? dData.notes.length : 0;
+                  const isSelected = diffKey === this.selectedDifficulty;
+                  const dColor = this.getDifficultyColor(diffKey, song.color);
+                  return `
+                    <button type="button" class="diff-select-btn ${isSelected ? 'is-active' : ''}" data-diff="${diffKey}" style="--diff-color: ${dColor};" aria-pressed="${isSelected}">
+                      <span class="diff-btn-dot"></span>
+                      <span class="diff-btn-name">${diffKey}</span>
+                      <span class="diff-btn-notes">${dNotes} notes</span>
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+            </div>
           </div>
 
           <!-- Additional Information Grid -->
@@ -467,7 +543,7 @@ class PlayMenu {
               <span class="meta-value">${song.duration || "03:00"}</span>
             </div>
             <div class="meta-field">
-              <span class="meta-label">Personal Best</span>
+              <span class="meta-label">Personal Best (${this.selectedDifficulty})</span>
               <span class="meta-value highlight-score">${bestScoreDisplay}</span>
             </div>
             <div class="meta-field">
@@ -476,7 +552,7 @@ class PlayMenu {
             </div>
             <div class="meta-field">
               <span class="meta-label">Density</span>
-              <span class="meta-value">${this.getSongNps(song)} NPS</span>
+              <span class="meta-value">${activeNps} NPS</span>
             </div>
             <div class="meta-field">
               <span class="meta-label">Track Type</span>
@@ -499,7 +575,7 @@ class PlayMenu {
           <div class="song-action-container">
             <div class="selected-status-badge ready">
               <div class="selected-status-textgroup">
-                <div class="selected-status-title">Track Ready: ${song.name}</div>
+                <div class="selected-status-title">Track Ready: ${song.name} [${this.selectedDifficulty}]</div>
                 <div class="selected-status-note">Dual Orb System &bull; Press Enter or Click to Play</div>
               </div>
               <button id="btn-start-gameplay" class="btn-start-action" type="button">
@@ -511,6 +587,19 @@ class PlayMenu {
         </div>
       </div>
     `;
+
+    // Connect Difficulty Picker buttons
+    const diffButtons = this.songDetailsContainer.querySelectorAll(".diff-select-btn");
+    diffButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const clickedDiff = btn.getAttribute("data-diff");
+        if (clickedDiff && clickedDiff !== this.selectedDifficulty) {
+          this.selectedDifficulty = clickedDiff;
+          if (this.soundManager) this.soundManager.playClick();
+          this.renderSelectedSongDetails(this.selectedSong);
+        }
+      });
+    });
 
     // Connect Start Track button
     const startBtn = this.songDetailsContainer.querySelector("#btn-start-gameplay");

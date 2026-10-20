@@ -684,6 +684,89 @@
   font-size: 0.82rem;
 }
 
+/* ==========================================================================
+   Difficulty Picker in Song Details View
+   ========================================================================== */
+.song-difficulty-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.diff-picker-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary);
+}
+
+.diff-picker-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.diff-select-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(18, 24, 38, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+  user-select: none;
+}
+
+.diff-select-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--diff-color, var(--color-accent));
+  color: var(--color-text-primary);
+  transform: translateY(-1px);
+}
+
+.diff-select-btn.is-active {
+  background: rgba(0, 0, 0, 0.55);
+  border-color: var(--diff-color, var(--color-accent));
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.4), inset 0 0 8px rgba(255, 255, 255, 0.06);
+}
+
+.diff-btn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--diff-color, var(--color-accent));
+  box-shadow: 0 0 6px var(--diff-color, var(--color-accent));
+  flex-shrink: 0;
+}
+
+.diff-btn-name {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.diff-btn-notes {
+  font-family: var(--font-family-mono);
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.diff-select-btn.is-active .diff-btn-notes {
+  color: rgba(255, 255, 255, 0.85);
+}
+
 /* Responsive collapse */
 @media (max-width: 960px) {
   .play-menu-view {

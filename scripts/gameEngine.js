@@ -956,6 +956,8 @@ class GameEngine {
     return {
       songName: this.song.name,
       songId: this.song.id,
+      difficulty: this.song.difficulty || "Normal",
+      song: this.song,
       score: this.score,
       highestPossibleScore: maxPossible,
       rawScorePercentage: rawScorePct,

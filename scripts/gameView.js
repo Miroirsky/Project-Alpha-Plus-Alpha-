@@ -117,7 +117,8 @@ class GameView {
    * @param {Object} song
    */
   setupSong(song) {
-    if (this.trackTitle) this.trackTitle.textContent = song.name;
+    const diffTag = song.difficulty ? ` [${song.difficulty}]` : "";
+    if (this.trackTitle) this.trackTitle.textContent = `${song.name}${diffTag}`;
     if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} &bull; Mapped by ${song.mapper || "Mapper"}`;
     this.hideResults();
 
@@ -1186,7 +1187,8 @@ class GameView {
    * @param {Object} scoreRecord
    */
   showResults(results, scoreRecord = { isNewRecord: false, bestScore: 0 }) {
-    if (this.resultsSongName) this.resultsSongName.textContent = results.songName;
+    const diffTag = results.difficulty ? ` [${results.difficulty}]` : (results.song && results.song.difficulty ? ` [${results.song.difficulty}]` : "");
+    if (this.resultsSongName) this.resultsSongName.textContent = `${results.songName}${diffTag}`;
     if (this.resultsStatus) {
       this.resultsStatus.textContent = results.completionStatus;
       this.resultsStatus.className = `results-status-banner ${results.statusClass || ""}`;

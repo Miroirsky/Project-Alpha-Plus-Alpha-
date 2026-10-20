@@ -32,11 +32,13 @@ class MapStorage {
           for (const m of parsed) {
             if (m && m.id && !seenIds.has(m.id)) {
               seenIds.add(m.id);
-              uniqueMaps.push({
+              const customMap = {
                 ...m,
                 isCustom: true,
                 isDefault: false
-              });
+              };
+              this.normalizeSongDifficulties(customMap);
+              uniqueMaps.push(customMap);
             }
           }
           return uniqueMaps;
@@ -111,6 +113,105 @@ class MapStorage {
   }
 
   /**
+   * Deeply sanitizes and clones a notes array.
+   * @param {Array} notesList
+   * @returns {Array}
+   */
+  cloneNotes(notesList) {
+    if (!Array.isArray(notesList)) return [];
+    return notesList.map((n) => {
+      const isTriangle = n.type === "triangle" || n.type === "bomb";
+      const isDirectional = n.type === "directional" || n.type === "arrow";
+      const item = {
+        time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
+        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
+        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
+        x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
+        y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
+      };
+      if (isDirectional) {
+        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+      }
+      return item;
+    }).sort((a, b) => a.time - b.time);
+  }
+
+  /**
+   * Computes density (Notes Per Second).
+   * @param {Array} notesList
+   * @param {number} durationSeconds
+   * @returns {number}
+   */
+  computeNps(notesList, durationSeconds = 180) {
+    const count = Array.isArray(notesList) ? notesList.length : 0;
+    const dur = Math.max(1, Number(durationSeconds) || 180);
+    return count > 0 ? parseFloat((count / dur).toFixed(1)) : 0;
+  }
+
+  /**
+   * Normalizes a song object to ensure difficulties dictionary is populated,
+   * separating song metadata from difficulty-specific notes maps.
+   * Maintains backward-compatible .notes and .difficulty properties pointing to primary difficulty.
+   * @param {Object} song
+   * @returns {Object}
+   */
+  normalizeSongDifficulties(song) {
+    if (!song) return song;
+    const durSec = Number(song.durationSeconds) || 180;
+    const diffs = {};
+
+    if (song.difficulties && typeof song.difficulties === "object" && Object.keys(song.difficulties).length > 0) {
+      for (const [diffKey, diffVal] of Object.entries(song.difficulties)) {
+        if (!diffVal) continue;
+        const name = String(diffVal.difficulty || diffKey || "Normal").trim();
+        const notes = this.cloneNotes(diffVal.notes || []);
+        diffs[name] = {
+          difficulty: name,
+          notes,
+          nps: typeof diffVal.nps === "number" && diffVal.nps > 0 ? diffVal.nps : this.computeNps(notes, durSec)
+        };
+      }
+    }
+
+    // If no difficulties object or it was empty, construct from top-level song properties
+    if (Object.keys(diffs).length === 0) {
+      const topDiffName = String(song.difficulty || "Normal").trim() || "Normal";
+      const notes = this.cloneNotes(song.notes || []);
+      diffs[topDiffName] = {
+        difficulty: topDiffName,
+        notes,
+        nps: typeof song.nps === "number" && song.nps > 0 ? song.nps : this.computeNps(notes, durSec)
+      };
+    }
+
+    song.difficulties = diffs;
+
+    // Backward compatibility: keep song.difficulty, song.notes, song.nps pointing to primary/selected difficulty
+    const primaryDiffKey = song.selectedDifficulty && diffs[song.selectedDifficulty]
+      ? song.selectedDifficulty
+      : (diffs[song.difficulty] ? song.difficulty : Object.keys(diffs)[0]);
+    const primary = diffs[primaryDiffKey];
+    if (primary) {
+      song.difficulty = primary.difficulty;
+      song.notes = primary.notes;
+      song.nps = primary.nps;
+    }
+
+    return song;
+  }
+
+  /**
+   * Retrieves difficulty tracks dictionary for a song.
+   * @param {Object} song
+   * @returns {Object}
+   */
+  getSongDifficulties(song) {
+    if (!song) return {};
+    this.normalizeSongDifficulties(song);
+    return song.difficulties || {};
+  }
+
+  /**
    * Generates a stable alphanumeric hash from a string.
    * @param {string} str
    * @returns {string}
@@ -163,7 +264,7 @@ class MapStorage {
     }
 
     const defaultTracks = [];
-    const seenSignatures = new Set();
+    const songMap = new Map(); // key: base song signature -> song object
 
     rawItems.forEach((item) => {
       if (!item) return;
@@ -177,22 +278,28 @@ class MapStorage {
       }
 
       const t = result.track;
+      this.normalizeSongDifficulties(t);
 
-      // Prevent duplicate imports using a deterministic content signature
-      const sig = `${t.name.toLowerCase()}::${(t.creator || "").toLowerCase()}::${t.notes.length}::${t.durationSeconds}`;
-      if (seenSignatures.has(sig)) {
-        return; // Already imported in this batch, avoid duplicate
+      // Group tracks with identical song name and audio file under one single song ID
+      const songBaseSig = `${t.name.toLowerCase().trim()}::${(t.creator || "").toLowerCase().trim()}::${(t.file || "").toLowerCase().trim()}`;
+
+      if (songMap.has(songBaseSig)) {
+        const existingSong = songMap.get(songBaseSig);
+        for (const [diffName, diffObj] of Object.entries(t.difficulties)) {
+          existingSong.difficulties[diffName] = diffObj;
+        }
+        this.normalizeSongDifficulties(existingSong);
+        return;
       }
-      seenSignatures.add(sig);
 
-      const trackId = `default_${this.hashString(sig)}`;
-      defaultTracks.push({
-        ...t,
-        id: trackId,
-        isDefault: true,
-        isCustom: false,
-        date: t.date || new Date().toISOString().split("T")[0]
-      });
+      const trackId = `default_${this.hashString(songBaseSig)}`;
+      t.id = trackId;
+      t.isDefault = true;
+      t.isCustom = false;
+      t.date = t.date || new Date().toISOString().split("T")[0];
+
+      songMap.set(songBaseSig, t);
+      defaultTracks.push(t);
     });
 
     return defaultTracks;
@@ -232,8 +339,9 @@ class MapStorage {
    * @param {Object} mapData
    * @returns {Object}
    */
-  createMap({ name, mapper, creator, file, duration = "03:00", durationSeconds = 180, cover = null }) {
+  createMap({ name, mapper, creator, file, duration = "03:00", durationSeconds = 180, cover = null, difficulty = "Normal" }) {
     const id = `custom_${Date.now()}`;
+    const diffName = String(difficulty || "Normal").trim() || "Normal";
     const newMap = {
       id,
       name: name || "Untitled Map",
@@ -247,7 +355,15 @@ class MapStorage {
       cover: cover || "Assets/Tracks Placeholders/Default-0.png",
       isCustom: true,
       isDefault: false,
-      notes: []
+      difficulty: diffName,
+      notes: [],
+      difficulties: {
+        [diffName]: {
+          difficulty: diffName,
+          notes: [],
+          nps: 0
+        }
+      }
     };
 
     this.customMaps.unshift(newMap);
@@ -281,6 +397,7 @@ class MapStorage {
    * Saves updates to a map:
    * - When editing a default track, saves changes as a separate copy, leaving the original unchanged.
    * - For custom tracks, saves changes directly to the existing track without creating duplicate saves or new tracks.
+   * - Persists each difficulty track under the same song ID.
    * @param {Object} updatedMap
    * @returns {Object} savedMap (or new copy if default track)
    */
@@ -288,36 +405,65 @@ class MapStorage {
     if (!updatedMap || !updatedMap.id) return updatedMap;
 
     const trackCover = updatedMap.cover || updatedMap.image || updatedMap.artwork || "Assets/Tracks Placeholders/Default-0.png";
-
-    // Helper to deeply sanitize and clone notes array
-    const cloneNotes = (notesList) => {
-      if (!Array.isArray(notesList)) return [];
-      return notesList.map((n) => {
-        const isTriangle = n.type === "triangle" || n.type === "bomb";
-        const isDirectional = n.type === "directional" || n.type === "arrow";
-        const item = {
-          time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
-          color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-          type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-          x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
-          y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
-        };
-        if (isDirectional) {
-          item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
-        }
-        return item;
-      }).sort((a, b) => a.time - b.time);
-    };
-
-    const notesClone = cloneNotes(updatedMap.notes);
-
     const durationSec = Number(updatedMap.durationSeconds || updatedMap.duration) || 180;
-    const computedNps = notesClone.length > 0 && durationSec > 0
-      ? parseFloat((notesClone.length / durationSec).toFixed(1))
-      : 0;
+
+    const activeDiff = String(updatedMap.selectedDifficulty || updatedMap.difficulty || "Normal").trim() || "Normal";
+
+    if (!updatedMap.difficulties || typeof updatedMap.difficulties !== "object") {
+      updatedMap.difficulties = {};
+    }
+
+    // If difficulties dictionary exists for active difficulty, preserve its notes;
+    // otherwise populate from updatedMap.notes if present
+    if (updatedMap.difficulties && updatedMap.difficulties[activeDiff] && Array.isArray(updatedMap.difficulties[activeDiff].notes)) {
+      if (Array.isArray(updatedMap.notes) && updatedMap.notes.length > 0 && updatedMap.selectedDifficulty === activeDiff) {
+        const cloned = this.cloneNotes(updatedMap.notes);
+        updatedMap.difficulties[activeDiff].notes = cloned;
+        updatedMap.difficulties[activeDiff].nps = this.computeNps(cloned, durationSec);
+      }
+    } else if (Object.keys(updatedMap.difficulties).length === 0 && Array.isArray(updatedMap.notes)) {
+      const cloned = this.cloneNotes(updatedMap.notes);
+      updatedMap.difficulties[activeDiff] = {
+        difficulty: activeDiff,
+        notes: cloned,
+        nps: this.computeNps(cloned, durationSec)
+      };
+    }
+
+    // Ensure difficulties dictionary exists and is normalized
+    this.normalizeSongDifficulties(updatedMap);
+
+    // Deeply clone and sanitize all difficulty maps
+    const sanitizedDifficulties = {};
+    for (const [name, diffData] of Object.entries(updatedMap.difficulties)) {
+      if (!diffData) continue;
+      const cleanName = String(diffData.difficulty || name).trim();
+      const notes = this.cloneNotes(diffData.notes || []);
+      sanitizedDifficulties[cleanName] = {
+        difficulty: cleanName,
+        notes,
+        nps: typeof diffData.nps === "number" && diffData.nps > 0 ? diffData.nps : this.computeNps(notes, durationSec)
+      };
+    }
+
+    if (Object.keys(sanitizedDifficulties).length === 0) {
+      sanitizedDifficulties[activeDiff] = {
+        difficulty: activeDiff,
+        notes: [],
+        nps: 0
+      };
+    }
+
+    updatedMap.difficulties = sanitizedDifficulties;
+
+    // Determine primary difficulty for backward-compatible properties
+    const primaryKey = sanitizedDifficulties[activeDiff] ? activeDiff : Object.keys(sanitizedDifficulties)[0];
+    const primary = sanitizedDifficulties[primaryKey];
+    const notesClone = primary ? primary.notes : [];
+    const computedNps = primary ? primary.nps : 0;
 
     // 1. If this track already exists in customMaps, update it directly in-place!
-    // NEVER create a new track or save copy for an existing custom track!
+    // NEVER create a new track or duplicate save for an existing custom track!
     const customIndex = this.customMaps.findIndex((m) => m.id === updatedMap.id);
     if (customIndex !== -1) {
       this.customMaps[customIndex] = {
@@ -328,7 +474,9 @@ class MapStorage {
         isDefault: false,
         cover: trackCover,
         nps: computedNps,
-        notes: notesClone
+        notes: notesClone,
+        difficulty: primaryKey,
+        difficulties: sanitizedDifficulties
       };
       this.saveCustomMapsToStorage();
       return this.customMaps[customIndex];
@@ -352,7 +500,9 @@ class MapStorage {
         isDefault: false,
         nps: computedNps,
         date: new Date().toISOString().split("T")[0],
-        notes: notesClone
+        notes: notesClone,
+        difficulty: primaryKey,
+        difficulties: sanitizedDifficulties
       };
 
       this.customMaps.unshift(copyMap);
@@ -368,11 +518,34 @@ class MapStorage {
       isCustom: true,
       isDefault: false,
       nps: computedNps,
-      notes: notesClone
+      notes: notesClone,
+      difficulty: primaryKey,
+      difficulties: sanitizedDifficulties
     };
     this.customMaps.unshift(newCustomMap);
     this.saveCustomMapsToStorage();
     return newCustomMap;
+  }
+
+  /**
+   * Deletes a specific difficulty from a custom map.
+   * @param {string} songId
+   * @param {string} diffName
+   * @returns {boolean}
+   */
+  deleteDifficulty(songId, diffName) {
+    if (!songId || !diffName) return false;
+    const map = this.customMaps.find((m) => m.id === songId);
+    if (!map || !map.difficulties) return false;
+    const keys = Object.keys(map.difficulties);
+    if (keys.length <= 1) {
+      console.warn("Cannot delete the only difficulty track for song:", songId);
+      return false;
+    }
+    delete map.difficulties[diffName];
+    this.normalizeSongDifficulties(map);
+    this.saveCustomMapsToStorage();
+    return true;
   }
 
   /**
@@ -385,25 +558,35 @@ class MapStorage {
   }
 
   /**
-   * Gets the saved best score for a song.
+   * Gets the saved best score for a song (and optionally a specific difficulty).
    * @param {string} songId
+   * @param {string|null} difficulty
    * @returns {number}
    */
-  getBestScore(songId) {
+  getBestScore(songId, difficulty = null) {
+    if (!songId) return 0;
+    if (difficulty) {
+      const diffKey = `${songId}#${String(difficulty).trim().toLowerCase()}`;
+      if (typeof this.highscores[diffKey] === "number") {
+        return this.highscores[diffKey];
+      }
+    }
     return this.highscores[songId] || 0;
   }
 
   /**
-   * Saves a score for a song.
+   * Saves a score for a song and difficulty.
    * Only completed runs can set a new best score.
    * Runs abandoned early never overwrite existing records.
    * @param {string} songId
    * @param {number} score
    * @param {boolean} isCompleted
+   * @param {string|null} difficulty
    * @returns {{ isNewRecord: boolean, bestScore: number }}
    */
-  recordScore(songId, score, isCompleted = true) {
-    const currentBest = this.getBestScore(songId);
+  recordScore(songId, score, isCompleted = true, difficulty = null) {
+    if (!songId) return { isNewRecord: false, bestScore: 0 };
+    const currentBest = this.getBestScore(songId, difficulty);
 
     // If abandoned early, NEVER count as a new best score
     if (!isCompleted) {
@@ -414,9 +597,27 @@ class MapStorage {
     let bestScore = currentBest;
 
     if (score > currentBest) {
-      this.highscores[songId] = score;
-      bestScore = score;
       isNewRecord = true;
+      bestScore = score;
+    }
+
+    let changed = false;
+    if (difficulty) {
+      const diffKey = `${songId}#${String(difficulty).trim().toLowerCase()}`;
+      const prevDiffBest = this.highscores[diffKey] || 0;
+      if (score > prevDiffBest) {
+        this.highscores[diffKey] = score;
+        changed = true;
+      }
+    }
+
+    const prevOverall = this.highscores[songId] || 0;
+    if (score > prevOverall) {
+      this.highscores[songId] = score;
+      changed = true;
+    }
+
+    if (changed) {
       try {
         localStorage.setItem(HIGHSCORES_STORAGE_KEY, JSON.stringify(this.highscores));
       } catch (err) {
@@ -431,33 +632,33 @@ class MapStorage {
    * Exports a map into a validated, unique, and copyable text code.
    * Does NOT create duplicate saves or modify the current track.
    * @param {Object} map
+   * @param {string|null} selectedDifficulty
    * @returns {{ code: string, json: string, payload: Object }}
    */
-  exportTrack(map) {
+  exportTrack(map, selectedDifficulty = null) {
     if (!map) throw new Error("No map specified for export.");
 
-    const notes = Array.isArray(map.notes) ? map.notes : [];
-    const sanitizedNotes = notes.map((n) => {
-      const isTriangle = n.type === "triangle" || n.type === "bomb";
-      const isDirectional = n.type === "directional" || n.type === "arrow";
-      const item = {
-        time: parseFloat(Number(n.time || 0).toFixed(3)),
-        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-        x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
-        y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
-      };
-      if (isDirectional) {
-        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
-      }
-      return item;
-    });
+    this.normalizeSongDifficulties(map);
+    const activeDiffName = String(selectedDifficulty || map.selectedDifficulty || map.difficulty || "Normal").trim() || "Normal";
+    const diffs = map.difficulties || {};
 
-    sanitizedNotes.sort((a, b) => a.time - b.time);
+    const exportedDifficulties = {};
+    for (const [name, diffObj] of Object.entries(diffs)) {
+      if (!diffObj) continue;
+      const cleanName = String(diffObj.difficulty || name).trim();
+      exportedDifficulties[cleanName] = {
+        difficulty: cleanName,
+        nps: typeof diffObj.nps === "number" ? diffObj.nps : 0,
+        notes: this.cloneNotes(diffObj.notes || [])
+      };
+    }
+
+    const primaryDiff = exportedDifficulties[activeDiffName] || exportedDifficulties[Object.keys(exportedDifficulties)[0]];
+    const sanitizedNotes = primaryDiff ? primaryDiff.notes : this.cloneNotes(map.notes || []);
 
     const payload = {
       format: "ProjectAlphaPlus-Track",
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       track: {
         id: map.id || `track_${Date.now()}`,
@@ -469,11 +670,10 @@ class MapStorage {
         file: map.file || "Assets/Songs/IMG_2449.mp3",
         color: map.color || "#00d4ff",
         cover: map.cover || map.image || map.artwork || "Assets/Tracks Placeholders/Default-0.png",
-        difficulty: map.difficulty || "Normal",
-        nps: sanitizedNotes.length > 0 && map.durationSeconds > 0
-          ? parseFloat((sanitizedNotes.length / map.durationSeconds).toFixed(1))
-          : 0,
-        notes: sanitizedNotes
+        difficulty: primaryDiff ? primaryDiff.difficulty : (map.difficulty || "Normal"),
+        nps: primaryDiff ? primaryDiff.nps : (map.nps || 0),
+        notes: sanitizedNotes,
+        difficulties: exportedDifficulties
       }
     };
 
@@ -627,6 +827,62 @@ class MapStorage {
     const seconds = Math.floor(durationSeconds % 60);
     const durationFormatted = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
+    const sanitizedDifficulties = {};
+    if (trackObj.difficulties && typeof trackObj.difficulties === "object" && Object.keys(trackObj.difficulties).length > 0) {
+      for (const [diffName, diffData] of Object.entries(trackObj.difficulties)) {
+        if (!diffData) continue;
+        const cleanName = String(diffData.difficulty || diffName).trim();
+        const rawDiffNotes = Array.isArray(diffData.notes) ? diffData.notes : [];
+        const diffNotes = [];
+        for (let i = 0; i < rawDiffNotes.length; i++) {
+          const n = rawDiffNotes[i];
+          if (!n || typeof n !== "object") continue;
+          const time = Number(n.time);
+          if (isNaN(time) || time < 0) continue;
+          const isTriangle = n.type === "triangle" || n.type === "bomb";
+          const isDirectional = n.type === "directional" || n.type === "arrow";
+          let color = String(n.color || "").toLowerCase();
+          if (isTriangle) {
+            color = "yellow";
+          } else if (color !== "red" && color !== "blue") {
+            continue;
+          }
+          const x = Number(n.x);
+          const y = Number(n.y);
+          if (isNaN(x) || isNaN(y)) continue;
+          const note = {
+            time: parseFloat(time.toFixed(3)),
+            color,
+            type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
+            x: Math.max(0.02, Math.min(0.98, parseFloat(x.toFixed(3)))),
+            y: Math.max(0.02, Math.min(0.98, parseFloat(y.toFixed(3))))
+          };
+          if (isDirectional) {
+            note.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+          }
+          diffNotes.push(note);
+        }
+        diffNotes.sort((a, b) => a.time - b.time);
+        sanitizedDifficulties[cleanName] = {
+          difficulty: cleanName,
+          notes: diffNotes,
+          nps: this.computeNps(diffNotes, durationSeconds)
+        };
+      }
+    }
+
+    const defaultDiffName = String(trackObj.difficulty || "Normal").trim() || "Normal";
+    if (Object.keys(sanitizedDifficulties).length === 0) {
+      sanitizedDifficulties[defaultDiffName] = {
+        difficulty: defaultDiffName,
+        notes: sanitizedNotes,
+        nps: this.computeNps(sanitizedNotes, durationSeconds)
+      };
+    }
+
+    const primaryKey = sanitizedDifficulties[defaultDiffName] ? defaultDiffName : Object.keys(sanitizedDifficulties)[0];
+    const primary = sanitizedDifficulties[primaryKey];
+
     const sanitizedTrack = {
       name: trackObj.name.trim().slice(0, 80),
       mapper: (trackObj.mapper || "Anonymous").trim().slice(0, 60),
@@ -636,8 +892,10 @@ class MapStorage {
       file: trackObj.file || "Assets/Songs/IMG_2449.mp3",
       color: trackObj.color || "#00d4ff",
       cover: trackObj.cover || trackObj.image || trackObj.artwork || "Assets/Tracks Placeholders/Default-0.png",
-      difficulty: trackObj.difficulty || "Normal",
-      notes: sanitizedNotes
+      difficulty: primary ? primary.difficulty : defaultDiffName,
+      nps: primary ? primary.nps : 0,
+      notes: primary ? primary.notes : sanitizedNotes,
+      difficulties: sanitizedDifficulties
     };
 
     if (trackObj.background && typeof trackObj.background === "object") {
@@ -671,6 +929,8 @@ class MapStorage {
       throw new Error("Invalid track data provided to importTrack.");
     }
 
+    this.normalizeSongDifficulties(validatedTrack);
+
     const uniqueId = `custom_import_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     const importedMap = {
       ...validatedTrack,
@@ -678,7 +938,8 @@ class MapStorage {
       date: new Date().toISOString().split("T")[0],
       isCustom: true,
       isDefault: false,
-      notes: [...(validatedTrack.notes || [])]
+      notes: [...(validatedTrack.notes || [])],
+      difficulties: { ...validatedTrack.difficulties }
     };
 
     this.customMaps.unshift(importedMap);

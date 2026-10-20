@@ -161,6 +161,11 @@
             </div>
 
             <div class="form-group">
+              <label for="new-map-difficulty" class="form-label">Initial Difficulty Track</label>
+              <input type="text" id="new-map-difficulty" class="form-input" placeholder="e.g. Normal, Easy, Skibidi..." value="Normal" maxlength="30">
+            </div>
+
+            <div class="form-group">
               <label class="form-label">Import Audio File</label>
               <div class="file-input-wrapper">
                 <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
@@ -263,6 +268,13 @@
         <div class="editor-bar-center">
           <div class="editor-playback-badge-wrap">
             <span id="editor-status-text" class="editor-status-badge">PAUSED</span>
+          </div>
+
+          <!-- Difficulty Selector / Tabs in Map Editor -->
+          <div class="editor-difficulty-selector" id="editor-difficulty-selector" role="tablist" aria-label="Difficulty Tracks">
+            <span class="editor-diff-selector-label">Diff:</span>
+            <div class="editor-diff-tabs" id="editor-diff-tabs"></div>
+            <button type="button" id="btn-editor-add-diff" class="btn-editor-add-diff" title="Add a new difficulty track">+</button>
           </div>
 
           <!-- Placement Tool Selector (Normal Note vs Directional Note vs Bomb Hazard) -->
@@ -774,6 +786,7 @@
             <div class="form-group">
               <label for="params-track-difficulty" class="form-label">Difficulty / Tag</label>
               <select id="params-track-difficulty" class="form-select">
+                <option value="Easy">Easy</option>
                 <option value="Normal">Normal</option>
                 <option value="Hard">Hard</option>
                 <option value="Expert">Expert</option>
@@ -905,6 +918,273 @@
             <button id="btn-cancel-params" class="btn-editor-action" type="button">Cancel</button>
             <button id="btn-save-params" class="menu-btn menu-btn-primary" type="submit">
               <span>Save Parameters</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Add Difficulty Track Modal -->
+    <div id="add-diff-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="add-diff-modal-title" aria-hidden="true">
+      <div class="modal-dialog add-diff-modal-dialog">
+        <header class="modal-header">
+          <h2 id="add-diff-modal-title" class="modal-title">Add Difficulty Track</h2>
+          <button id="btn-close-add-diff" class="modal-close-btn" type="button" aria-label="Close Dialog">&times;</button>
+        </header>
+        <form id="add-diff-form" class="modal-content-body">
+          <div class="form-group">
+            <label class="form-label">Difficulty Name</label>
+            <div class="diff-preset-chips" id="diff-preset-chips">
+              <button type="button" class="chip-btn" data-diff="Easy">Easy</button>
+              <button type="button" class="chip-btn" data-diff="Normal">Normal</button>
+              <button type="button" class="chip-btn" data-diff="Hard">Hard</button>
+              <button type="button" class="chip-btn" data-diff="Expert">Expert</button>
+            </div>
+            <input type="text" id="new-diff-name" class="form-input" placeholder="Or enter custom name (e.g. Insane)" required maxlength="25">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Notes</label>
+            <div class="diff-initial-choice">
+              <label class="radio-label">
+                <input type="radio" name="diff-notes-source" value="empty" checked>
+                <span>Start with empty track (blank canvas)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="diff-notes-source" value="copy">
+                <span>Copy notes from current active difficulty</span>
+              </label>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btn-cancel-add-diff" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-confirm-add-diff" class="menu-btn menu-btn-primary" type="submit">
+              <span>Create Difficulty</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Menu: Add Difficulty Track Modal -->
+    <div id="create-add-diff-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-add-diff-title" aria-hidden="true">
+      <div class="modal-dialog add-diff-modal-dialog">
+        <header class="modal-header">
+          <h2 id="create-add-diff-title" class="modal-title">Add Difficulty Track</h2>
+          <button id="btn-close-create-add-diff" class="modal-close-btn" type="button" aria-label="Close Dialog">&times;</button>
+        </header>
+        <form id="create-add-diff-form" class="modal-content-body">
+          <div class="params-note-callout" id="create-add-diff-song-title">Adding difficulty to: ...</div>
+          <div class="form-group">
+            <label class="form-label">Difficulty Name</label>
+            <div class="diff-preset-chips" id="create-diff-preset-chips">
+              <button type="button" class="chip-btn" data-diff="Easy">Easy</button>
+              <button type="button" class="chip-btn" data-diff="Normal">Normal</button>
+              <button type="button" class="chip-btn" data-diff="Hard">Hard</button>
+              <button type="button" class="chip-btn" data-diff="Expert">Expert</button>
+              <button type="button" class="chip-btn" data-diff="Master">Master</button>
+            </div>
+            <input type="text" id="create-new-diff-name" class="form-input" placeholder="Or enter any custom name (e.g. Skibidi, Insane...)" required maxlength="30">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Notes</label>
+            <div class="diff-initial-choice">
+              <label class="radio-label">
+                <input type="radio" name="create-diff-source" value="empty" checked>
+                <span>Start with empty track (blank canvas)</span>
+              </label>
+              <label class="radio-label">
+                <input type="radio" name="create-diff-source" value="copy">
+                <span>Copy notes from existing difficulty:</span>
+              </label>
+              <select id="create-diff-copy-source-select" class="form-select" style="margin-top: 0.4rem; display: none;">
+                <!-- Populated dynamically with this song's difficulties -->
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btn-cancel-create-add-diff" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-confirm-create-add-diff" class="menu-btn menu-btn-primary" type="submit">
+              <span>+ Create Track</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Menu: Difficulty Track Parameters Modal -->
+    <div id="create-diff-params-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-diff-params-title" aria-hidden="true">
+      <div class="modal-dialog add-diff-modal-dialog">
+        <header class="modal-header">
+          <div class="modal-header-title-group">
+            <h2 id="create-diff-params-title" class="modal-title">Difficulty Parameters</h2>
+            <span id="create-diff-params-badge" class="track-type-badge">Track Settings</span>
+          </div>
+          <button id="btn-close-create-diff-params" class="modal-close-btn" type="button" aria-label="Close Dialog">&times;</button>
+        </header>
+        <form id="create-diff-params-form" class="modal-content-body">
+          <div class="params-note-callout" id="create-diff-params-subtitle">Song: ...</div>
+          <div class="form-group">
+            <label for="create-diff-param-name" class="form-label">Difficulty Name</label>
+            <input type="text" id="create-diff-param-name" class="form-input" required maxlength="30" placeholder="e.g. Easy, Normal, Skibidi...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Accent / Theme Color</label>
+            <div class="color-picker-row">
+              <input type="color" id="create-diff-param-color" class="form-color-input" value="#00d4ff">
+              <div class="swatch-group" id="create-diff-swatch-group">
+                <button type="button" class="swatch-btn" data-color="#00d4ff" style="background:#00d4ff;" title="Cyan"></button>
+                <button type="button" class="swatch-btn" data-color="#ff4757" style="background:#ff4757;" title="Red"></button>
+                <button type="button" class="swatch-btn" data-color="#2ed573" style="background:#2ed573;" title="Green"></button>
+                <button type="button" class="swatch-btn" data-color="#ffa502" style="background:#ffa502;" title="Amber"></button>
+                <button type="button" class="swatch-btn" data-color="#a55eea" style="background:#a55eea;" title="Purple"></button>
+                <button type="button" class="swatch-btn" data-color="#ff6b81" style="background:#ff6b81;" title="Pink"></button>
+              </div>
+            </div>
+          </div>
+          <div class="diff-stats-box" id="create-diff-stats-box" style="padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: var(--color-text-secondary); display: flex; justify-content: space-around;">
+            <span>Notes: <strong id="create-diff-stats-notes" style="color: var(--color-text-primary);">0</strong></span>
+            <span>NPS: <strong id="create-diff-stats-nps" style="color: var(--color-text-primary);">0.0</strong></span>
+            <span>High Score: <strong id="create-diff-stats-score" style="color: var(--color-accent);">0</strong></span>
+          </div>
+          <div class="modal-footer" style="margin-top: 1.25rem;">
+            <button id="btn-cancel-create-diff-params" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-save-create-diff-params" class="menu-btn menu-btn-primary" type="submit">
+              <span>Save Settings</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Menu: Song Parameters Modal (Song-level metadata & Arena Background) -->
+    <div id="create-song-params-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="create-song-params-title" aria-hidden="true">
+      <div class="modal-dialog params-modal-dialog">
+        <header class="modal-header">
+          <div class="modal-header-title-group">
+            <h2 id="create-song-params-title" class="modal-title">Song Parameters</h2>
+            <span id="create-song-params-badge" class="track-type-badge">Song Settings</span>
+          </div>
+          <button id="btn-close-create-song-params" class="modal-close-btn" type="button" aria-label="Close Dialog">&times;</button>
+        </header>
+        <form id="create-song-params-form" class="params-modal-content">
+          <div class="params-note-callout">
+            Configure global song metadata and arena background settings shared across all difficulty tracks for this song.
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="create-song-param-name" class="form-label">Song Name</label>
+              <input type="text" id="create-song-param-name" class="form-input" required placeholder="e.g. Cyber Pulse">
+            </div>
+            <div class="form-group">
+              <label for="create-song-param-mapper" class="form-label">Mapper Name</label>
+              <input type="text" id="create-song-param-mapper" class="form-input" required placeholder="e.g. MasterMapper">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-song-param-creator" class="form-label">Music Creator / Artist</label>
+            <input type="text" id="create-song-param-creator" class="form-input" required placeholder="e.g. SynthWave Producer">
+          </div>
+
+          <!-- Cover Artwork Gallery & Upload -->
+          <div class="form-group">
+            <label class="form-label">Track Artwork / Cover</label>
+            <div class="artwork-picker-box">
+              <span class="artwork-picker-subtitle">Choose from Project Placeholders:</span>
+              <div class="artwork-gallery-grid" id="create-song-artwork-gallery">
+                <button type="button" class="artwork-gallery-thumb is-active" data-artwork="Assets/Tracks Placeholders/Default-0.png" title="Default-0 (Prism Blue)">
+                  <img src="Assets/Tracks Placeholders/Default-0.png" alt="Prism Blue">
+                  <span class="thumb-caption">Prism</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-1.png" title="Default-1 (Neon Sphere)">
+                  <img src="Assets/Tracks Placeholders/Default-1.png" alt="Neon Sphere">
+                  <span class="thumb-caption">Sphere</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-2.png" title="Default-2 (Emerald Matrix)">
+                  <img src="Assets/Tracks Placeholders/Default-2.png" alt="Emerald Matrix">
+                  <span class="thumb-caption">Matrix</span>
+                </button>
+                <button type="button" class="artwork-gallery-thumb" data-artwork="Assets/Tracks Placeholders/Default-3.png" title="Default-3 (Solar Pulsar)">
+                  <img src="Assets/Tracks Placeholders/Default-3.png" alt="Solar Pulsar">
+                  <span class="thumb-caption">Pulsar</span>
+                </button>
+              </div>
+
+              <div class="artwork-upload-row">
+                <input type="file" id="create-song-artwork-file" accept="image/*" style="display: none;">
+                <label for="create-song-artwork-file" class="custom-file-btn artwork-upload-btn">
+                  <span>Upload Custom Artwork...</span>
+                </label>
+                <span id="create-song-artwork-status" class="file-status-text">Using preset artwork</span>
+              </div>
+
+              <div class="artwork-selected-card">
+                <img id="create-song-artwork-preview" class="artwork-card-img" src="Assets/Tracks Placeholders/Default-0.png" alt="Artwork Preview">
+                <div class="artwork-card-meta">
+                  <span id="create-song-artwork-title" class="artwork-card-title">Default-0.png</span>
+                  <span class="artwork-card-badge">Selected Artwork</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Arena Background Section (Image or Video) -->
+          <div class="form-group">
+            <label class="form-label">Playfield Arena Background</label>
+            <div class="artwork-picker-box bg-picker-box">
+              <span class="artwork-picker-subtitle">Import Image or Video for Square Play Area</span>
+
+              <div class="artwork-upload-row">
+                <input type="file" id="create-song-bg-file" accept="image/*,video/*" style="display: none;">
+                <label for="create-song-bg-file" class="custom-file-btn bg-upload-btn">
+                  <span>Upload Image / Video...</span>
+                </label>
+                <button type="button" id="btn-create-song-bg-remove" class="btn-editor-action btn-bg-remove" style="display: none;">
+                  <span>Remove Background</span>
+                </button>
+                <span id="create-song-bg-status" class="file-status-text">Default Arena Grid</span>
+              </div>
+
+              <!-- Controls row: Fit Mode & Opacity -->
+              <div class="form-row-2 bg-options-row">
+                <div class="form-group">
+                  <label for="create-song-bg-fit" class="form-label">Fit Mode</label>
+                  <select id="create-song-bg-fit" class="form-select">
+                    <option value="cover">Cover (Fill Square Area)</option>
+                    <option value="contain">Contain (Fit Inside Square)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                    <label for="create-song-bg-opacity" class="form-label" style="margin-bottom: 0;">Opacity</label>
+                    <span id="create-song-bg-opacity-val" class="artwork-card-badge" style="font-size: 0.75rem;">70%</span>
+                  </div>
+                  <input type="range" id="create-song-bg-opacity" class="editor-speed-slider" min="0.05" max="1.0" step="0.05" value="0.7">
+                </div>
+              </div>
+
+              <!-- Selected Preview Card -->
+              <div class="artwork-selected-card bg-selected-card" id="create-song-bg-preview-box">
+                <div id="create-song-bg-media-container" class="bg-media-container" style="position: relative; width: 68px; height: 68px; border-radius: 0.5rem; overflow: hidden; background: #000; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <img id="create-song-bg-preview-img" class="artwork-card-img" style="display: none; width: 100%; height: 100%; object-fit: cover;" alt="Background Preview">
+                  <video id="create-song-bg-preview-video" class="artwork-card-img" muted loop playsinline style="display: none; width: 100%; height: 100%; object-fit: cover;"></video>
+                  <div id="create-song-bg-preview-empty" class="bg-preview-empty" style="color: rgba(255, 255, 255, 0.4); font-size: 0.65rem; text-align: center; padding: 4px;">
+                    <span>Grid</span>
+                  </div>
+                </div>
+                <div class="artwork-card-meta">
+                  <span id="create-song-bg-preview-title" class="artwork-card-title">Default Arena Grid</span>
+                  <span id="create-song-bg-preview-badge" class="artwork-card-badge">No Custom Media</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="params-modal-footer">
+            <button id="btn-cancel-create-song-params" class="btn-editor-action" type="button">Cancel</button>
+            <button id="btn-save-create-song-params" class="menu-btn menu-btn-primary" type="submit">
+              <span>Save Song Parameters</span>
             </button>
           </div>
         </form>

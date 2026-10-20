@@ -510,3 +510,350 @@
   flex-shrink: 0;
   background: #000;
 }
+
+/* ==========================================================================
+   Hierarchical Song Management Tree Styles
+   Layout:
+   SongName — Mapper — Notes — Parameters
+   ├── Easy       [Edit] [Parameters]
+   ├── Skibidi    [Edit] [Parameters]
+   ├── Difficult  [Edit] [Parameters]
+   └── + Add New Difficulty Track
+   ========================================================================== */
+
+.song-tree-card {
+  display: flex;
+  flex-direction: column;
+  background: rgba(14, 21, 37, 0.7);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 0.85rem;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+}
+
+.song-tree-card:hover {
+  border-color: rgba(0, 212, 255, 0.35);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Parent Row */
+.song-tree-parent {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+}
+
+.song-toggle-btn {
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-speed) ease;
+}
+
+.song-toggle-btn:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.toggle-icon {
+  line-height: 1;
+  display: inline-block;
+  transition: transform var(--transition-speed) ease;
+}
+
+.song-parent-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.song-parent-header {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.song-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.song-parent-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.song-parent-meta strong {
+  color: var(--color-text-primary);
+}
+
+/* Parent Action Buttons */
+.song-parent-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-shrink: 0;
+}
+
+.btn-song-params {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  color: var(--color-text-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-song-params:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  box-shadow: 0 0 12px var(--color-accent-glow);
+}
+
+.btn-song-delete {
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.2rem;
+}
+
+/* Children Difficulty Tracks Container */
+.song-tree-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.85rem;
+  padding-left: 2rem;
+  border-left: 2px dashed rgba(255, 255, 255, 0.1);
+  margin-left: 1rem;
+}
+
+.song-tree-children.is-collapsed {
+  display: none;
+}
+
+/* Single Difficulty Row */
+.difficulty-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  transition: all var(--transition-speed) ease;
+}
+
+.difficulty-tree-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.tree-branch-symbol {
+  font-family: var(--font-family-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.diff-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 6px currentColor;
+}
+
+.diff-row-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.diff-row-name {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+}
+
+.diff-row-stats {
+  font-size: 0.78rem;
+  font-family: var(--font-family-mono);
+  color: var(--color-text-secondary);
+}
+
+/* Difficulty Actions: Edit [Play icon] & Parameters */
+.diff-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.btn-diff-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-diff-edit {
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+}
+
+.btn-diff-edit .play-icon {
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+.btn-diff-edit:hover {
+  background: var(--color-accent);
+  color: #050b14;
+  box-shadow: 0 0 14px var(--color-accent-glow);
+  transform: scale(1.04);
+}
+
+.btn-diff-params {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--color-text-secondary);
+}
+
+.btn-diff-params:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: var(--color-text-primary);
+}
+
+.btn-diff-delete {
+  padding: 0.3rem 0.55rem;
+  background: transparent;
+  border: 1px solid rgba(255, 71, 87, 0.3);
+  color: #ff6b81;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.btn-diff-delete:hover {
+  background: rgba(255, 71, 87, 0.18);
+  border-color: #ff4757;
+  color: #ffffff;
+}
+
+/* + Add New Difficulty Track Row */
+.difficulty-tree-add-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  margin-top: 0.2rem;
+}
+
+.btn-add-diff-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px dashed rgba(0, 212, 255, 0.4);
+  border-radius: 0.5rem;
+  color: var(--color-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.btn-add-diff-track .add-plus-icon {
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.btn-add-diff-track:hover {
+  background: rgba(0, 212, 255, 0.15);
+  border-style: solid;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 15px var(--color-accent-glow);
+  transform: translateX(3px);
+}
+
+/* Preset Chips for Add Difficulty Modal */
+.diff-preset-chips {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.chip-btn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all var(--transition-speed) ease;
+}
+
+.chip-btn:hover {
+  background: rgba(0, 212, 255, 0.12);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  transform: translateY(-1px);
+}

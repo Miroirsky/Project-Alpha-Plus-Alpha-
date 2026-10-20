@@ -32,6 +32,18 @@ class MapEditor {
     this.isDirty = false;
     this._isClosing = false;
 
+    // Multi-Difficulty Management State & Elements
+    this.difficulties = {};
+    this.activeDifficulty = "Normal";
+    this.diffTabsContainer = document.getElementById("editor-diff-tabs");
+    this.btnAddDiff = document.getElementById("btn-editor-add-diff");
+    this.addDiffModal = document.getElementById("add-diff-modal");
+    this.addDiffForm = document.getElementById("add-diff-form");
+    this.newDiffNameInput = document.getElementById("new-diff-name");
+    this.btnCloseAddDiff = document.getElementById("btn-close-add-diff");
+    this.btnCancelAddDiff = document.getElementById("btn-cancel-add-diff");
+    this.diffPresetChips = document.getElementById("diff-preset-chips");
+
     // Placement Tool State (Selection-based placement system)
     this.activeTool = "note"; // "note" | "directional" | "bomb"
     this.toolSelectorEl = document.getElementById("editor-tool-selector");
@@ -194,10 +206,47 @@ class MapEditor {
   }
 
   /**
+   * Deeply clones and sanitizes notes array.
+   * @param {Array} notesList
+   * @returns {Array}
+   */
+  cloneNotes(notesList) {
+    if (!Array.isArray(notesList)) return [];
+    return notesList.map((n) => {
+      const isTriangle = n.type === "triangle" || n.type === "bomb";
+      const isDirectional = n.type === "directional" || n.type === "arrow";
+      const item = {
+        time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
+        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
+        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
+        x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
+        y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
+      };
+      if (isDirectional) {
+        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+      }
+      return item;
+    }).sort((a, b) => a.time - b.time);
+  }
+
+  /**
+   * Computes NPS for a notes list.
+   * @param {Array} notesList
+   * @param {number} durationSeconds
+   * @returns {number}
+   */
+  computeNps(notesList, durationSeconds = 180) {
+    const count = Array.isArray(notesList) ? notesList.length : 0;
+    const dur = Math.max(1, Number(durationSeconds) || 180);
+    return count > 0 ? parseFloat((count / dur).toFixed(1)) : 0;
+  }
+
+  /**
    * Loads a map into the editor and opens the workspace.
    * @param {Object} map
+   * @param {string|null} targetDifficulty
    */
-  open(map) {
+  open(map, targetDifficulty = null) {
     if (!map) return;
 
     // If switching between songs while editor has unsaved edits, flush the previous map first
@@ -216,24 +265,42 @@ class MapEditor {
       this.saveIndicatorEl.className = "editor-save-tag saved";
     }
 
-    this.notes = (freshMap.notes || []).map((n) => {
-      const isTriangle = n.type === "triangle" || n.type === "bomb";
-      const isDirectional = n.type === "directional" || n.type === "arrow";
-      const item = {
-        time: parseFloat(Number(n.time || 0).toFixed(3)),
-        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-        x: parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)),
-        y: parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))
-      };
-      if (isDirectional) {
-        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+    if (this.mapStorage) {
+      this.mapStorage.normalizeSongDifficulties(this.activeMap);
+    }
+
+    this.difficulties = {};
+    if (this.activeMap.difficulties && typeof this.activeMap.difficulties === "object" && Object.keys(this.activeMap.difficulties).length > 0) {
+      for (const [diffKey, diffVal] of Object.entries(this.activeMap.difficulties)) {
+        if (!diffVal) continue;
+        const name = String(diffVal.difficulty || diffKey).trim();
+        this.difficulties[name] = {
+          difficulty: name,
+          notes: this.cloneNotes(diffVal.notes || []),
+          nps: diffVal.nps || 0
+        };
       }
-      return item;
-    });
+    }
+    if (Object.keys(this.difficulties).length === 0) {
+      const defName = String(this.activeMap.difficulty || "Normal").trim() || "Normal";
+      this.difficulties[defName] = {
+        difficulty: defName,
+        notes: this.cloneNotes(this.activeMap.notes || []),
+        nps: this.activeMap.nps || 0
+      };
+    }
+
+    this.activeDifficulty = targetDifficulty || map.selectedDifficulty || freshMap.selectedDifficulty || freshMap.difficulty || Object.keys(this.difficulties)[0] || "Normal";
+    if (!this.difficulties[this.activeDifficulty]) {
+      this.activeDifficulty = Object.keys(this.difficulties)[0] || "Normal";
+    }
+
+    this.notes = this.cloneNotes(this.difficulties[this.activeDifficulty].notes || []);
     this.duration = freshMap.durationSeconds || 180;
     this.currentTime = 0;
     this.isPlaying = false;
+
+    this.renderDifficultyTabs();
 
     // Stop any existing music playback in musicPlayer (e.g. from preview or playtesting)
     if (this.musicPlayer && typeof this.musicPlayer.stop === "function") {
@@ -276,7 +343,207 @@ class MapEditor {
       });
     }
 
-    this.animFrameId = requestAnimationFrame(this.boundTick);
+    if (typeof requestAnimationFrame === "function") {
+      this.animFrameId = requestAnimationFrame(this.boundTick);
+    }
+  }
+
+  /**
+   * Renders difficulty tabs in the editor toolbar.
+   */
+  renderDifficultyTabs() {
+    if (!this.diffTabsContainer) return;
+    this.diffTabsContainer.innerHTML = "";
+
+    const diffNames = Object.keys(this.difficulties || {});
+    diffNames.forEach((diffName) => {
+      const diffObj = this.difficulties[diffName];
+      const count = (diffObj && Array.isArray(diffObj.notes)) ? diffObj.notes.length : 0;
+      const isActive = diffName === this.activeDifficulty;
+
+      const tab = document.createElement("button");
+      tab.type = "button";
+      tab.className = `editor-diff-tab ${isActive ? "is-active" : ""}`;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", isActive ? "true" : "false");
+      tab.setAttribute("data-diff", diffName);
+      tab.title = `Switch to ${diffName} track (${count} notes)`;
+
+      const label = document.createElement("span");
+      label.className = "tab-label";
+      label.textContent = `${diffName} (${count})`;
+      tab.appendChild(label);
+
+      // Only allow deleting difficulty if more than one exists
+      if (diffNames.length > 1) {
+        const delBtn = document.createElement("span");
+        delBtn.className = "tab-del-btn";
+        delBtn.innerHTML = "&times;";
+        delBtn.title = `Delete "${diffName}" difficulty`;
+        delBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.promptDeleteDifficulty(diffName);
+        });
+        tab.appendChild(delBtn);
+      }
+
+      tab.addEventListener("click", () => {
+        this.switchDifficulty(diffName);
+      });
+
+      this.diffTabsContainer.appendChild(tab);
+    });
+  }
+
+  /**
+   * Switches active difficulty track in the editor.
+   * Auto-saves the current difficulty before switching.
+   * @param {string} diffName
+   */
+  switchDifficulty(diffName) {
+    if (!diffName || diffName === this.activeDifficulty) return;
+    if (!this.difficulties[diffName]) return;
+
+    // Flush current active difficulty notes
+    this.difficulties[this.activeDifficulty] = {
+      difficulty: this.activeDifficulty,
+      notes: this.cloneNotes(this.notes),
+      nps: this.computeNps(this.notes, this.duration)
+    };
+
+    // Auto-save state
+    this.saveMapState();
+
+    this.activeDifficulty = diffName;
+    const targetDiff = this.difficulties[diffName];
+    this.notes = this.cloneNotes(targetDiff.notes || []);
+    this.selectedNote = null;
+    if (this.noteInspector) {
+      this.noteInspector.classList.remove("is-visible");
+    }
+
+    this.renderDifficultyTabs();
+    this.renderTimeline();
+    this.renderTimelineMarkers();
+    this.drawCanvas();
+
+    if (this.soundManager) {
+      this.soundManager.playClick();
+    }
+  }
+
+  /**
+   * Opens the Add Difficulty modal.
+   */
+  promptAddDifficulty() {
+    if (!this.addDiffModal) return;
+    const presets = ["Easy", "Normal", "Hard", "Expert"];
+    const existing = Object.keys(this.difficulties || {});
+    const suggested = presets.find((p) => !existing.includes(p)) || "";
+    if (this.newDiffNameInput) {
+      this.newDiffNameInput.value = suggested;
+    }
+
+    if (this.diffPresetChips) {
+      const chips = this.diffPresetChips.querySelectorAll(".chip-btn");
+      chips.forEach((c) => {
+        const val = c.getAttribute("data-diff");
+        if (existing.includes(val)) {
+          c.classList.add("is-disabled");
+          c.title = "Already exists";
+        } else {
+          c.classList.remove("is-disabled");
+          c.title = `Use ${val}`;
+        }
+        if (val === suggested) {
+          c.classList.add("is-selected");
+        } else {
+          c.classList.remove("is-selected");
+        }
+      });
+    }
+
+    this.addDiffModal.classList.add("is-active");
+    this.addDiffModal.setAttribute("aria-hidden", "false");
+    if (this.newDiffNameInput) {
+      this.newDiffNameInput.focus();
+    }
+    if (this.soundManager) {
+      this.soundManager.playClick();
+    }
+  }
+
+  /**
+   * Closes the Add Difficulty modal.
+   */
+  closeAddDiffModal() {
+    if (!this.addDiffModal) return;
+    this.addDiffModal.classList.remove("is-active");
+    this.addDiffModal.setAttribute("aria-hidden", "true");
+    if (this.soundManager) {
+      this.soundManager.playClick();
+    }
+  }
+
+  /**
+   * Handles creation of a new difficulty track.
+   * @param {Event} e
+   */
+  handleAddDifficultySubmit(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!this.newDiffNameInput) return;
+
+    const name = this.newDiffNameInput.value.trim();
+    if (!name) return;
+
+    if (this.difficulties[name]) {
+      alert(`A difficulty named "${name}" already exists for this track.`);
+      return;
+    }
+
+    const sourceRadio = this.addDiffForm ? this.addDiffForm.querySelector('input[name="diff-notes-source"]:checked') : null;
+    const sourceVal = sourceRadio ? sourceRadio.value : "empty";
+
+    const newNotes = sourceVal === "copy" ? this.cloneNotes(this.notes) : [];
+    this.difficulties[name] = {
+      difficulty: name,
+      notes: newNotes,
+      nps: this.computeNps(newNotes, this.duration)
+    };
+
+    this.closeAddDiffModal();
+    this.switchDifficulty(name);
+    this.isDirty = true;
+    this.saveMapState();
+  }
+
+  /**
+   * Deletes a difficulty track with confirmation.
+   * @param {string} diffName
+   */
+  promptDeleteDifficulty(diffName) {
+    const keys = Object.keys(this.difficulties || {});
+    if (keys.length <= 1) {
+      alert("A track must have at least one difficulty track.");
+      return;
+    }
+
+    if (window.confirm(`Are you sure you want to delete the "${diffName}" difficulty track? This cannot be undone.`)) {
+      delete this.difficulties[diffName];
+      if (this.mapStorage && this.activeMap) {
+        this.mapStorage.deleteDifficulty(this.activeMap.id, diffName);
+      }
+      if (this.activeDifficulty === diffName) {
+        this.activeDifficulty = Object.keys(this.difficulties)[0];
+        this.notes = this.cloneNotes(this.difficulties[this.activeDifficulty].notes || []);
+      }
+      this.isDirty = true;
+      this.saveMapState();
+      this.renderDifficultyTabs();
+      this.renderTimeline();
+      this.renderTimelineMarkers();
+      this.drawCanvas();
+    }
   }
 
   /**
@@ -1128,6 +1395,53 @@ class MapEditor {
         this.onSaveParams(e);
       });
     }
+
+    // Multi-Difficulty Management Listeners
+    if (this.btnAddDiff) {
+      this.btnAddDiff.addEventListener("click", () => {
+        this.promptAddDifficulty();
+      });
+    }
+
+    if (this.btnCloseAddDiff) {
+      this.btnCloseAddDiff.addEventListener("click", () => {
+        this.closeAddDiffModal();
+      });
+    }
+
+    if (this.btnCancelAddDiff) {
+      this.btnCancelAddDiff.addEventListener("click", () => {
+        this.closeAddDiffModal();
+      });
+    }
+
+    if (this.addDiffModal) {
+      this.addDiffModal.addEventListener("click", (e) => {
+        if (e.target === this.addDiffModal) {
+          this.closeAddDiffModal();
+        }
+      });
+    }
+
+    if (this.diffPresetChips) {
+      const chips = this.diffPresetChips.querySelectorAll(".chip-btn");
+      chips.forEach((c) => {
+        c.addEventListener("click", () => {
+          const val = c.getAttribute("data-diff");
+          if (val && this.newDiffNameInput) {
+            this.newDiffNameInput.value = val;
+            chips.forEach((chip) => chip.classList.remove("is-selected"));
+            c.classList.add("is-selected");
+          }
+        });
+      });
+    }
+
+    if (this.addDiffForm) {
+      this.addDiffForm.addEventListener("submit", (e) => {
+        this.handleAddDifficultySubmit(e);
+      });
+    }
   }
 
   /**
@@ -1143,11 +1457,11 @@ class MapEditor {
     if (!this.activeMap || !this.mapStorage) return;
 
     try {
-      const exportResult = this.mapStorage.exportTrack(this.activeMap);
+      const exportResult = this.mapStorage.exportTrack(this.activeMap, this.activeDifficulty);
       this.lastExportData = exportResult;
 
       if (this.exportTrackName) {
-        this.exportTrackName.textContent = this.activeMap.name || "Untitled Track";
+        this.exportTrackName.textContent = `${this.activeMap.name || "Untitled Track"} [${this.activeDifficulty}]`;
       }
       if (this.exportTrackNotes) {
         this.exportTrackNotes.textContent = `${this.notes.length} note${this.notes.length === 1 ? "" : "s"}`;
@@ -1259,7 +1573,7 @@ class MapEditor {
     if (this.paramsName) this.paramsName.value = this.activeMap.name || "";
     if (this.paramsMapper) this.paramsMapper.value = this.activeMap.mapper || "";
     if (this.paramsCreator) this.paramsCreator.value = this.activeMap.creator || "";
-    if (this.paramsDifficulty) this.paramsDifficulty.value = this.activeMap.difficulty || "Normal";
+    if (this.paramsDifficulty) this.paramsDifficulty.value = this.activeDifficulty || this.activeMap.difficulty || "Normal";
     const trackColor = this.activeMap.color || "#00d4ff";
     if (this.paramsColor) this.paramsColor.value = trackColor;
     this.updateColorSwatches(trackColor);
@@ -1397,25 +1711,48 @@ class MapEditor {
       }
     }
 
+    if (newDifficulty !== this.activeDifficulty) {
+      const currentNotes = this.cloneNotes(this.notes);
+      delete this.difficulties[this.activeDifficulty];
+      this.difficulties[newDifficulty] = {
+        difficulty: newDifficulty,
+        notes: currentNotes,
+        nps: this.computeNps(currentNotes, newDurationSeconds)
+      };
+      this.activeDifficulty = newDifficulty;
+    } else {
+      this.difficulties[this.activeDifficulty] = {
+        difficulty: this.activeDifficulty,
+        notes: this.cloneNotes(this.notes),
+        nps: this.computeNps(this.notes, newDurationSeconds)
+      };
+    }
+
     const updated = {
       ...this.activeMap,
       name: newName,
       mapper: newMapper || "Anonymous",
       creator: newCreator || "Unknown Artist",
-      difficulty: newDifficulty,
+      difficulty: this.activeDifficulty,
+      selectedDifficulty: this.activeDifficulty,
       color: newColor,
       cover: newCover,
       file: newAudio,
       duration: newDuration,
       durationSeconds: newDurationSeconds,
       background: this.activeBgConfig ? { ...this.activeBgConfig } : null,
-      notes: [...this.notes]
+      notes: [...this.notes],
+      difficulties: { ...this.difficulties }
     };
 
     const savedMap = this.mapStorage.saveMap(updated);
     this.activeMap = savedMap;
+    if (savedMap.difficulties) {
+      this.difficulties = { ...savedMap.difficulties };
+    }
     this.duration = savedMap.durationSeconds || 180;
     this.isDirty = false;
+    this.renderDifficultyTabs();
 
     if (this.saveIndicatorEl) {
       this.saveIndicatorEl.textContent = "✓ All changes saved";
@@ -1493,6 +1830,10 @@ class MapEditor {
 
     if (isTextInput) {
       if (e.key === "Escape") {
+        if (this.addDiffModal && this.addDiffModal.classList.contains("is-active")) {
+          this.closeAddDiffModal();
+          return;
+        }
         if (this.paramsModal && this.paramsModal.classList.contains("is-active")) {
           this.closeParamsModal();
           return;
@@ -1509,6 +1850,10 @@ class MapEditor {
     }
 
     if (e.key === "Escape") {
+      if (this.addDiffModal && this.addDiffModal.classList.contains("is-active")) {
+        this.closeAddDiffModal();
+        return;
+      }
       if (this.paramsModal && this.paramsModal.classList.contains("is-active")) {
         this.closeParamsModal();
         return;
@@ -1946,7 +2291,9 @@ class MapEditor {
 
     this.drawCanvas();
 
-    this.animFrameId = requestAnimationFrame(this.boundTick);
+    if (typeof requestAnimationFrame === "function") {
+      this.animFrameId = requestAnimationFrame(this.boundTick);
+    }
   }
 
   /**
@@ -2525,25 +2872,24 @@ class MapEditor {
         this.activeMap.background = null;
       }
 
-      this.activeMap.notes = this.notes.map((n) => {
-        const isTriangle = n.type === "triangle" || n.type === "bomb";
-        const isDirectional = n.type === "directional" || n.type === "arrow";
-        const item = {
-          time: parseFloat(Number(n.time || 0).toFixed(3)),
-          color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-          type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-          x: parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)),
-          y: parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))
-        };
-        if (isDirectional) {
-          item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
-        }
-        return item;
-      });
+      const cloned = this.cloneNotes(this.notes);
+      this.difficulties[this.activeDifficulty] = {
+        difficulty: this.activeDifficulty,
+        notes: cloned,
+        nps: this.computeNps(cloned, this.duration)
+      };
+
+      this.activeMap.difficulties = { ...this.difficulties };
+      this.activeMap.difficulty = this.activeDifficulty;
+      this.activeMap.selectedDifficulty = this.activeDifficulty;
+      this.activeMap.notes = cloned;
 
       const saved = this.mapStorage.saveMap(this.activeMap);
       if (saved) {
         this.activeMap = saved;
+        if (saved.difficulties) {
+          this.difficulties = { ...saved.difficulties };
+        }
         if (this.titleEl) {
           this.titleEl.textContent = `${saved.name} - by ${saved.mapper}`;
         }
@@ -2559,6 +2905,7 @@ class MapEditor {
       }
 
       this.isDirty = false;
+      this.renderDifficultyTabs();
 
       if (this.saveIndicatorEl) {
         this.saveIndicatorEl.textContent = "✓ All changes saved";
@@ -2598,6 +2945,8 @@ class MapEditor {
       this.onTestMap(
         {
           ...this.activeMap,
+          difficulty: this.activeDifficulty,
+          selectedDifficulty: this.activeDifficulty,
           background: this.activeBgConfig ? { ...this.activeBgConfig } : null,
           notes: [...this.notes]
         },
