@@ -796,3 +796,28 @@
   font-size: 0.7rem;
   opacity: 0.75;
 }
+
+/* Play Header Actions & Direct Song Drop */
+.play-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.play-import-btn,
+.play-folder-btn {
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.play-import-btn:hover,
+.play-folder-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.15);
+}
+
+.play-menu-view.is-dragover {
+  outline: 3px dashed var(--palette-accent, #ff9100);
+  outline-offset: -8px;
+  background-color: rgba(var(--palette-secondary-rgb), 0.85);
+}

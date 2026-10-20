@@ -21,6 +21,7 @@
   <script defer src="scripts/themeManager.js"></script>
   <script defer src="scripts/soundManager.js"></script>
   <script defer src="scripts/songsData.js"></script>
+  <script defer src="scripts/defaultAudioData.js"></script>
   <script defer src="scripts/mapData.js"></script>
   <script defer src="scripts/mediaStorage.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
@@ -106,6 +107,15 @@
         <div class="play-title-group">
           <h2 class="play-screen-title">Select Track</h2>
           <p class="play-screen-subtitle">Select track to preview &bull; Click to prepare</p>
+        </div>
+        <div class="play-header-actions" style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+          <label class="btn-theme-action play-import-btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Import custom song (.json)">
+            <span>📥 Import Song</span>
+            <input type="file" id="play-song-import-input" accept=".json,application/json" style="display: none;">
+          </label>
+          <button id="btn-link-default-tracks" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Link Default Tracks folder on disk">
+            <span>📁 Default Tracks Folder</span>
+          </button>
         </div>
       </header>
 
