@@ -122,76 +122,139 @@
     </section>
 
     <!-- Create Menu View (Custom Maps & Creation Form) -->
+    <!-- Create Menu View (Custom Maps & Creation Form) -->
     <section id="create-menu-view" class="create-menu-view" aria-label="Create Maps" aria-hidden="true">
       <header class="create-header">
         <div class="create-header-left">
           <button id="btn-back-create" class="play-back-btn" type="button" aria-label="Return to Main Menu">
-            &larr; Main Menu
-          </button>
-          <button id="btn-create-import" class="play-back-btn btn-create-import" type="button" aria-label="Import Track Code">
-            <span>Import Track</span>
+            <span class="btn-icon">&larr;</span>
+            <span>Main Menu</span>
           </button>
         </div>
-        <div class="play-title-group">
-          <h2 class="play-screen-title">Map Creator</h2>
-          <p class="play-screen-subtitle">Design, edit, playtest, and share rhythm maps</p>
+
+        <div class="create-header-center">
+          <div class="create-title-badge">Song Studio</div>
+          <h2 class="create-screen-title">Map Creator &amp; Catalog</h2>
+          <p class="create-screen-subtitle">Design, organize, edit difficulty tracks, and export rhythm maps</p>
+        </div>
+
+        <div class="create-header-right">
+          <span id="create-stats-badge" class="create-stats-pill" title="Total songs in catalog">0 Songs</span>
+          <button id="btn-create-import" class="btn-create-import" type="button" aria-label="Import Song Package">
+            <span class="btn-icon">📥</span>
+            <span>Import Song</span>
+          </button>
         </div>
       </header>
 
       <div class="create-content">
         <!-- Left Panel: Create New Map Form -->
         <section class="create-form-panel">
-          <h3 class="create-form-title">Create New Map</h3>
-          <p class="create-form-desc">Configure track details and import audio to start mapping.</p>
-
-          <form id="new-map-form">
-            <div class="form-group">
-              <label for="new-map-name" class="form-label">Map Name</label>
-              <input type="text" id="new-map-name" class="form-input" placeholder="e.g. Cyber Rush" required>
+          <div class="panel-header-block">
+            <div class="panel-icon-wrap">
+              <span class="panel-icon">✦</span>
             </div>
-
-            <div class="form-group">
-              <label for="new-map-mapper" class="form-label">Mapper Name</label>
-              <input type="text" id="new-map-mapper" class="form-input" placeholder="e.g. AlphaMaker">
+            <div>
+              <h3 class="create-form-title">Create New Song</h3>
+              <p class="create-form-desc">Configure track details and import audio to start mapping.</p>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label for="new-map-creator" class="form-label">Music Creator Name</label>
-              <input type="text" id="new-map-creator" class="form-input" placeholder="e.g. SynthWave Studio">
-            </div>
+          <form id="new-map-form" class="create-form-body">
+            <!-- Section 1: Song Identity -->
+            <fieldset class="form-section-card">
+              <legend class="section-legend">
+                <span class="legend-number">1</span>
+                <span>Song Identity</span>
+              </legend>
 
-            <div class="form-group">
-              <label for="new-map-difficulty" class="form-label">Initial Difficulty Track</label>
-              <input type="text" id="new-map-difficulty" class="form-input" placeholder="e.g. Normal, Easy, Skibidi..." value="Normal" maxlength="30">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label">Import Audio File</label>
-              <div class="file-input-wrapper">
-                <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
-                <label for="new-map-file" class="custom-file-btn">
-                  <span>Choose Audio File...</span>
-                </label>
-                <span id="new-map-file-status" class="file-status-text"></span>
+              <div class="form-group">
+                <label for="new-map-name" class="form-label">Song Title <span class="required-star">*</span></label>
+                <div class="input-with-icon">
+                  <span class="input-icon">🎵</span>
+                  <input type="text" id="new-map-name" class="form-input" placeholder="e.g. Cyber Rush" required autocomplete="off">
+                </div>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label for="new-map-preset-audio" class="form-label">Or Select Bundled Music</label>
-              <select id="new-map-preset-audio" class="form-select">
-                <option value="">-- Choose existing song --</option>
-                <option value="Assets/Songs/IMG_2449.mp3" data-duration="229">test (IMG_2449.mp3) - 03:49</option>
-                <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">test1 (Sanstitre9juin.mp3) - 02:33</option>
-                <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">test2 (Sanstitre10juin1715.mp3) - 03:37</option>
-                <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">test3 (Sanstitre10juin1744.mp3) - 04:42</option>
-              </select>
-            </div>
+              <div class="form-row-2">
+                <div class="form-group">
+                  <label for="new-map-creator" class="form-label">Music Artist / Creator</label>
+                  <input type="text" id="new-map-creator" class="form-input" placeholder="e.g. SynthWave Studio" autocomplete="off">
+                </div>
+                <div class="form-group">
+                  <label for="new-map-mapper" class="form-label">Mapper Name</label>
+                  <input type="text" id="new-map-mapper" class="form-input" placeholder="e.g. AlphaMaker" autocomplete="off">
+                </div>
+              </div>
+            </fieldset>
 
-            <!-- Track Artwork / Cover Picker -->
-            <div class="form-group">
-              <label class="form-label">Track Artwork / Cover</label>
+            <!-- Section 2: Audio Configuration -->
+            <fieldset class="form-section-card">
+              <legend class="section-legend">
+                <span class="legend-number">2</span>
+                <span>Audio Source</span>
+              </legend>
+
+              <div class="form-group">
+                <label class="form-label">Upload Custom Audio File</label>
+                <div class="file-upload-dropzone">
+                  <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
+                  <label for="new-map-file" class="dropzone-label">
+                    <span class="dropzone-icon">🎧</span>
+                    <span class="dropzone-main-text">Choose Audio File...</span>
+                    <span class="dropzone-hint">Supports MP3, WAV, OGG, M4A</span>
+                  </label>
+                  <span id="new-map-file-status" class="file-status-text">No custom file selected</span>
+                </div>
+              </div>
+
+              <div class="form-divider-or">
+                <span>OR PRESET TRACK</span>
+              </div>
+
+              <div class="form-group">
+                <label for="new-map-preset-audio" class="form-label">Select Bundled Music</label>
+                <div class="select-wrapper">
+                  <select id="new-map-preset-audio" class="form-select">
+                    <option value="">-- Choose bundled song --</option>
+                    <option value="Assets/Songs/IMG_2449.mp3" data-duration="229">IMG_2449.mp3 (Chance) - 03:49</option>
+                    <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">Sanstitre9juin20251019.mp3 - 02:33</option>
+                    <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">Sanstitre10juin20251715.mp3 (Beating) - 03:37</option>
+                    <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">Sanstitre10juin20251744.mp3 - 04:42</option>
+                  </select>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Section 3: Starting Difficulty Track -->
+            <fieldset class="form-section-card">
+              <legend class="section-legend">
+                <span class="legend-number">3</span>
+                <span>Initial Difficulty Track</span>
+              </legend>
+
+              <div class="form-group">
+                <label for="new-map-difficulty" class="form-label">Difficulty Name</label>
+                <div class="diff-preset-chips" id="create-initial-diff-chips">
+                  <button type="button" class="chip-btn" data-diff="Easy">Easy</button>
+                  <button type="button" class="chip-btn is-selected" data-diff="Normal">Normal</button>
+                  <button type="button" class="chip-btn" data-diff="Hard">Hard</button>
+                  <button type="button" class="chip-btn" data-diff="Expert">Expert</button>
+                  <button type="button" class="chip-btn" data-diff="Master">Master</button>
+                </div>
+                <input type="text" id="new-map-difficulty" class="form-input" placeholder="e.g. Normal, Easy, Skibidi..." value="Normal" maxlength="30" autocomplete="off">
+              </div>
+            </fieldset>
+
+            <!-- Section 4: Cover Artwork -->
+            <fieldset class="form-section-card">
+              <legend class="section-legend">
+                <span class="legend-number">4</span>
+                <span>Track Artwork / Cover</span>
+              </legend>
+
               <div class="artwork-picker-box">
-                <span class="artwork-picker-subtitle">Choose from Project Placeholders:</span>
+                <span class="artwork-picker-subtitle">Choose preset cover:</span>
                 <div class="artwork-gallery-grid" id="create-artwork-gallery">
                   <button type="button" class="artwork-gallery-thumb is-active" data-artwork="Assets/Tracks Placeholders/Default-0.png" title="Default-0 (Prism Blue)">
                     <img src="Assets/Tracks Placeholders/Default-0.png" alt="Prism Blue">
@@ -214,7 +277,7 @@
                 <div class="artwork-upload-row">
                   <input type="file" id="new-map-artwork-file" accept="image/*" style="display: none;">
                   <label for="new-map-artwork-file" class="custom-file-btn artwork-upload-btn">
-                    <span>Upload Custom Artwork...</span>
+                    <span>Upload Custom Image...</span>
                   </label>
                   <span id="new-map-artwork-status" class="file-status-text">Using preset artwork</span>
                 </div>
@@ -223,22 +286,41 @@
                   <img id="new-map-artwork-preview" class="artwork-card-img" src="Assets/Tracks Placeholders/Default-0.png" alt="Artwork Preview">
                   <div class="artwork-card-meta">
                     <span id="new-map-artwork-title" class="artwork-card-title">Default-0.png</span>
-                    <span class="artwork-card-badge">Selected Artwork</span>
+                    <span class="artwork-card-badge">Active Cover</span>
                   </div>
                 </div>
               </div>
-            </div>
+            </fieldset>
 
-            <button type="submit" class="btn-create-submit">
-              Create &amp; Open Editor &rarr;
+            <button type="submit" id="btn-create-submit" class="btn-create-submit">
+              <span class="btn-submit-icon">✦</span>
+              <span>Create Song &amp; Open Editor</span>
+              <span class="btn-arrow">&rarr;</span>
             </button>
           </form>
         </section>
 
         <!-- Right Panel: Existing Maps List -->
         <section class="create-list-panel">
-          <h3 class="create-list-title">Existing Maps</h3>
-          <p class="create-list-desc">Select a map using the Play icon (&#9654;) to open the editor.</p>
+          <header class="create-list-header">
+            <div class="list-header-left">
+              <h3 class="create-list-title">Song Catalog</h3>
+              <p class="create-list-desc">Manage songs, difficulty tracks, parameters, and exports.</p>
+            </div>
+
+            <!-- Search and Filter Controls -->
+            <div class="catalog-filter-bar">
+              <div class="catalog-search-wrap">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="create-search-input" class="catalog-search-input" placeholder="Search songs or mappers..." autocomplete="off">
+              </div>
+              <div class="catalog-filter-pills" id="create-filter-pills" role="tablist" aria-label="Filter Songs">
+                <button type="button" class="filter-pill is-active" data-filter="all">All</button>
+                <button type="button" class="filter-pill" data-filter="default">Default</button>
+                <button type="button" class="filter-pill" data-filter="custom">Custom</button>
+              </div>
+            </div>
+          </header>
 
           <div id="create-maps-list" class="maps-scroll-area">
             <!-- Dynamically populated with maps and Play icon edit buttons -->
@@ -1097,6 +1179,46 @@
           <div class="form-group">
             <label for="create-song-param-creator" class="form-label">Music Creator / Artist</label>
             <input type="text" id="create-song-param-creator" class="form-input" required placeholder="e.g. SynthWave Producer">
+          </div>
+
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="create-song-param-color" class="form-label">Theme / Accent Color</label>
+              <div class="color-picker-row">
+                <input type="color" id="create-song-param-color" class="form-color-input" value="#954132">
+                <div class="swatch-group" id="create-song-swatches">
+                  <button type="button" class="swatch-btn" data-color="#954132" style="background:#954132;" title="Theme Primary"></button>
+                  <button type="button" class="swatch-btn" data-color="#00d4ff" style="background:#00d4ff;" title="Cyan"></button>
+                  <button type="button" class="swatch-btn" data-color="#ff4757" style="background:#ff4757;" title="Red"></button>
+                  <button type="button" class="swatch-btn" data-color="#2ed573" style="background:#2ed573;" title="Green"></button>
+                  <button type="button" class="swatch-btn" data-color="#ffa502" style="background:#ffa502;" title="Amber"></button>
+                  <button type="button" class="swatch-btn" data-color="#a55eea" style="background:#a55eea;" title="Purple"></button>
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="create-song-param-bpm" class="form-label">BPM (Tempo)</label>
+              <input type="number" id="create-song-param-bpm" class="form-input" min="30" max="360" placeholder="e.g. 128">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="create-song-param-audio" class="form-label">Audio Track Source</label>
+            <div class="audio-picker-box" style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                <select id="create-song-param-audio" class="form-select" style="flex: 1; min-width: 200px;">
+                  <option value="Assets/Songs/IMG_2449.mp3" data-duration="180">IMG_2449.mp3 (Default)</option>
+                  <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">Sanstitre9juin20251019.mp3 (02:33)</option>
+                  <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">Sanstitre10juin20251715.mp3 (03:37)</option>
+                  <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">Sanstitre10juin20251744.mp3 (04:42)</option>
+                </select>
+                <input type="file" id="create-song-param-audio-file" accept="audio/*" style="display: none;">
+                <label for="create-song-param-audio-file" class="custom-file-btn" style="white-space: nowrap; margin-bottom: 0;">
+                  <span>Upload Audio...</span>
+                </label>
+              </div>
+              <span id="create-song-param-audio-status" class="file-status-text">Using preset audio track</span>
+            </div>
           </div>
 
           <!-- Cover Artwork Gallery & Upload -->
