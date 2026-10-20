@@ -90,6 +90,13 @@ class MusicPlayer {
       audio.volume = this.getTargetVolume();
       this.currentAudio = audio;
 
+      audio.addEventListener("error", () => {
+        if (song.file && song.file !== "Assets/Songs/IMG_2449.mp3") {
+          song.file = "Assets/Songs/IMG_2449.mp3";
+          this.playPreview(song);
+        }
+      });
+
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
@@ -133,6 +140,13 @@ class MusicPlayer {
       if (onEnded) {
         audio.addEventListener("ended", onEnded);
       }
+
+      audio.addEventListener("error", () => {
+        if (song.file && song.file !== "Assets/Songs/IMG_2449.mp3") {
+          song.file = "Assets/Songs/IMG_2449.mp3";
+          this.playSong(song, { onTimeUpdate, onEnded });
+        }
+      });
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
@@ -201,8 +215,7 @@ class MusicPlayer {
     return Boolean(
       this.currentAudio &&
       !this.currentAudio.paused &&
-      !this.currentAudio.ended &&
-      this.currentAudio.currentTime > 0
+      !this.currentAudio.ended
     );
   }
 

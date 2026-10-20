@@ -16,6 +16,21 @@ class SoundManager {
     this.volume = this.loadSavedVolume();
     this.audioCtx = null;
     this.listeners = new Set();
+    this.userInteracted = false;
+
+    // Listen for the first user gesture to unlock AudioContext cleanly without autoplay warnings
+    if (typeof window !== "undefined") {
+      const unlockAudio = () => {
+        this.userInteracted = true;
+        if (this.audioCtx && this.audioCtx.state === "suspended") {
+          this.audioCtx.resume().catch(() => {});
+        }
+      };
+      window.addEventListener("pointerdown", unlockAudio, { once: true, capture: true });
+      window.addEventListener("keydown", unlockAudio, { once: true, capture: true });
+      window.addEventListener("click", unlockAudio, { once: true, capture: true });
+      window.addEventListener("touchstart", unlockAudio, { once: true, capture: true, passive: true });
+    }
   }
 
   /**
@@ -64,11 +79,12 @@ class SoundManager {
           this.audioCtx = new AudioContextClass();
         }
       }
-      if (this.audioCtx && this.audioCtx.state === "suspended") {
+      // Only resume if user has performed an interaction gesture, avoiding browser autoplay warnings
+      if (this.audioCtx && this.audioCtx.state === "suspended" && this.userInteracted) {
         this.audioCtx.resume().catch(() => {});
       }
     } catch (err) {
-      console.warn("AudioContext initialization prevented:", err);
+      // AudioContext initialization prevented safely
     }
   }
 
@@ -132,6 +148,7 @@ class SoundManager {
   playClick() {
     try {
       if (!this.enabled || this.volume === 0) return;
+      this.userInteracted = true;
       this.ensureAudioContext();
       if (!this.audioCtx) return;
 
@@ -163,8 +180,8 @@ class SoundManager {
   playHover() {
     try {
       if (!this.enabled || this.volume === 0) return;
-      this.ensureAudioContext();
-      if (!this.audioCtx) return;
+      // Do not attempt hover sounds before user has interacted or if audio is suspended
+      if (!this.userInteracted || !this.audioCtx || this.audioCtx.state !== "running") return;
 
       const now = this.audioCtx.currentTime;
       const osc = this.audioCtx.createOscillator();
@@ -184,7 +201,7 @@ class SoundManager {
       osc.start(now);
       osc.stop(now + 0.04);
     } catch (err) {
-      console.warn("Audio playback error:", err);
+      // Audio playback error safely ignored
     }
   }
 
@@ -194,6 +211,7 @@ class SoundManager {
   playTestTone() {
     try {
       if (!this.enabled || this.volume === 0) return;
+      this.userInteracted = true;
       this.ensureAudioContext();
       if (!this.audioCtx) return;
 
@@ -224,6 +242,7 @@ class SoundManager {
   playPerfectTone() {
     try {
       if (!this.enabled || this.volume === 0) return;
+      this.userInteracted = true;
       this.ensureAudioContext();
       if (!this.audioCtx) return;
 
@@ -262,6 +281,7 @@ class SoundManager {
   playWrongTone() {
     try {
       if (!this.enabled || this.volume === 0) return;
+      this.userInteracted = true;
       this.ensureAudioContext();
       if (!this.audioCtx) return;
 

@@ -48,7 +48,7 @@ class PlayMenu {
     this.renderSongList();
     this.bindEvents();
     if (this.songs && this.songs.length > 0) {
-      this.selectSongByIndex(0, false);
+      this.selectSongByIndex(0, false, false);
     } else {
       this.renderDefaultDetails();
     }
@@ -94,7 +94,7 @@ class PlayMenu {
         </div>
         <h4 class="empty-state-title">No Tracks Available</h4>
         <p class="empty-state-desc">
-          Paste exported track codes into <code>scripts/importedTracks.js</code> to load tracks automatically, or build a new map in the <strong>Create</strong> menu.
+          Place exported song files into the <code>Default Tracks</code> folder or create a new map in the <strong>Create</strong> menu.
         </p>
       `;
       this.songListContainer.appendChild(emptyState);
@@ -147,19 +147,19 @@ class PlayMenu {
         </div>
       `;
 
-      // Hover: play preview in loop and display preview details
+      // Hover: display preview details without playing music
       card.addEventListener("mouseenter", () => {
         this.handleSongHover(song, card);
       });
 
-      // Click: select song, keep music playing, display full metadata
+      // Click: select song, stop previous music, and start playing this song
       card.addEventListener("click", () => {
-        this.selectSongByIndex(idx, true);
+        this.selectSongByIndex(idx, true, true);
       });
 
       // Double-click: immediately start game
       card.addEventListener("dblclick", () => {
-        this.selectSongByIndex(idx, false);
+        this.selectSongByIndex(idx, false, false);
         this.launchCurrentSong();
       });
 
@@ -170,7 +170,7 @@ class PlayMenu {
           this.launchCurrentSong();
         } else if (e.key === " ") {
           e.preventDefault();
-          this.selectSongByIndex(idx, true);
+          this.selectSongByIndex(idx, true, true);
         }
       });
 
@@ -240,20 +240,22 @@ class PlayMenu {
 
   /**
    * Selects the next song in the list.
+   * Browsing via arrow keys does not autoplay music.
    */
   selectNextSong() {
     if (!this.songs || this.songs.length === 0) return;
     const nextIdx = (this.selectedIndex + 1) % this.songs.length;
-    this.selectSongByIndex(nextIdx, true);
+    this.selectSongByIndex(nextIdx, true, false);
   }
 
   /**
    * Selects the previous song in the list.
+   * Browsing via arrow keys does not autoplay music.
    */
   selectPreviousSong() {
     if (!this.songs || this.songs.length === 0) return;
     const prevIdx = (this.selectedIndex - 1 + this.songs.length) % this.songs.length;
-    this.selectSongByIndex(prevIdx, true);
+    this.selectSongByIndex(prevIdx, true, false);
   }
 
   /**
@@ -272,14 +274,30 @@ class PlayMenu {
   }
 
   /**
+   * Returns whether a song is actively playing preview audio.
+   * @param {Object} song
+   * @returns {boolean}
+   */
+  isSongPlaying(song) {
+    if (!song || !this.musicPlayer) return false;
+    const isPlaying = typeof this.musicPlayer.isPlaying === "function"
+      ? this.musicPlayer.isPlaying()
+      : Boolean(this.musicPlayer.currentAudio && !this.musicPlayer.currentAudio.paused);
+    return Boolean(isPlaying && this.musicPlayer.currentSongId === song.id);
+  }
+
+  /**
    * Selects song by index and scrolls card into view.
+   * Only plays audio if explicitly requested (playMusic = true).
+   * Stops current song when another song is selected or when playMusic is false.
    * @param {number} idx
    * @param {boolean} playSound
-   * @param {boolean} playPreview
+   * @param {boolean} playMusic
    */
-  selectSongByIndex(idx, playSound = true, playPreview = true) {
+  selectSongByIndex(idx, playSound = true, playMusic = false) {
     if (!this.songs || idx < 0 || idx >= this.songs.length) return;
 
+    const previousSongId = this.selectedSong ? this.selectedSong.id : null;
     this.selectedIndex = idx;
     this.selectedSong = this.songs[idx];
 
@@ -294,9 +312,21 @@ class PlayMenu {
       this.soundManager.playClick();
     }
 
+    // Stop current song when another song is selected
+    if (this.musicPlayer && previousSongId && previousSongId !== this.selectedSong.id) {
+      this.musicPlayer.stop();
+    }
+
     // STRICT CHECK: Only play music preview if explicitly requested AND the play menu is actively open on screen!
-    if (playPreview && this.musicPlayer && this.isOpen()) {
-      this.musicPlayer.playPreview(this.selectedSong);
+    if (playMusic) {
+      if (this.musicPlayer && this.isOpen()) {
+        this.musicPlayer.playPreview(this.selectedSong);
+      }
+    } else {
+      // If playMusic is false and we selected a different song, ensure audio is stopped
+      if (this.musicPlayer && previousSongId && previousSongId !== this.selectedSong.id) {
+        this.musicPlayer.stop();
+      }
     }
 
     this.updateActiveCardHighlight();
@@ -329,7 +359,7 @@ class PlayMenu {
 
   /**
    * Handles hovering over a song card.
-   * Plays music preview in a loop.
+   * Does NOT autoplay music preview while browsing.
    * @param {Object} song
    * @param {HTMLElement} cardEl
    */
@@ -341,37 +371,26 @@ class PlayMenu {
       this.soundManager.playHover();
     }
 
-    // Start music preview for this track in a loop (only when menu is open)
-    if (this.musicPlayer && this.isOpen()) {
-      this.musicPlayer.playPreview(song);
-    }
-
     // If hovered song is already the selected song, keep showing full view
     if (this.selectedSong && this.selectedSong.id === song.id) {
       this.renderSelectedSongDetails(this.selectedSong);
     } else {
-      // Show preview badge while keeping rich artwork of hovered track
+      // Show preview details while keeping rich artwork of hovered track
       this.renderHoverDetails(song);
     }
   }
 
   /**
    * Handles leaving the song list.
-   * Stops preview or restores selected song preview.
+   * Restores selected song details without restarting audio.
    */
   handleListLeave() {
     if (!this.isOpen()) return;
     this.hoveredSong = null;
 
     if (this.selectedSong) {
-      if (this.musicPlayer && this.isOpen()) {
-        this.musicPlayer.playPreview(this.selectedSong);
-      }
       this.renderSelectedSongDetails(this.selectedSong);
     } else {
-      if (this.musicPlayer) {
-        this.musicPlayer.stop();
-      }
       this.renderDefaultDetails();
     }
   }
@@ -382,6 +401,7 @@ class PlayMenu {
   launchCurrentSong() {
     if (!this.selectedSong) return;
     if (this.soundManager) this.soundManager.playClick();
+    if (this.musicPlayer) this.musicPlayer.stop();
     if (typeof this.onStartTrack === "function") {
       const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(this.selectedSong)) || this.selectedSong.difficulties || {};
       const chosenDiff = this.selectedDifficulty || this.selectedSong.difficulty || Object.keys(diffs)[0] || "Normal";
@@ -406,6 +426,7 @@ class PlayMenu {
     if (!this.songDetailsContainer) return;
 
     const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+    const isPlaying = this.isSongPlaying(song);
 
     this.songDetailsContainer.innerHTML = `
       <div class="selected-song-view hover-mode" style="background-image: url('${coverSrc}');">
@@ -425,15 +446,15 @@ class PlayMenu {
             <p class="song-hover-mapper">Mapped by: <strong>${song.mapper || "Anonymous"}</strong></p>
           </div>
 
-          <div class="audio-preview-indicator">
-            <div class="equalizer-bars" aria-hidden="true">
+          <div class="audio-preview-indicator ${isPlaying ? '' : 'is-idle'}">
+            <div class="equalizer-bars ${isPlaying ? '' : 'is-paused'}" aria-hidden="true">
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
             </div>
-            <span class="preview-status-text">Playing Preview (Looped)</span>
+            <span class="preview-status-text">${isPlaying ? 'Playing Preview (Looped)' : 'Click to select & play preview'}</span>
           </div>
 
           <div class="hover-tip-container">
@@ -494,6 +515,7 @@ class PlayMenu {
     const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id, this.selectedDifficulty) : 0;
     const bestScoreDisplay = bestScore > 0 ? bestScore.toLocaleString() : "--";
     const activeDiffColor = this.getDifficultyColor(this.selectedDifficulty, song.color);
+    const isPlaying = this.isSongPlaying(song);
 
     this.songDetailsContainer.innerHTML = `
       <div class="selected-song-view" style="background-image: url('${coverSrc}');">
@@ -560,15 +582,15 @@ class PlayMenu {
             </div>
           </div>
 
-          <div class="audio-preview-indicator">
-            <div class="equalizer-bars" aria-hidden="true">
+          <div class="audio-preview-indicator ${isPlaying ? '' : 'is-idle'}">
+            <div class="equalizer-bars ${isPlaying ? '' : 'is-paused'}" aria-hidden="true">
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
               <span class="eq-bar"></span>
             </div>
-            <span class="preview-status-text">Preview Playing &bull; Selected</span>
+            <span class="preview-status-text">${isPlaying ? 'Preview Playing &bull; Selected' : 'Selected &bull; Click to preview audio'}</span>
           </div>
 
           <!-- Start Track Action -->
@@ -629,12 +651,11 @@ class PlayMenu {
    * Opens the Play Menu view and hides the main menu.
    */
   open() {
+    if (this.musicPlayer) {
+      this.musicPlayer.stop();
+    }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
-    }
-    const mainMenuBg = document.getElementById("main-menu-bg");
-    if (mainMenuBg) {
-      mainMenuBg.style.display = "none";
     }
     if (this.view) {
       this.view.classList.add("is-active");
@@ -643,7 +664,7 @@ class PlayMenu {
 
     if (this.songs && this.songs.length > 0) {
       const idx = this.selectedIndex >= 0 ? this.selectedIndex : 0;
-      this.selectSongByIndex(idx, false, true);
+      this.selectSongByIndex(idx, false, false);
     }
   }
 
@@ -660,10 +681,6 @@ class PlayMenu {
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "";
-    }
-    const mainMenuBg = document.getElementById("main-menu-bg");
-    if (mainMenuBg) {
-      mainMenuBg.style.display = "";
     }
   }
 

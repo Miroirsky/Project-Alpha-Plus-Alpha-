@@ -54,6 +54,21 @@ class CreateMenu {
     this.confirmImportBtn = document.getElementById("btn-confirm-import");
     this.importCodeArea = document.getElementById("import-code-area");
     this.importErrorBanner = document.getElementById("import-error-banner");
+    this.importFileInput = document.getElementById("import-file-input");
+    this.importFileStatusEl = document.getElementById("import-file-status");
+
+    // Export Modal Elements
+    this.exportModal = document.getElementById("export-modal");
+    this.closeExportBtn = document.getElementById("btn-close-export");
+    this.copyExportBtn = document.getElementById("btn-copy-export-code");
+    this.downloadExportBtn = document.getElementById("btn-download-export-json");
+    this.exportCodeArea = document.getElementById("export-code-area");
+    this.exportTrackName = document.getElementById("export-track-name");
+    this.exportTrackNotes = document.getElementById("export-track-notes");
+    this.exportTrackDuration = document.getElementById("export-track-duration");
+    this.exportTrackNps = document.getElementById("export-track-nps");
+    this.exportFeedback = document.getElementById("export-copy-feedback");
+    this.lastExportData = null;
 
     // Add Difficulty Modal Elements
     this.addDiffModal = document.getElementById("create-add-diff-modal");
@@ -255,10 +270,48 @@ class CreateMenu {
       });
     }
 
-    if (this.importModal) {
-      this.importModal.addEventListener("click", (e) => {
-        if (e.target === this.importModal) {
-          this.closeImportModal();
+    // File upload in import modal
+    if (this.importFileInput) {
+      this.importFileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            if (this.importCodeArea) {
+              this.importCodeArea.value = evt.target.result;
+            }
+            if (this.importFileStatusEl) {
+              this.importFileStatusEl.textContent = `Loaded file: ${file.name}`;
+            }
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
+
+    // Export Modal listeners
+    if (this.closeExportBtn) {
+      this.closeExportBtn.addEventListener("click", () => {
+        this.closeExportModal();
+      });
+    }
+
+    if (this.copyExportBtn) {
+      this.copyExportBtn.addEventListener("click", () => {
+        this.copyExportCode();
+      });
+    }
+
+    if (this.downloadExportBtn) {
+      this.downloadExportBtn.addEventListener("click", () => {
+        this.downloadExportFile();
+      });
+    }
+
+    if (this.exportModal) {
+      this.exportModal.addEventListener("click", (e) => {
+        if (e.target === this.exportModal) {
+          this.closeExportModal();
         }
       });
     }
@@ -288,9 +341,23 @@ class CreateMenu {
           const diff = chip.getAttribute("data-diff");
           if (diff) {
             this.addDiffNameInput.value = diff;
+            this.addDiffPresetChips.querySelectorAll(".chip-btn").forEach((c) => c.classList.remove("is-selected"));
+            chip.classList.add("is-selected");
             this.addDiffNameInput.focus();
             if (this.soundManager) this.soundManager.playClick();
           }
+        }
+      });
+    }
+
+    if (this.addDiffNameInput) {
+      this.addDiffNameInput.addEventListener("input", () => {
+        if (this.addDiffPresetChips) {
+          const val = this.addDiffNameInput.value.trim().toLowerCase();
+          this.addDiffPresetChips.querySelectorAll(".chip-btn").forEach((c) => {
+            const chipDiff = (c.getAttribute("data-diff") || "").toLowerCase();
+            c.classList.toggle("is-selected", chipDiff === val);
+          });
         }
       });
     }
@@ -470,6 +537,8 @@ class CreateMenu {
    */
   openImportModal() {
     if (this.importCodeArea) this.importCodeArea.value = "";
+    if (this.importFileInput) this.importFileInput.value = "";
+    if (this.importFileStatusEl) this.importFileStatusEl.textContent = "No file chosen";
     if (this.importErrorBanner) {
       this.importErrorBanner.textContent = "";
       this.importErrorBanner.style.display = "none";
@@ -493,7 +562,8 @@ class CreateMenu {
   }
 
   /**
-   * Validates and imports the track code into storage.
+   * Validates and imports the track code or song JSON into storage.
+   * Merges with existing songs to avoid duplicates and preserves high scores.
    */
   confirmImport() {
     if (!this.importCodeArea || !this.mapStorage) return;
@@ -503,14 +573,14 @@ class CreateMenu {
 
     if (!result.valid) {
       if (this.importErrorBanner) {
-        this.importErrorBanner.textContent = `⚠ ${result.error || "Invalid track code."}`;
+        this.importErrorBanner.textContent = `⚠ ${result.error || "Invalid song file or code."}`;
         this.importErrorBanner.style.display = "block";
       }
       return;
     }
 
     try {
-      const importedMap = this.mapStorage.importTrack(result.track);
+      const importedMap = this.mapStorage.importTrack(result.song || result.track);
       this.closeImportModal();
       this.expandedSongIds.add(importedMap.id);
       this.renderMapsList();
@@ -527,6 +597,98 @@ class CreateMenu {
         this.importErrorBanner.textContent = `⚠ Import failed: ${err.message}`;
         this.importErrorBanner.style.display = "block";
       }
+    }
+  }
+
+  /**
+   * Opens the Export Song modal for the entire song package.
+   * @param {Object} song
+   */
+  openExportSong(song) {
+    if (!song || !this.mapStorage) return;
+
+    try {
+      const exportResult = this.mapStorage.exportTrack(song);
+      this.lastExportData = exportResult;
+
+      const diffKeys = Object.keys(song.difficulties || {});
+      if (this.exportTrackName) this.exportTrackName.textContent = song.name || "Untitled Song";
+      if (this.exportTrackNps) this.exportTrackNps.textContent = `${diffKeys.length} Track${diffKeys.length === 1 ? "" : "s"}`;
+      if (this.exportTrackNotes) this.exportTrackNotes.textContent = `${exportResult.totalNotes} note${exportResult.totalNotes === 1 ? "" : "s"} (${diffKeys.join(", ")})`;
+      if (this.exportTrackDuration) this.exportTrackDuration.textContent = song.duration || "03:00";
+      if (this.exportCodeArea) this.exportCodeArea.value = exportResult.code;
+      if (this.exportFeedback) this.exportFeedback.style.display = "none";
+
+      if (this.exportModal) {
+        this.exportModal.classList.add("is-active");
+        this.exportModal.setAttribute("aria-hidden", "false");
+      }
+      if (this.soundManager) this.soundManager.playClick();
+    } catch (err) {
+      alert("Failed to export song: " + err.message);
+    }
+  }
+
+  /**
+   * Closes the Export Song modal.
+   */
+  closeExportModal() {
+    if (this.exportModal) {
+      this.exportModal.classList.remove("is-active");
+      this.exportModal.setAttribute("aria-hidden", "true");
+    }
+    if (this.soundManager) this.soundManager.playClick();
+  }
+
+  /**
+   * Copies the exported song code to clipboard.
+   */
+  copyExportCode() {
+    if (!this.exportCodeArea || !this.exportCodeArea.value) return;
+    const code = this.exportCodeArea.value;
+    const notifySuccess = () => {
+      if (this.exportFeedback) {
+        this.exportFeedback.textContent = "Copied to clipboard! ✓";
+        this.exportFeedback.style.display = "inline-block";
+        clearTimeout(this._copyTimeout);
+        this._copyTimeout = setTimeout(() => {
+          if (this.exportFeedback) this.exportFeedback.style.display = "none";
+        }, 2800);
+      }
+      if (this.soundManager) this.soundManager.playClick();
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(code).then(notifySuccess).catch(() => {
+        this.exportCodeArea.select();
+        document.execCommand("copy");
+        notifySuccess();
+      });
+    } else {
+      this.exportCodeArea.select();
+      document.execCommand("copy");
+      notifySuccess();
+    }
+  }
+
+  /**
+   * Downloads the exported song package as a .json file for the Default Tracks folder.
+   */
+  downloadExportFile() {
+    if (!this.lastExportData || !this.lastExportData.json) return;
+    try {
+      const blob = new Blob([this.lastExportData.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const filename = this.lastExportData.filename || "song.json";
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      if (this.soundManager) this.soundManager.playClick();
+    } catch (e) {
+      console.warn("Download failed:", e);
     }
   }
 
@@ -691,6 +853,10 @@ class CreateMenu {
           </div>
         </div>
         <div class="song-parent-actions">
+          <button class="btn-song-export" type="button" aria-label="Export ${map.name}" title="Export entire song and all difficulty tracks">
+            <span class="export-icon">📤</span>
+            <span>Export</span>
+          </button>
           <button class="btn-song-params" type="button" aria-label="Song Parameters" title="Song metadata and global arena background">
             <span class="param-icon">⚙</span>
             <span>Parameters</span>
@@ -716,6 +882,15 @@ class CreateMenu {
       };
       if (toggleBtn) {
         toggleBtn.addEventListener("click", toggleAction);
+      }
+
+      // Song Export button listener
+      const exportSongBtn = parentRow.querySelector(".btn-song-export");
+      if (exportSongBtn) {
+        exportSongBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.openExportSong(map);
+        });
       }
 
       // Song Parameters button listener
@@ -858,6 +1033,9 @@ class CreateMenu {
     }
     if (this.addDiffNameInput) {
       this.addDiffNameInput.value = "";
+    }
+    if (this.addDiffPresetChips) {
+      this.addDiffPresetChips.querySelectorAll(".chip-btn").forEach((c) => c.classList.remove("is-selected"));
     }
 
     // Populate copy source dropdown with song's existing difficulties
@@ -1293,10 +1471,6 @@ class CreateMenu {
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
     }
-    const mainMenuBg = document.getElementById("main-menu-bg");
-    if (mainMenuBg) {
-      mainMenuBg.style.display = "none";
-    }
     this.renderMapsList();
     if (this.view) {
       this.view.classList.add("is-active");
@@ -1314,10 +1488,6 @@ class CreateMenu {
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "";
-    }
-    const mainMenuBg = document.getElementById("main-menu-bg");
-    if (mainMenuBg) {
-      mainMenuBg.style.display = "";
     }
   }
 
@@ -1340,5 +1510,10 @@ class CreateMenu {
   }
 }
 
-// Expose to window
-window.CreateMenu = CreateMenu;
+// Expose to window and module
+if (typeof window !== "undefined") {
+  window.CreateMenu = CreateMenu;
+}
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = CreateMenu;
+}

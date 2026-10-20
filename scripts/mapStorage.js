@@ -32,8 +32,14 @@ class MapStorage {
           for (const m of parsed) {
             if (m && m.id && !seenIds.has(m.id)) {
               seenIds.add(m.id);
+              // Clean up expired blob URLs from previous browser sessions
+              let audioFile = m.file;
+              if (audioFile && typeof audioFile === "string" && audioFile.startsWith("blob:")) {
+                audioFile = "Assets/Songs/IMG_2449.mp3";
+              }
               const customMap = {
                 ...m,
+                file: audioFile || "Assets/Songs/IMG_2449.mp3",
                 isCustom: true,
                 isDefault: false
               };
@@ -226,41 +232,43 @@ class MapStorage {
   }
 
   /**
-   * Automatically detects, validates, and loads track codes from `importedTracks.js`.
-   * Reuses the existing export format, prevents duplicate imports, and handles invalid codes safely.
+   * Automatically detects and loads default tracks directly from the `Default Tracks` folder.
+   * Checks window.DEFAULT_TRACKS (registered by Default Tracks/defaultTracks.js),
+   * filesystem in Node.js, and normalizes all difficulty tracks under a stable default song ID.
    * @returns {Array} defaultTracks
    */
-  loadImportedDefaultTracks() {
+  loadDefaultTracks() {
     const rawItems = [];
 
-    // 1. Detect array, string, or object from window.TRACK_CODES
-    if (typeof window !== "undefined" && window.TRACK_CODES) {
-      if (Array.isArray(window.TRACK_CODES)) {
-        rawItems.push(...window.TRACK_CODES);
-      } else if (typeof window.TRACK_CODES === "string" && window.TRACK_CODES.trim()) {
-        rawItems.push(window.TRACK_CODES);
-      } else if (typeof window.TRACK_CODES === "object") {
-        rawItems.push(window.TRACK_CODES);
-      }
+    // 1. Detect default tracks registered from Default Tracks/defaultTracks.js
+    if (typeof window !== "undefined" && Array.isArray(window.DEFAULT_TRACKS)) {
+      rawItems.push(...window.DEFAULT_TRACKS);
     }
 
-    // 2. Detect multiline raw text from window.TRACK_CODES_TEXT
-    if (typeof window !== "undefined" && typeof window.TRACK_CODES_TEXT === "string" && window.TRACK_CODES_TEXT.trim()) {
-      const text = window.TRACK_CODES_TEXT.trim();
-      const alphaMatches = text.match(/ALPHA_TRACK_V1:[A-Za-z0-9+/=_\-]+/g);
-      if (alphaMatches && alphaMatches.length > 0) {
-        rawItems.push(...alphaMatches);
-      } else {
-        // Fallback: split by non-comment lines or parse single JSON block
-        if (text.startsWith("{") && text.endsWith("}")) {
-          rawItems.push(text);
-        } else {
-          const lines = text.split(/\r?\n/)
-            .map((l) => l.trim())
-            .filter((l) => l && !l.startsWith("#") && !l.startsWith("//") && !l.startsWith("/*"));
-          rawItems.push(...lines);
-        }
-      }
+    // 2. In Node.js / testing environment, directly read JSON files from Default Tracks / Assets/Default Tracks
+    if (typeof process !== "undefined" && typeof require === "function") {
+      try {
+        const fs = require("fs");
+        const path = require("path");
+        const dirs = [
+          path.resolve("Default Tracks"),
+          path.resolve("Assets", "Default Tracks")
+        ];
+        dirs.forEach((dir) => {
+          if (fs.existsSync(dir)) {
+            const files = fs.readdirSync(dir);
+            files.forEach((f) => {
+              if (f.endsWith(".json") && f !== "manifest.json") {
+                try {
+                  const content = fs.readFileSync(path.join(dir, f), "utf8");
+                  const parsed = JSON.parse(content);
+                  rawItems.push(parsed);
+                } catch (e) {}
+              }
+            });
+          }
+        });
+      } catch (e) {}
     }
 
     const defaultTracks = [];
@@ -272,49 +280,52 @@ class MapStorage {
       if (!rawString) return;
 
       const result = this.validateAndParseTrackCode(rawString);
-      if (!result.valid || !result.track) {
-        console.warn("Skipping invalid track code in importedTracks.js:", result.error || "Unknown validation error");
+      if (!result.valid || (!result.song && !result.track)) {
+        console.warn("Skipping invalid default track:", result.error || "Unknown validation error");
         return;
       }
 
-      const t = result.track;
-      this.normalizeSongDifficulties(t);
+      const songObj = result.song || result.track;
+      this.normalizeSongDifficulties(songObj);
 
       // Group tracks with identical song name and audio file under one single song ID
-      const songBaseSig = `${t.name.toLowerCase().trim()}::${(t.creator || "").toLowerCase().trim()}::${(t.file || "").toLowerCase().trim()}`;
+      const songBaseSig = `${songObj.name.toLowerCase().trim()}::${(songObj.creator || "").toLowerCase().trim()}::${(songObj.file || "").toLowerCase().trim()}`;
 
       if (songMap.has(songBaseSig)) {
         const existingSong = songMap.get(songBaseSig);
-        for (const [diffName, diffObj] of Object.entries(t.difficulties)) {
+        for (const [diffName, diffObj] of Object.entries(songObj.difficulties)) {
           existingSong.difficulties[diffName] = diffObj;
         }
         this.normalizeSongDifficulties(existingSong);
         return;
       }
 
-      const trackId = `default_${this.hashString(songBaseSig)}`;
-      t.id = trackId;
-      t.isDefault = true;
-      t.isCustom = false;
-      t.date = t.date || new Date().toISOString().split("T")[0];
+      const trackId = songObj.id && String(songObj.id).startsWith("default_")
+        ? songObj.id
+        : `default_${this.hashString(songBaseSig)}`;
 
-      songMap.set(songBaseSig, t);
-      defaultTracks.push(t);
+      songObj.id = trackId;
+      songObj.isDefault = true;
+      songObj.isCustom = false;
+      songObj.date = songObj.date || new Date().toISOString().split("T")[0];
+
+      songMap.set(songBaseSig, songObj);
+      defaultTracks.push(songObj);
     });
 
     return defaultTracks;
   }
 
   /**
-   * Returns default maps automatically detected from `importedTracks.js`.
+   * Returns default maps loaded directly from the `Default Tracks` folder.
    * @returns {Array}
    */
   getDefaultMaps() {
-    return this.loadImportedDefaultTracks();
+    return this.loadDefaultTracks();
   }
 
   /**
-   * Returns all maps (both custom maps and default tracks from importedTracks.js).
+   * Returns all maps (both custom maps and default tracks from the Default Tracks folder).
    * @returns {Array}
    */
   getAllMaps() {
@@ -372,7 +383,7 @@ class MapStorage {
   }
 
   /**
-   * Checks whether a map is a default track (from importedTracks.js / presets).
+   * Checks whether a map is a default track (from Default Tracks folder / presets).
    * Any map present in this.customMaps is strictly a custom track, never default.
    * @param {Object} track
    * @returns {boolean}
@@ -635,50 +646,56 @@ class MapStorage {
    * @param {string|null} selectedDifficulty
    * @returns {{ code: string, json: string, payload: Object }}
    */
-  exportTrack(map, selectedDifficulty = null) {
-    if (!map) throw new Error("No map specified for export.");
+  /**
+   * Exports an entire song, including all difficulty tracks, song metadata, and arena background parameters.
+   * Does NOT modify the current track or create duplicate saves.
+   * @param {Object} mapOrSong
+   * @returns {{ code: string, json: string, payload: Object, filename: string, totalNotes: number, diffCount: number, difficulties: Array<string> }}
+   */
+  exportTrack(mapOrSong) {
+    if (!mapOrSong) throw new Error("No song specified for export.");
 
-    this.normalizeSongDifficulties(map);
-    const activeDiffName = String(selectedDifficulty || map.selectedDifficulty || map.difficulty || "Normal").trim() || "Normal";
-    const diffs = map.difficulties || {};
+    this.normalizeSongDifficulties(mapOrSong);
+    const diffs = mapOrSong.difficulties || {};
 
     const exportedDifficulties = {};
+    let totalNotes = 0;
     for (const [name, diffObj] of Object.entries(diffs)) {
       if (!diffObj) continue;
       const cleanName = String(diffObj.difficulty || name).trim();
+      const notes = this.cloneNotes(diffObj.notes || []);
+      totalNotes += notes.length;
       exportedDifficulties[cleanName] = {
         difficulty: cleanName,
-        nps: typeof diffObj.nps === "number" ? diffObj.nps : 0,
-        notes: this.cloneNotes(diffObj.notes || [])
+        nps: typeof diffObj.nps === "number" ? diffObj.nps : this.computeNps(notes, mapOrSong.durationSeconds || 180),
+        color: diffObj.color || mapOrSong.color || "#00d4ff",
+        notes
       };
     }
 
-    const primaryDiff = exportedDifficulties[activeDiffName] || exportedDifficulties[Object.keys(exportedDifficulties)[0]];
-    const sanitizedNotes = primaryDiff ? primaryDiff.notes : this.cloneNotes(map.notes || []);
+    const diffKeys = Object.keys(exportedDifficulties);
+    const primaryKey = diffKeys[0] || "Normal";
+    const primaryDiff = exportedDifficulties[primaryKey] || { difficulty: "Normal", notes: [], nps: 0 };
 
-    const payload = {
-      format: "ProjectAlphaPlus-Track",
-      version: 3,
-      exportedAt: new Date().toISOString(),
-      track: {
-        id: map.id || `track_${Date.now()}`,
-        name: map.name || "Untitled Track",
-        mapper: map.mapper || "Anonymous",
-        creator: map.creator || "Unknown Artist",
-        duration: map.duration || "03:00",
-        durationSeconds: Math.max(10, Number(map.durationSeconds) || 180),
-        file: map.file || "Assets/Songs/IMG_2449.mp3",
-        color: map.color || "#00d4ff",
-        cover: map.cover || map.image || map.artwork || "Assets/Tracks Placeholders/Default-0.png",
-        difficulty: primaryDiff ? primaryDiff.difficulty : (map.difficulty || "Normal"),
-        nps: primaryDiff ? primaryDiff.nps : (map.nps || 0),
-        notes: sanitizedNotes,
-        difficulties: exportedDifficulties
-      }
+    const songPayload = {
+      id: mapOrSong.id || `song_${Date.now()}`,
+      name: mapOrSong.name || "Untitled Song",
+      mapper: mapOrSong.mapper || "Anonymous",
+      creator: mapOrSong.creator || "Unknown Artist",
+      duration: mapOrSong.duration || "03:00",
+      durationSeconds: Math.max(10, Number(mapOrSong.durationSeconds) || 180),
+      file: mapOrSong.file || "Assets/Songs/IMG_2449.mp3",
+      color: mapOrSong.color || "#00d4ff",
+      cover: mapOrSong.cover || mapOrSong.image || mapOrSong.artwork || "Assets/Tracks Placeholders/Default-0.png",
+      difficulty: primaryKey,
+      nps: primaryDiff.nps || 0,
+      notes: primaryDiff.notes || [],
+      difficulties: exportedDifficulties,
+      totalNotes
     };
 
-    if (map.background && typeof map.background === "object") {
-      const bg = map.background;
+    if (mapOrSong.background && typeof mapOrSong.background === "object") {
+      const bg = mapOrSong.background;
       const isVideo = bg.type === "video";
       const hasDirectUrl = typeof bg.url === "string" && (bg.url.startsWith("data:") || bg.url.startsWith("Assets/") || bg.url.startsWith("http"));
       const bgPayload = {
@@ -689,11 +706,17 @@ class MapStorage {
       };
       if (hasDirectUrl && bg.url.length < 3000000) {
         bgPayload.url = bg.url;
-      } else {
-        bgPayload.needsMedia = true;
       }
-      payload.track.background = bgPayload;
+      songPayload.background = bgPayload;
     }
+
+    const payload = {
+      format: "ProjectAlphaPlus-Song",
+      version: 4,
+      exportedAt: new Date().toISOString(),
+      song: songPayload,
+      track: songPayload // Backward-compatibility alias
+    };
 
     const jsonStr = JSON.stringify(payload, null, 2);
     let base64Code = "";
@@ -707,26 +730,38 @@ class MapStorage {
       base64Code = Buffer.from(jsonStr, "utf8").toString("base64");
     }
 
-    const code = `ALPHA_TRACK_V1:${base64Code}`;
-    return { code, json: jsonStr, payload };
+    const code = `ALPHA_SONG_V1:${base64Code}`;
+    const filename = `${(mapOrSong.name || "Song").replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || "Song"}.json`;
+
+    return {
+      code,
+      json: jsonStr,
+      payload,
+      filename,
+      totalNotes,
+      diffCount: diffKeys.length,
+      difficulties: diffKeys
+    };
   }
 
   /**
-   * Validates and parses an exported track code or JSON string safely.
-   * Handles invalid, incomplete, or corrupted data gracefully.
+   * Validates and parses an exported track code, whole-song code, or JSON string safely.
+   * Supports ALPHA_SONG_V1:, ALPHA_TRACK_V1:, and raw JSON files.
+   * Handles multi-difficulty tracks as well as legacy single-track formats.
    * @param {string} rawCode
-   * @returns {{ valid: boolean, track?: Object, error?: string }}
+   * @returns {{ valid: boolean, song?: Object, track?: Object, error?: string }}
    */
   validateAndParseTrackCode(rawCode) {
     if (!rawCode || typeof rawCode !== "string" || !rawCode.trim()) {
-      return { valid: false, error: "Please enter or paste a valid track code." };
+      return { valid: false, error: "Please enter, paste, or select a valid song code/file." };
     }
 
     let rawString = rawCode.trim();
 
     // 1. Decode Base64 prefix if present
-    if (rawString.startsWith("ALPHA_TRACK_V1:")) {
-      const b64 = rawString.slice("ALPHA_TRACK_V1:".length).trim();
+    if (rawString.startsWith("ALPHA_SONG_V1:") || rawString.startsWith("ALPHA_TRACK_V1:")) {
+      const prefix = rawString.startsWith("ALPHA_SONG_V1:") ? "ALPHA_SONG_V1:" : "ALPHA_TRACK_V1:";
+      const b64 = rawString.slice(prefix.length).trim();
       try {
         if (typeof atob !== "undefined") {
           try {
@@ -738,7 +773,7 @@ class MapStorage {
           rawString = Buffer.from(b64, "base64").toString("utf8");
         }
       } catch (err) {
-        return { valid: false, error: "The provided track code is corrupted or malformed." };
+        return { valid: false, error: "The provided song code is corrupted or malformed." };
       }
     }
 
@@ -747,23 +782,23 @@ class MapStorage {
     try {
       parsed = JSON.parse(rawString);
     } catch (jsonErr) {
-      return { valid: false, error: "Invalid track data format: could not parse JSON content." };
+      return { valid: false, error: "Invalid song data format: could not parse JSON content." };
     }
 
     if (!parsed || typeof parsed !== "object") {
-      return { valid: false, error: "Invalid track data format: expected object." };
+      return { valid: false, error: "Invalid song data format: expected object." };
     }
 
-    const trackObj = parsed.track || parsed;
+    const songObj = parsed.song || parsed.track || parsed;
 
     // 3. Validate metadata
-    if (!trackObj.name || typeof trackObj.name !== "string" || !trackObj.name.trim()) {
-      return { valid: false, error: "Track is missing a valid track name." };
+    if (!songObj.name || typeof songObj.name !== "string" || !songObj.name.trim()) {
+      return { valid: false, error: "Song data is missing a valid song name." };
     }
 
-    let durationSeconds = Number(trackObj.durationSeconds);
-    if ((isNaN(durationSeconds) || durationSeconds <= 0) && typeof trackObj.duration === "string") {
-      const parts = trackObj.duration.split(":");
+    let durationSeconds = Number(songObj.durationSeconds);
+    if ((isNaN(durationSeconds) || durationSeconds <= 0) && typeof songObj.duration === "string") {
+      const parts = songObj.duration.split(":");
       if (parts.length === 2) {
         const m = parseInt(parts[0], 10);
         const s = parseInt(parts[1], 10);
@@ -773,133 +808,101 @@ class MapStorage {
       }
     }
     if (isNaN(durationSeconds) || durationSeconds <= 0) {
-      if (Array.isArray(trackObj.notes) && trackObj.notes.length > 0) {
-        const maxTime = Math.max(...trackObj.notes.map((n) => Number(n.time) || 0));
-        durationSeconds = Math.max(10, Math.ceil(maxTime + 2));
-      } else {
-        durationSeconds = 180;
-      }
+      durationSeconds = 180;
     }
 
-    // 4. Validate notes array
-    if (!Array.isArray(trackObj.notes)) {
-      return { valid: false, error: "Track data is missing notes array." };
-    }
+    // Helper: sanitize notes array
+    const sanitizeNotesArray = (rawNotes) => {
+      if (!Array.isArray(rawNotes)) return [];
+      const res = [];
+      for (let i = 0; i < rawNotes.length; i++) {
+        const n = rawNotes[i];
+        if (!n || typeof n !== "object") continue;
 
-    const sanitizedNotes = [];
-    for (let i = 0; i < trackObj.notes.length; i++) {
-      const n = trackObj.notes[i];
-      if (!n || typeof n !== "object") continue;
+        const time = Number(n.time);
+        if (isNaN(time) || time < 0) continue;
 
-      const time = Number(n.time);
-      if (isNaN(time) || time < 0) continue;
+        const isTriangle = n.type === "triangle" || n.type === "bomb";
+        const isDirectional = n.type === "directional" || n.type === "arrow";
+        let color = String(n.color || "").toLowerCase();
+        if (isTriangle) {
+          color = "yellow";
+        } else if (color !== "red" && color !== "blue") {
+          continue;
+        }
 
-      const isTriangle = n.type === "triangle" || n.type === "bomb";
-      const isDirectional = n.type === "directional" || n.type === "arrow";
-      let color = String(n.color || "").toLowerCase();
-      if (isTriangle) {
-        color = "yellow";
-      } else if (color !== "red" && color !== "blue") {
-        continue;
+        const x = Number(n.x);
+        const y = Number(n.y);
+        if (isNaN(x) || isNaN(y)) continue;
+
+        const note = {
+          time: parseFloat(time.toFixed(3)),
+          color,
+          type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
+          x: Math.max(0.02, Math.min(0.98, parseFloat(x.toFixed(3)))),
+          y: Math.max(0.02, Math.min(0.98, parseFloat(y.toFixed(3))))
+        };
+        if (isDirectional) {
+          note.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+        }
+        res.push(note);
       }
-
-      const x = Number(n.x);
-      const y = Number(n.y);
-      if (isNaN(x) || isNaN(y)) continue;
-
-      const note = {
-        time: parseFloat(time.toFixed(3)),
-        color,
-        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-        x: Math.max(0.02, Math.min(0.98, parseFloat(x.toFixed(3)))),
-        y: Math.max(0.02, Math.min(0.98, parseFloat(y.toFixed(3))))
-      };
-      if (isDirectional) {
-        note.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
-      }
-
-      sanitizedNotes.push(note);
-    }
-
-    sanitizedNotes.sort((a, b) => a.time - b.time);
+      res.sort((a, b) => a.time - b.time);
+      return res;
+    };
 
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = Math.floor(durationSeconds % 60);
     const durationFormatted = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 
+    // 4. Sanitize difficulties dictionary
     const sanitizedDifficulties = {};
-    if (trackObj.difficulties && typeof trackObj.difficulties === "object" && Object.keys(trackObj.difficulties).length > 0) {
-      for (const [diffName, diffData] of Object.entries(trackObj.difficulties)) {
+    if (songObj.difficulties && typeof songObj.difficulties === "object" && Object.keys(songObj.difficulties).length > 0) {
+      for (const [diffName, diffData] of Object.entries(songObj.difficulties)) {
         if (!diffData) continue;
         const cleanName = String(diffData.difficulty || diffName).trim();
-        const rawDiffNotes = Array.isArray(diffData.notes) ? diffData.notes : [];
-        const diffNotes = [];
-        for (let i = 0; i < rawDiffNotes.length; i++) {
-          const n = rawDiffNotes[i];
-          if (!n || typeof n !== "object") continue;
-          const time = Number(n.time);
-          if (isNaN(time) || time < 0) continue;
-          const isTriangle = n.type === "triangle" || n.type === "bomb";
-          const isDirectional = n.type === "directional" || n.type === "arrow";
-          let color = String(n.color || "").toLowerCase();
-          if (isTriangle) {
-            color = "yellow";
-          } else if (color !== "red" && color !== "blue") {
-            continue;
-          }
-          const x = Number(n.x);
-          const y = Number(n.y);
-          if (isNaN(x) || isNaN(y)) continue;
-          const note = {
-            time: parseFloat(time.toFixed(3)),
-            color,
-            type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
-            x: Math.max(0.02, Math.min(0.98, parseFloat(x.toFixed(3)))),
-            y: Math.max(0.02, Math.min(0.98, parseFloat(y.toFixed(3))))
-          };
-          if (isDirectional) {
-            note.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
-          }
-          diffNotes.push(note);
-        }
-        diffNotes.sort((a, b) => a.time - b.time);
+        const diffNotes = sanitizeNotesArray(diffData.notes || []);
         sanitizedDifficulties[cleanName] = {
           difficulty: cleanName,
           notes: diffNotes,
-          nps: this.computeNps(diffNotes, durationSeconds)
+          nps: typeof diffData.nps === "number" && diffData.nps > 0 ? diffData.nps : this.computeNps(diffNotes, durationSeconds),
+          color: diffData.color || songObj.color || "#00d4ff"
         };
       }
     }
 
-    const defaultDiffName = String(trackObj.difficulty || "Normal").trim() || "Normal";
+    // If no difficulties dictionary, extract from top-level notes/difficulty
+    const fallbackNotes = sanitizeNotesArray(songObj.notes || []);
+    const defaultDiffName = String(songObj.difficulty || "Normal").trim() || "Normal";
     if (Object.keys(sanitizedDifficulties).length === 0) {
       sanitizedDifficulties[defaultDiffName] = {
         difficulty: defaultDiffName,
-        notes: sanitizedNotes,
-        nps: this.computeNps(sanitizedNotes, durationSeconds)
+        notes: fallbackNotes,
+        nps: this.computeNps(fallbackNotes, durationSeconds),
+        color: songObj.color || "#00d4ff"
       };
     }
 
     const primaryKey = sanitizedDifficulties[defaultDiffName] ? defaultDiffName : Object.keys(sanitizedDifficulties)[0];
     const primary = sanitizedDifficulties[primaryKey];
 
-    const sanitizedTrack = {
-      name: trackObj.name.trim().slice(0, 80),
-      mapper: (trackObj.mapper || "Anonymous").trim().slice(0, 60),
-      creator: (trackObj.creator || "Unknown Artist").trim().slice(0, 60),
-      duration: trackObj.duration || durationFormatted,
+    const sanitizedSong = {
+      name: songObj.name.trim().slice(0, 80),
+      mapper: (songObj.mapper || "Anonymous").trim().slice(0, 60),
+      creator: (songObj.creator || "Unknown Artist").trim().slice(0, 60),
+      duration: songObj.duration || durationFormatted,
       durationSeconds,
-      file: trackObj.file || "Assets/Songs/IMG_2449.mp3",
-      color: trackObj.color || "#00d4ff",
-      cover: trackObj.cover || trackObj.image || trackObj.artwork || "Assets/Tracks Placeholders/Default-0.png",
+      file: songObj.file || "Assets/Songs/IMG_2449.mp3",
+      color: songObj.color || "#00d4ff",
+      cover: songObj.cover || songObj.image || songObj.artwork || "Assets/Tracks Placeholders/Default-0.png",
       difficulty: primary ? primary.difficulty : defaultDiffName,
       nps: primary ? primary.nps : 0,
-      notes: primary ? primary.notes : sanitizedNotes,
+      notes: primary ? primary.notes : fallbackNotes,
       difficulties: sanitizedDifficulties
     };
 
-    if (trackObj.background && typeof trackObj.background === "object") {
-      const bg = trackObj.background;
+    if (songObj.background && typeof songObj.background === "object") {
+      const bg = songObj.background;
       const isVideo = bg.type === "video";
       const validBg = {
         type: isVideo ? "video" : "image",
@@ -913,38 +916,68 @@ class MapStorage {
       if (bg.needsMedia) {
         validBg.needsMedia = true;
       }
-      sanitizedTrack.background = validBg;
+      sanitizedSong.background = validBg;
     }
 
-    return { valid: true, track: sanitizedTrack };
+    return { valid: true, song: sanitizedSong, track: sanitizedSong };
   }
 
   /**
-   * Imports a validated track into custom maps and saves it to storage.
-   * @param {Object} validatedTrack
-   * @returns {Object} importedMap
+   * Imports a validated song into custom maps and saves it to storage.
+   * Prevents duplicate songs by merging incoming difficulty tracks into an existing song if already present.
+   * Ensures all difficulty tracks remain linked to the same song ID and preserves high scores.
+   * @param {Object} validatedSong
+   * @returns {Object} importedSong
    */
-  importTrack(validatedTrack) {
-    if (!validatedTrack || !validatedTrack.name) {
-      throw new Error("Invalid track data provided to importTrack.");
+  importTrack(validatedSong) {
+    if (!validatedSong || !validatedSong.name) {
+      throw new Error("Invalid song data provided to importTrack.");
     }
 
-    this.normalizeSongDifficulties(validatedTrack);
+    this.normalizeSongDifficulties(validatedSong);
 
-    const uniqueId = `custom_import_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-    const importedMap = {
-      ...validatedTrack,
+    // Check if an existing custom song matches by ID or by (name + creator)
+    const songSig = `${validatedSong.name.toLowerCase().trim()}::${(validatedSong.creator || "").toLowerCase().trim()}`;
+    const existingIndex = this.customMaps.findIndex(
+      (m) => m.id === validatedSong.id || `${m.name.toLowerCase().trim()}::${(m.creator || "").toLowerCase().trim()}` === songSig
+    );
+
+    if (existingIndex !== -1) {
+      const existing = this.customMaps[existingIndex];
+      // Merge all difficulty tracks from imported song into the existing song without duplicating!
+      if (!existing.difficulties) existing.difficulties = {};
+      for (const [diffName, diffData] of Object.entries(validatedSong.difficulties)) {
+        existing.difficulties[diffName] = {
+          ...diffData,
+          notes: this.cloneNotes(diffData.notes || [])
+        };
+      }
+      if (validatedSong.background) {
+        existing.background = { ...validatedSong.background };
+      }
+      this.normalizeSongDifficulties(existing);
+      this.saveCustomMapsToStorage();
+      return existing;
+    }
+
+    // New song: generate unique custom ID
+    const uniqueId = validatedSong.id && String(validatedSong.id).startsWith("custom_")
+      ? validatedSong.id
+      : `custom_import_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+    const importedSong = {
+      ...validatedSong,
       id: uniqueId,
       date: new Date().toISOString().split("T")[0],
       isCustom: true,
       isDefault: false,
-      notes: [...(validatedTrack.notes || [])],
-      difficulties: { ...validatedTrack.difficulties }
+      difficulties: { ...validatedSong.difficulties }
     };
+    this.normalizeSongDifficulties(importedSong);
 
-    this.customMaps.unshift(importedMap);
+    this.customMaps.unshift(importedSong);
     this.saveCustomMapsToStorage();
-    return importedMap;
+    return importedSong;
   }
 
   /**

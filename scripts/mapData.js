@@ -1,8 +1,8 @@
 /**
  * @file mapData.js
  * @description Preset mapped notes for Project Alpha Plus tracks.
- * Initial sample tracks have been removed. Tracks are now imported from
- * the dedicated `importedTracks.js` file or created via the Create menu.
+ * Initial sample tracks have been replaced by the `Default Tracks` folder
+ * or tracks created via the Create menu.
  */
 
 const SAMPLE_MAPS = {};

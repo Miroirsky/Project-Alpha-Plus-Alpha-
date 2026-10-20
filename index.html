@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Alpha Plus</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
 
   <!-- Modular Stylesheets -->
   <link rel="stylesheet" href="styles/themes.css">
@@ -20,7 +21,7 @@
   <script defer src="scripts/soundManager.js"></script>
   <script defer src="scripts/songsData.js"></script>
   <script defer src="scripts/mapData.js"></script>
-  <script defer src="scripts/importedTracks.js"></script>
+  <script defer src="Default Tracks/defaultTracks.js"></script>
   <script defer src="scripts/mediaStorage.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
   <script defer src="scripts/musicPlayer.js"></script>
@@ -104,7 +105,7 @@
         </button>
         <div class="play-title-group">
           <h2 class="play-screen-title">Select Track</h2>
-          <p class="play-screen-subtitle">Hover to preview &bull; Click to prepare</p>
+          <p class="play-screen-subtitle">Select track to preview &bull; Click to prepare</p>
         </div>
       </header>
 
@@ -426,9 +427,9 @@
           <span class="legend-item"><span class="key-tag">Ctrl + Wheel</span> Zoom Timeline</span>
           <span class="legend-item"><span class="key-tag">Click Note</span> Select &amp; Edit Time</span>
           <span class="legend-item"><span class="key-tag">1 / 2 / 3</span> Tool Select</span>
-          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Red</span>
-          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Blue</span>
-          <span class="legend-item"><strong style="color: #38bdf8;">[Directional]</strong> Drag to set angle</span>
+          <span class="legend-item"><strong style="color: var(--palette-primary, #954132);">[Left Click]</strong> Terracotta</span>
+          <span class="legend-item"><strong style="color: var(--palette-bg-secondary, #F7D4BC);">[Right Click]</strong> Peach</span>
+          <span class="legend-item"><strong style="color: var(--palette-bg-primary, #FAE3E3);">[Directional]</strong> Drag to set angle</span>
           <span class="legend-item"><strong style="color: #ffd32a;">[Bomb]</strong> Click Places Bomb</span>
           <span class="legend-item"><span class="key-tag">Enter</span> Test Map</span>
         </div>
@@ -627,17 +628,21 @@
               <span class="settings-label">UI Theme</span>
             </div>
             <div class="theme-options" role="radiogroup" aria-label="Select UI Theme">
-              <button class="theme-btn" data-theme="dark" type="button" aria-label="Cyber Dark Theme">
-                <span class="theme-preview-dot theme-preview-dark"></span>
-                <span>Dark</span>
+              <button class="theme-btn" data-theme="terracotta" type="button" aria-label="Terracotta Warm Theme">
+                <span class="theme-preview-dot theme-preview-terracotta"></span>
+                <span>Terracotta</span>
               </button>
-              <button class="theme-btn" data-theme="midnight" type="button" aria-label="Midnight Theme">
+              <button class="theme-btn" data-theme="midnight" type="button" aria-label="Midnight Oceanic Theme">
                 <span class="theme-preview-dot theme-preview-midnight"></span>
                 <span>Midnight</span>
               </button>
-              <button class="theme-btn" data-theme="light" type="button" aria-label="Solar Light Theme">
-                <span class="theme-preview-dot theme-preview-light"></span>
-                <span>Light</span>
+              <button class="theme-btn" data-theme="sage" type="button" aria-label="Nordic Sage Theme">
+                <span class="theme-preview-dot theme-preview-sage"></span>
+                <span>Sage</span>
+              </button>
+              <button class="theme-btn" data-theme="amethyst" type="button" aria-label="Amethyst Twilight Theme">
+                <span class="theme-preview-dot theme-preview-amethyst"></span>
+                <span>Amethyst</span>
               </button>
             </div>
           </div>
@@ -670,36 +675,36 @@
       </div>
     </div>
 
-    <!-- Export Track Modal -->
+    <!-- Export Song Modal -->
     <div id="export-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" aria-hidden="true">
       <div class="modal-dialog export-modal-dialog">
         <header class="modal-header">
-          <h2 id="export-modal-title" class="modal-title">Export Track Code</h2>
+          <h2 id="export-modal-title" class="modal-title">Export Song Package</h2>
           <button id="btn-close-export" class="modal-close-btn" type="button" aria-label="Close Export Dialog">&times;</button>
         </header>
 
         <div class="export-modal-content">
           <div class="export-track-summary">
             <div class="export-summary-badge">
-              <span class="summary-label">Track</span>
-              <strong id="export-track-name" class="summary-val">Track Name</strong>
+              <span class="summary-label">Song</span>
+              <strong id="export-track-name" class="summary-val">Song Name</strong>
             </div>
             <div class="export-summary-badge">
-              <span class="summary-label">Notes</span>
+              <span class="summary-label">Difficulties</span>
+              <strong id="export-track-nps" class="summary-val">1 Track</strong>
+            </div>
+            <div class="export-summary-badge">
+              <span class="summary-label">Total Notes</span>
               <strong id="export-track-notes" class="summary-val">0 notes</strong>
             </div>
             <div class="export-summary-badge">
               <span class="summary-label">Duration</span>
               <strong id="export-track-duration" class="summary-val">00:00</strong>
             </div>
-            <div class="export-summary-badge">
-              <span class="summary-label">NPS</span>
-              <strong id="export-track-nps" class="summary-val">0.0</strong>
-            </div>
           </div>
 
           <p class="export-desc">
-            Copy this unique code to share your mapped track with other players. It contains complete note coordinates, timings, directions, and song metadata.
+            Exports the complete song, including all difficulty tracks, mapped notes, song metadata, and arena background parameters. Copy the code or download the JSON file to share or drop directly into the <code>Default Tracks</code> folder.
           </p>
 
           <div class="code-container">
@@ -713,7 +718,7 @@
                 <span id="copy-btn-text">Copy Code</span>
               </button>
               <button id="btn-download-export-json" class="btn-editor-action btn-download-export" type="button">
-                <span>Download .alpha</span>
+                <span>Download Song JSON</span>
               </button>
             </div>
             <span id="export-copy-feedback" class="export-feedback-toast" style="display: none;">Copied to clipboard! ✓</span>
@@ -722,21 +727,29 @@
       </div>
     </div>
 
-    <!-- Import Track Modal -->
+    <!-- Import Song Modal -->
     <div id="import-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="import-modal-title" aria-hidden="true">
       <div class="modal-dialog import-modal-dialog">
         <header class="modal-header">
-          <h2 id="import-modal-title" class="modal-title">Import Track Code</h2>
+          <h2 id="import-modal-title" class="modal-title">Import Song</h2>
           <button id="btn-close-import" class="modal-close-btn" type="button" aria-label="Close Import Dialog">&times;</button>
         </header>
 
         <div class="import-modal-content">
           <p class="import-desc">
-            Paste an exported track code (starting with <code>ALPHA_TRACK_V1:</code> or valid JSON) below to import and play it:
+            Upload an exported song file (<code>.json</code>) or paste an exported code (starting with <code>ALPHA_SONG_V1:</code>, <code>ALPHA_TRACK_V1:</code>, or JSON) to import the complete song with all its difficulty tracks:
           </p>
 
+          <div class="import-file-upload-row" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+            <input type="file" id="import-file-input" accept=".json,.track,.alpha,.txt" style="display: none;">
+            <label for="import-file-input" class="custom-file-btn" style="cursor: pointer;">
+              <span>Choose Song File (.json)...</span>
+            </label>
+            <span id="import-file-status" class="file-status-text" style="font-size: 0.82rem; color: var(--color-text-secondary);">No file chosen</span>
+          </div>
+
           <div class="code-container">
-            <textarea id="import-code-area" class="import-textarea" spellcheck="false" placeholder="Paste ALPHA_TRACK_V1:... code or JSON here"></textarea>
+            <textarea id="import-code-area" class="import-textarea" spellcheck="false" placeholder="Paste ALPHA_SONG_V1:... code or JSON here"></textarea>
           </div>
 
           <div id="import-error-banner" class="import-error-alert" style="display: none;"></div>
@@ -1041,7 +1054,7 @@
               </div>
             </div>
           </div>
-          <div class="diff-stats-box" id="create-diff-stats-box" style="padding: 0.75rem 1rem; background: rgba(0,0,0,0.3); border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.08); font-size: 0.85rem; color: var(--color-text-secondary); display: flex; justify-content: space-around;">
+          <div class="diff-stats-box" id="create-diff-stats-box" style="padding: 0.75rem 1rem; background: rgba(50,34,20,0.4); border-radius: 0.5rem; border: 1px solid rgba(247,212,188,0.25); font-size: 0.85rem; color: var(--color-text-secondary); display: flex; justify-content: space-around;">
             <span>Notes: <strong id="create-diff-stats-notes" style="color: var(--color-text-primary);">0</strong></span>
             <span>NPS: <strong id="create-diff-stats-nps" style="color: var(--color-text-primary);">0.0</strong></span>
             <span>High Score: <strong id="create-diff-stats-score" style="color: var(--color-accent);">0</strong></span>

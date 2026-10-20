@@ -64,9 +64,18 @@ class SettingsModal {
    */
   updateThemeButtons(activeTheme) {
     if (!this.themeButtons) return;
+    const normalize = (t) => {
+      if (!t) return "";
+      const lower = t.toLowerCase();
+      if (lower === "dark") return "terracotta";
+      if (lower === "light") return "sage";
+      return lower;
+    };
+    const currentNorm = normalize(activeTheme);
     this.themeButtons.forEach((btn) => {
       const theme = btn.getAttribute("data-theme");
-      if (theme === activeTheme) {
+      const btnNorm = normalize(theme);
+      if (btnNorm === currentNorm) {
         btn.classList.add("is-active");
         btn.setAttribute("aria-pressed", "true");
       } else {

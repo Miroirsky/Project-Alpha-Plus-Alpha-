@@ -563,37 +563,51 @@ class MapEditor {
       this.audio = null;
     }
 
+    const safeFile = file || "Assets/Songs/IMG_2449.mp3";
+
     // Trigger waveform loading/decoding (cached, bundled, or dynamic Web Audio API)
-    this.loadAudioWaveform(file);
+    this.loadAudioWaveform(safeFile);
 
-    if (file) {
-      try {
-        const audio = new Audio(file);
-        audio.preload = "auto";
-        audio.currentTime = 0;
+    try {
+      const audio = new Audio(safeFile);
+      audio.preload = "auto";
+      audio.currentTime = 0;
 
-        const soundVol = this.soundManager ? (this.soundManager.isEnabled() ? this.soundManager.getVolume() / 100 : 0) : 0.7;
-        audio.volume = soundVol;
-        audio.playbackRate = this.playSpeed || 1.0;
+      const soundVol = this.soundManager ? (this.soundManager.isEnabled() ? this.soundManager.getVolume() / 100 : 0) : 0.7;
+      audio.volume = soundVol;
+      audio.playbackRate = this.playSpeed || 1.0;
 
-        audio.addEventListener("loadedmetadata", () => {
-          if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-            this.duration = audio.duration;
-            this.resizeTimelineContent();
-            this.renderTimeline();
-            this.updateTimelineUI();
+      audio.addEventListener("error", () => {
+        // Fallback to default bundled track if source fails to load (e.g. expired blob URL)
+        if (safeFile !== "Assets/Songs/IMG_2449.mp3") {
+          console.warn(`Audio loading failed for "${safeFile}". Falling back to default track.`);
+          if (this.activeMap) {
+            this.activeMap.file = "Assets/Songs/IMG_2449.mp3";
+            if (this.mapStorage) {
+              this.mapStorage.saveMap(this.activeMap);
+            }
           }
-        });
+          this.initAudio("Assets/Songs/IMG_2449.mp3");
+        }
+      });
 
-        audio.addEventListener("ended", () => {
-          this.pause();
-          this.seekTo(0);
-        });
+      audio.addEventListener("loadedmetadata", () => {
+        if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+          this.duration = audio.duration;
+          this.resizeTimelineContent();
+          this.renderTimeline();
+          this.updateTimelineUI();
+        }
+      });
 
-        this.audio = audio;
-      } catch (err) {
-        console.warn("Audio loading failed in editor:", err);
-      }
+      audio.addEventListener("ended", () => {
+        this.pause();
+        this.seekTo(0);
+      });
+
+      this.audio = audio;
+    } catch (err) {
+      console.warn("Audio loading failed in editor:", err);
     }
   }
 
@@ -680,7 +694,6 @@ class MapEditor {
         }
       }
     } catch (err) {
-      console.warn("Waveform extraction not available for track:", err);
       if (this.currentWaveformFile === file) {
         this.waveformPeaks = null;
       }
@@ -1456,22 +1469,33 @@ class MapEditor {
 
     if (!this.activeMap || !this.mapStorage) return;
 
+    // Flush current active difficulty notes into map difficulties before exporting
+    if (this.difficulties && this.activeDifficulty) {
+      this.difficulties[this.activeDifficulty] = {
+        difficulty: this.activeDifficulty,
+        notes: this.cloneNotes(this.notes),
+        nps: this.computeNps(this.notes, this.duration),
+        color: (this.difficulties[this.activeDifficulty] && this.difficulties[this.activeDifficulty].color) || this.activeMap.color || "#00d4ff"
+      };
+      this.activeMap.difficulties = { ...this.difficulties };
+    }
+
     try {
-      const exportResult = this.mapStorage.exportTrack(this.activeMap, this.activeDifficulty);
+      const exportResult = this.mapStorage.exportTrack(this.activeMap);
       this.lastExportData = exportResult;
 
+      const diffKeys = Object.keys(this.difficulties || {});
       if (this.exportTrackName) {
-        this.exportTrackName.textContent = `${this.activeMap.name || "Untitled Track"} [${this.activeDifficulty}]`;
+        this.exportTrackName.textContent = this.activeMap.name || "Untitled Song";
+      }
+      if (this.exportTrackNps) {
+        this.exportTrackNps.textContent = `${diffKeys.length} Track${diffKeys.length === 1 ? "" : "s"}`;
       }
       if (this.exportTrackNotes) {
-        this.exportTrackNotes.textContent = `${this.notes.length} note${this.notes.length === 1 ? "" : "s"}`;
+        this.exportTrackNotes.textContent = `${exportResult.totalNotes} note${exportResult.totalNotes === 1 ? "" : "s"} (${diffKeys.join(", ")})`;
       }
       if (this.exportTrackDuration) {
         this.exportTrackDuration.textContent = this.formatTime(this.duration);
-      }
-      if (this.exportTrackNps) {
-        const nps = this.duration > 0 ? (this.notes.length / this.duration).toFixed(1) : "0.0";
-        this.exportTrackNps.textContent = nps;
       }
 
       if (this.exportCodeArea) {
@@ -1492,7 +1516,7 @@ class MapEditor {
       }
     } catch (err) {
       console.error("Export error:", err);
-      alert("Failed to export track: " + err.message);
+      alert("Failed to export song: " + err.message);
     }
   }
 
@@ -1530,7 +1554,7 @@ class MapEditor {
   }
 
   /**
-   * Downloads the exported track as an .alpha JSON file.
+   * Downloads the exported song as a .json file suitable for the Default Tracks folder.
    */
   downloadExportFile() {
     if (!this.lastExportData || !this.lastExportData.json) return;
@@ -1539,9 +1563,9 @@ class MapEditor {
       const blob = new Blob([this.lastExportData.json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const cleanName = (this.activeMap.name || "track").replace(/[^a-zA-Z0-9_\-]/g, "_");
+      const filename = this.lastExportData.filename || `${(this.activeMap.name || "song").replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || "song"}.json`;
       a.href = url;
-      a.download = `${cleanName}.alpha`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -2133,10 +2157,18 @@ class MapEditor {
    */
   play() {
     this.isPlaying = true;
-    if (this.audio) {
+    if (this.audio && !this.audio.error) {
       const playPromise = this.audio.play();
       if (playPromise !== undefined) {
-        playPromise.catch((err) => console.warn(err));
+        playPromise.catch((err) => {
+          if (err && err.name === "NotSupportedError" && this.activeMap && this.activeMap.file !== "Assets/Songs/IMG_2449.mp3") {
+            this.activeMap.file = "Assets/Songs/IMG_2449.mp3";
+            if (this.mapStorage) {
+              this.mapStorage.saveMap(this.activeMap);
+            }
+            this.initAudio("Assets/Songs/IMG_2449.mp3");
+          }
+        });
       }
     }
     if (this.bgMedia && this.bgMediaType === "video") {
