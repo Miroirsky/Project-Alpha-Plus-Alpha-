@@ -373,6 +373,13 @@ class MapEditor {
       tab.setAttribute("data-diff", diffName);
       tab.title = `Switch to ${diffName} track (${count} notes)`;
 
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "drag-handle tab-drag-handle";
+      dragHandle.draggable = true;
+      dragHandle.title = "Drag to reorder difficulty";
+      dragHandle.innerHTML = "&#x22EE;&#x22EE;";
+      tab.appendChild(dragHandle);
+
       const label = document.createElement("span");
       label.className = "tab-label";
       label.textContent = `${diffName} (${count})`;
@@ -393,6 +400,83 @@ class MapEditor {
 
       tab.addEventListener("click", () => {
         this.switchDifficulty(diffName);
+      });
+
+      // Drag and drop for difficulty tabs
+      dragHandle.addEventListener("dragstart", (e) => {
+        e.stopPropagation();
+        e.dataTransfer.setData("application/json", JSON.stringify({ type: "diff-tab", diffName }));
+        e.dataTransfer.effectAllowed = "move";
+        tab.classList.add("is-dragging");
+      });
+
+      dragHandle.addEventListener("dragend", () => {
+        tab.classList.remove("is-dragging");
+        this.diffTabsContainer.querySelectorAll(".editor-diff-tab").forEach((t) => {
+          t.classList.remove("drop-target-h-before", "drop-target-h-after");
+        });
+      });
+
+      tab.addEventListener("dragover", (e) => {
+        const draggingTab = this.diffTabsContainer.querySelector(".editor-diff-tab.is-dragging");
+        if (!draggingTab || draggingTab === tab) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "move";
+        const rect = tab.getBoundingClientRect();
+        const isBefore = e.clientX < rect.left + rect.width / 2;
+        tab.classList.toggle("drop-target-h-before", isBefore);
+        tab.classList.toggle("drop-target-h-after", !isBefore);
+      });
+
+      tab.addEventListener("dragleave", (e) => {
+        if (!tab.contains(e.relatedTarget)) {
+          tab.classList.remove("drop-target-h-before", "drop-target-h-after");
+        }
+      });
+
+      tab.addEventListener("drop", (e) => {
+        const draggingTab = this.diffTabsContainer.querySelector(".editor-diff-tab.is-dragging");
+        if (!draggingTab || draggingTab === tab) return;
+        e.preventDefault();
+        e.stopPropagation();
+        tab.classList.remove("drop-target-h-before", "drop-target-h-after");
+
+        let data = null;
+        try {
+          data = JSON.parse(e.dataTransfer.getData("application/json"));
+        } catch (err) {}
+
+        if (data && data.type === "diff-tab" && data.diffName !== diffName) {
+          const rect = tab.getBoundingClientRect();
+          const isBefore = e.clientX < rect.left + rect.width / 2;
+          if (isBefore) {
+            this.diffTabsContainer.insertBefore(draggingTab, tab);
+          } else {
+            this.diffTabsContainer.insertBefore(draggingTab, tab.nextSibling);
+          }
+          const newOrder = Array.from(this.diffTabsContainer.querySelectorAll(".editor-diff-tab"))
+            .map((t) => t.getAttribute("data-diff"))
+            .filter(Boolean);
+
+          // Reorder internal difficulties object
+          if (this.difficulties) {
+            const reordered = {};
+            newOrder.forEach((d) => {
+              if (this.difficulties[d]) reordered[d] = this.difficulties[d];
+            });
+            Object.keys(this.difficulties).forEach((d) => {
+              if (!reordered[d]) reordered[d] = this.difficulties[d];
+            });
+            this.difficulties = reordered;
+          }
+
+          if (this.mapStorage && this.activeMap && typeof this.mapStorage.reorderDifficulties === "function") {
+            this.mapStorage.reorderDifficulties(this.activeMap.id, newOrder);
+          }
+          if (this.soundManager) this.soundManager.playClick();
+          this.renderDifficultyTabs();
+        }
       });
 
       this.diffTabsContainer.appendChild(tab);
@@ -581,8 +665,22 @@ class MapEditor {
       audio.volume = soundVol;
       audio.playbackRate = this.playSpeed || 1.0;
 
-      audio.addEventListener("error", (err) => {
+      audio.addEventListener("error", async (err) => {
         console.warn(`Audio loading issue for "${safeFile}":`, err);
+        if (typeof window !== "undefined" && window.MediaStorage && this.activeMap && this.activeMap.id) {
+          try {
+            const stored = await window.MediaStorage.getAudio(this.activeMap.id);
+            if (stored) {
+              const freshUrl = (typeof Blob !== "undefined" && stored instanceof Blob)
+                ? URL.createObjectURL(stored)
+                : stored;
+              if (freshUrl && this.audio === audio) {
+                audio.src = freshUrl;
+                this.loadAudioWaveform(freshUrl);
+              }
+            }
+          } catch (e) {}
+        }
       });
 
       audio.addEventListener("loadedmetadata", () => {
@@ -1455,7 +1553,7 @@ class MapEditor {
    * Opens the Export Track modal with the serialized, validated code.
    * Does NOT duplicate saves or mutate the track.
    */
-  openExportModal() {
+  async openExportModal() {
     this.pause();
     if (this.isDirty) {
       this.saveMapState();
@@ -1475,7 +1573,19 @@ class MapEditor {
     }
 
     try {
-      const exportResult = this.mapStorage.exportTrack(this.activeMap);
+      let exportMap = { ...this.activeMap };
+
+      // If file is a blob: URL, convert it to Base64 data URL so it's fully embedded in the exported file!
+      if (typeof exportMap.file === "string" && exportMap.file.startsWith("blob:")) {
+        if (typeof window !== "undefined" && window.MediaStorage) {
+          const dataUrl = await window.MediaStorage.resolveBlobToDataUrl(exportMap.file);
+          if (dataUrl && (dataUrl.startsWith("data:") || dataUrl.startsWith("Assets/"))) {
+            exportMap.file = dataUrl;
+          }
+        }
+      }
+
+      const exportResult = this.mapStorage.exportTrack(exportMap);
       this.lastExportData = exportResult;
 
       const diffKeys = Object.keys(this.difficulties || {});

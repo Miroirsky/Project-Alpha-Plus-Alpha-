@@ -90,8 +90,22 @@ class MusicPlayer {
       audio.volume = this.getTargetVolume();
       this.currentAudio = audio;
 
-      audio.addEventListener("error", (err) => {
+      audio.addEventListener("error", async (err) => {
         console.warn(`Audio preview play issue for ${song.name}:`, err);
+        if (typeof window !== "undefined" && window.MediaStorage && song.id) {
+          try {
+            const stored = await window.MediaStorage.getAudio(song.id);
+            if (stored) {
+              const freshUrl = (typeof Blob !== "undefined" && stored instanceof Blob)
+                ? URL.createObjectURL(stored)
+                : stored;
+              if (freshUrl && this.currentAudio === audio) {
+                audio.src = freshUrl;
+                audio.play().catch(() => {});
+              }
+            }
+          } catch (e) {}
+        }
       });
 
       const playPromise = audio.play();
@@ -138,8 +152,22 @@ class MusicPlayer {
         audio.addEventListener("ended", onEnded);
       }
 
-      audio.addEventListener("error", (err) => {
+      audio.addEventListener("error", async (err) => {
         console.warn(`Gameplay audio play issue for ${song.name}:`, err);
+        if (typeof window !== "undefined" && window.MediaStorage && song.id) {
+          try {
+            const stored = await window.MediaStorage.getAudio(song.id);
+            if (stored) {
+              const freshUrl = (typeof Blob !== "undefined" && stored instanceof Blob)
+                ? URL.createObjectURL(stored)
+                : stored;
+              if (freshUrl && this.currentAudio === audio) {
+                audio.src = freshUrl;
+                audio.play().catch(() => {});
+              }
+            }
+          } catch (e) {}
+        }
       });
 
       const playPromise = audio.play();

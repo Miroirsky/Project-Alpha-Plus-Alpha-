@@ -113,6 +113,7 @@ class PlayMenu {
         `
         : "";
 
+      const tracksFolder = (this.mapStorage && this.mapStorage.getDefaultTracksPath()) || "Default Tracks";
       const emptyState = document.createElement("div");
       emptyState.className = "song-list-empty";
       emptyState.innerHTML = `
@@ -121,13 +122,13 @@ class PlayMenu {
         </div>
         <h4 class="empty-state-title">No Tracks Available</h4>
         <p class="empty-state-desc">
-          Place exported song files into the <code>Default Tracks</code> folder or create a new map in the <strong>Create</strong> menu.
+          Place exported song files into the <code>${tracksFolder}</code> folder or create a new map in the <strong>Create</strong> menu.
         </p>
         ${fileProtocolHint}
         ${errorHtml}
         <div class="empty-state-actions" style="margin-top: 14px;">
           <label class="btn-theme-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-primary, #954132); color: #fff;">
-            <span>📁 Load Default Tracks Folder</span>
+            <span>📁 Load ${tracksFolder} Folder</span>
             <input type="file" class="empty-folder-input" webkitdirectory directory multiple style="display: none;">
           </label>
         </div>
@@ -171,6 +172,9 @@ class PlayMenu {
       const bestScoreLabel = bestScore > 0 ? `PB: ${bestScore.toLocaleString()}` : "Unplayed";
 
       card.innerHTML = `
+        <div class="song-card-drag-wrapper" style="display: flex; align-items: center; padding-left: 6px;">
+          <span class="drag-handle song-card-drag-handle" draggable="true" title="Drag to reorder song" aria-label="Drag to reorder song">&#x22EE;&#x22EE;</span>
+        </div>
         <div class="song-card-thumb-wrapper">
           <img class="song-card-thumb" src="${coverSrc}" alt="${song.name}" loading="lazy">
         </div>
@@ -192,6 +196,70 @@ class PlayMenu {
           </div>
         </div>
       `;
+
+      // Song drag-and-drop listeners
+      const songDragHandle = card.querySelector(".song-card-drag-handle");
+      if (songDragHandle) {
+        songDragHandle.addEventListener("dragstart", (e) => {
+          e.stopPropagation();
+          e.dataTransfer.setData("application/json", JSON.stringify({ type: "song", id: song.id }));
+          e.dataTransfer.effectAllowed = "move";
+          card.classList.add("is-dragging");
+        });
+        songDragHandle.addEventListener("dragend", () => {
+          card.classList.remove("is-dragging");
+          this.songListContainer.querySelectorAll(".song-card").forEach((c) => {
+            c.classList.remove("drop-target-before", "drop-target-after");
+          });
+        });
+      }
+
+      card.addEventListener("dragover", (e) => {
+        const draggingEl = this.songListContainer.querySelector(".song-card.is-dragging");
+        if (!draggingEl || draggingEl === card) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = card.getBoundingClientRect();
+        const isBefore = e.clientY < rect.top + rect.height / 2;
+        card.classList.toggle("drop-target-before", isBefore);
+        card.classList.toggle("drop-target-after", !isBefore);
+      });
+
+      card.addEventListener("dragleave", (e) => {
+        if (!card.contains(e.relatedTarget)) {
+          card.classList.remove("drop-target-before", "drop-target-after");
+        }
+      });
+
+      card.addEventListener("drop", (e) => {
+        const draggingEl = this.songListContainer.querySelector(".song-card.is-dragging");
+        if (!draggingEl || draggingEl === card) return;
+        e.preventDefault();
+        card.classList.remove("drop-target-before", "drop-target-after");
+
+        let data = null;
+        try {
+          data = JSON.parse(e.dataTransfer.getData("application/json"));
+        } catch (err) {}
+
+        if (data && data.type === "song" && data.id !== song.id) {
+          const rect = card.getBoundingClientRect();
+          const isBefore = e.clientY < rect.top + rect.height / 2;
+          if (isBefore) {
+            this.songListContainer.insertBefore(draggingEl, card);
+          } else {
+            this.songListContainer.insertBefore(draggingEl, card.nextSibling);
+          }
+          const newOrder = Array.from(this.songListContainer.querySelectorAll(".song-card"))
+            .map((c) => c.getAttribute("data-song-id"))
+            .filter(Boolean);
+          if (this.mapStorage && typeof this.mapStorage.reorderSongs === "function") {
+            this.mapStorage.reorderSongs(newOrder);
+          }
+          if (this.soundManager) this.soundManager.playClick();
+          this.updateSongs(this.mapStorage.getAllMaps());
+        }
+      });
 
       // Hover: display preview details without playing music
       card.addEventListener("mouseenter", () => {
@@ -596,6 +664,7 @@ class PlayMenu {
                   const dColor = this.getDifficultyColor(diffKey, song.color);
                   return `
                     <button type="button" class="diff-select-btn ${isSelected ? 'is-active' : ''}" data-diff="${diffKey}" style="--diff-color: ${dColor};" aria-pressed="${isSelected}">
+                      <span class="drag-handle diff-btn-drag" draggable="true" title="Drag to reorder difficulty" aria-label="Drag to reorder difficulty">&#x22EE;&#x22EE;</span>
                       <span class="diff-btn-dot"></span>
                       <span class="diff-btn-name">${diffKey}</span>
                       <span class="diff-btn-notes">${dNotes} notes</span>
@@ -667,13 +736,80 @@ class PlayMenu {
       </div>
     `;
 
-    // Connect Difficulty Picker buttons
+    // Connect Difficulty Picker buttons and drag-and-drop
     const diffButtons = this.songDetailsContainer.querySelectorAll(".diff-select-btn");
     diffButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
         const clickedDiff = btn.getAttribute("data-diff");
         if (clickedDiff && clickedDiff !== this.selectedDifficulty) {
           this.selectedDifficulty = clickedDiff;
+          if (this.soundManager) this.soundManager.playClick();
+          this.renderSelectedSongDetails(this.selectedSong);
+        }
+      });
+
+      const diffDrag = btn.querySelector(".diff-btn-drag");
+      if (diffDrag) {
+        diffDrag.addEventListener("dragstart", (e) => {
+          e.stopPropagation();
+          e.dataTransfer.setData("application/json", JSON.stringify({ type: "diff", songId: song.id, diffName: btn.getAttribute("data-diff") }));
+          e.dataTransfer.effectAllowed = "move";
+          btn.classList.add("is-dragging");
+        });
+        diffDrag.addEventListener("dragend", () => {
+          btn.classList.remove("is-dragging");
+          this.songDetailsContainer.querySelectorAll(".diff-select-btn").forEach((b) => {
+            b.classList.remove("drop-target-h-before", "drop-target-h-after");
+          });
+        });
+      }
+
+      btn.addEventListener("dragover", (e) => {
+        const draggingBtn = this.songDetailsContainer.querySelector(".diff-select-btn.is-dragging");
+        if (!draggingBtn || draggingBtn === btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = "move";
+        const rect = btn.getBoundingClientRect();
+        const isBefore = e.clientX < rect.left + rect.width / 2;
+        btn.classList.toggle("drop-target-h-before", isBefore);
+        btn.classList.toggle("drop-target-h-after", !isBefore);
+      });
+
+      btn.addEventListener("dragleave", (e) => {
+        if (!btn.contains(e.relatedTarget)) {
+          btn.classList.remove("drop-target-h-before", "drop-target-h-after");
+        }
+      });
+
+      btn.addEventListener("drop", (e) => {
+        const draggingBtn = this.songDetailsContainer.querySelector(".diff-select-btn.is-dragging");
+        if (!draggingBtn || draggingBtn === btn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        btn.classList.remove("drop-target-h-before", "drop-target-h-after");
+
+        let data = null;
+        try {
+          data = JSON.parse(e.dataTransfer.getData("application/json"));
+        } catch (err) {}
+
+        const targetDiff = btn.getAttribute("data-diff");
+        if (data && data.type === "diff" && data.songId === song.id && data.diffName !== targetDiff) {
+          const parentBox = btn.parentElement;
+          const rect = btn.getBoundingClientRect();
+          const isBefore = e.clientX < rect.left + rect.width / 2;
+          if (isBefore) {
+            parentBox.insertBefore(draggingBtn, btn);
+          } else {
+            parentBox.insertBefore(draggingBtn, btn.nextSibling);
+          }
+          const newOrder = Array.from(parentBox.querySelectorAll(".diff-select-btn"))
+            .map((b) => b.getAttribute("data-diff"))
+            .filter(Boolean);
+          if (this.mapStorage && typeof this.mapStorage.reorderDifficulties === "function") {
+            this.mapStorage.reorderDifficulties(song.id, newOrder);
+          }
           if (this.soundManager) this.soundManager.playClick();
           this.renderSelectedSongDetails(this.selectedSong);
         }

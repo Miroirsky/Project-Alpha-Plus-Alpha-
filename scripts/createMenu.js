@@ -230,6 +230,7 @@ class CreateMenu {
             URL.revokeObjectURL(this.importedFileUrl);
           }
           this.importedFileUrl = URL.createObjectURL(file);
+          this.importedAudioFile = file;
           if (this.fileStatusEl) {
             this.fileStatusEl.textContent = `Selected: ${file.name}`;
           }
@@ -251,6 +252,7 @@ class CreateMenu {
         if (e.target.value) {
           if (this.fileInput) this.fileInput.value = "";
           this.importedFileUrl = null;
+          this.importedAudioFile = null;
           if (this.fileStatusEl) {
             this.fileStatusEl.textContent = `Using preset: ${e.target.selectedOptions[0].text}`;
           }
@@ -536,6 +538,7 @@ class CreateMenu {
         if (file) {
           const objUrl = URL.createObjectURL(file);
           this.selectedSongAudioUrl = objUrl;
+          this.selectedSongAudioFile = file;
           if (this.songParamAudioStatus) {
             this.songParamAudioStatus.textContent = `Custom audio: ${file.name}`;
           }
@@ -719,13 +722,27 @@ class CreateMenu {
 
   /**
    * Opens the Export Song modal for the entire song package.
+   * Resolves any temporary blob: audio URLs to embedded Base64 data URLs
+   * so the downloaded JSON or exported string contains the complete music.
    * @param {Object} song
    */
-  openExportSong(song) {
+  async openExportSong(song) {
     if (!song || !this.mapStorage) return;
 
     try {
-      const exportResult = this.mapStorage.exportTrack(song);
+      let exportSong = { ...song };
+
+      // If file is a blob: URL, convert it to Base64 data URL so it's fully embedded in the exported file!
+      if (typeof exportSong.file === "string" && exportSong.file.startsWith("blob:")) {
+        if (typeof window !== "undefined" && window.MediaStorage) {
+          const dataUrl = await window.MediaStorage.resolveBlobToDataUrl(exportSong.file);
+          if (dataUrl && (dataUrl.startsWith("data:") || dataUrl.startsWith("Assets/"))) {
+            exportSong.file = dataUrl;
+          }
+        }
+      }
+
+      const exportResult = this.mapStorage.exportTrack(exportSong);
       this.lastExportData = { ...exportResult, songId: song.id };
       if (this.mapStorage) {
         this.mapStorage.setSelectedSongId(song.id);
@@ -877,6 +894,12 @@ class CreateMenu {
         difficulty
       });
 
+      if (this.importedAudioFile && typeof window !== "undefined" && window.MediaStorage) {
+        window.MediaStorage.saveAudio(newMap.id, this.importedAudioFile);
+        newMap.hasStoredAudio = true;
+      }
+      this.importedAudioFile = null;
+
       if (this.soundManager) this.soundManager.playClick();
 
       // Ensure new song is expanded in tree
@@ -938,6 +961,7 @@ class CreateMenu {
         `
         : "";
 
+      const tracksFolder = (this.mapStorage && this.mapStorage.getDefaultTracksPath()) || "Default Tracks";
       const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
       const fileProtocolHint = isFileProtocol
         ? `
@@ -950,12 +974,12 @@ class CreateMenu {
       this.mapsListContainer.innerHTML = `
         <div class="empty-maps-notice" style="text-align: center; padding: 24px 16px;">
           <p style="margin: 0 0 8px 0; font-weight: 600;">No maps found. Create a new map to start mapping notes!</p>
-          <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">Or load existing songs from the <code>Default Tracks</code> folder.</p>
+          <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">Or load existing songs from the <code>${tracksFolder}</code> folder.</p>
           ${fileProtocolHint}
           ${errorHtml}
           <div style="margin-top: 16px;">
             <label class="btn-theme-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-primary, #954132); color: #fff;">
-              <span>📁 Load Default Tracks Folder</span>
+              <span>📁 Load ${tracksFolder} Folder</span>
               <input type="file" class="empty-maps-folder-input" webkitdirectory directory multiple style="display: none;">
             </label>
           </div>
@@ -1054,6 +1078,7 @@ class CreateMenu {
       const parentRow = document.createElement("div");
       parentRow.className = "song-tree-parent";
       parentRow.innerHTML = `
+        <span class="drag-handle song-drag-handle" draggable="true" title="Drag to reorder song" aria-label="Drag to reorder song">&#x22EE;&#x22EE;</span>
         <button class="song-toggle-btn" type="button" aria-label="Toggle difficulty tracks" title="${isExpanded ? "Collapse Tracks" : "Expand Tracks"}">
           <span class="toggle-icon">${isExpanded ? "▼" : "▶"}</span>
         </button>
@@ -1089,6 +1114,68 @@ class CreateMenu {
           }
         </div>
       `;
+
+      // Song drag-and-drop listeners
+      const songDragHandle = parentRow.querySelector(".song-drag-handle");
+      if (songDragHandle) {
+        songDragHandle.addEventListener("dragstart", (e) => {
+          e.dataTransfer.setData("application/json", JSON.stringify({ type: "song", id: map.id }));
+          e.dataTransfer.effectAllowed = "move";
+          card.classList.add("is-dragging");
+        });
+        songDragHandle.addEventListener("dragend", () => {
+          card.classList.remove("is-dragging");
+          this.mapsListContainer.querySelectorAll(".song-tree-card").forEach((c) => {
+            c.classList.remove("drop-target-before", "drop-target-after");
+          });
+        });
+      }
+
+      card.addEventListener("dragover", (e) => {
+        const draggingEl = this.mapsListContainer.querySelector(".song-tree-card.is-dragging");
+        if (!draggingEl || draggingEl === card) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        const rect = card.getBoundingClientRect();
+        const isBefore = e.clientY < rect.top + rect.height / 2;
+        card.classList.toggle("drop-target-before", isBefore);
+        card.classList.toggle("drop-target-after", !isBefore);
+      });
+
+      card.addEventListener("dragleave", (e) => {
+        if (!card.contains(e.relatedTarget)) {
+          card.classList.remove("drop-target-before", "drop-target-after");
+        }
+      });
+
+      card.addEventListener("drop", (e) => {
+        const draggingEl = this.mapsListContainer.querySelector(".song-tree-card.is-dragging");
+        if (!draggingEl || draggingEl === card) return;
+        e.preventDefault();
+        card.classList.remove("drop-target-before", "drop-target-after");
+
+        let data = null;
+        try {
+          data = JSON.parse(e.dataTransfer.getData("application/json"));
+        } catch (err) {}
+
+        if (data && data.type === "song" && data.id !== map.id) {
+          const rect = card.getBoundingClientRect();
+          const isBefore = e.clientY < rect.top + rect.height / 2;
+          if (isBefore) {
+            this.mapsListContainer.insertBefore(draggingEl, card);
+          } else {
+            this.mapsListContainer.insertBefore(draggingEl, card.nextSibling);
+          }
+          const newOrder = Array.from(this.mapsListContainer.querySelectorAll(".song-tree-card"))
+            .map((c) => c.getAttribute("data-song-id"))
+            .filter(Boolean);
+          if (this.mapStorage && typeof this.mapStorage.reorderSongs === "function") {
+            this.mapStorage.reorderSongs(newOrder);
+          }
+          if (this.soundManager) this.soundManager.playClick();
+        }
+      });
 
       // Toggle expand / collapse listener
       const toggleBtn = parentRow.querySelector(".song-toggle-btn");
@@ -1152,9 +1239,11 @@ class CreateMenu {
           const diffRow = document.createElement("div");
           diffRow.className = "difficulty-tree-row";
           diffRow.setAttribute("data-diff-name", diffName);
+          diffRow.setAttribute("data-song-id", map.id);
 
           diffRow.innerHTML = `
             <span class="tree-branch-symbol" aria-hidden="true">├──</span>
+            <span class="drag-handle diff-drag-handle" draggable="true" title="Drag to reorder difficulty" aria-label="Drag to reorder difficulty">&#x22EE;&#x22EE;</span>
             <span class="diff-color-dot" style="background-color: ${diffColor};" title="Theme: ${diffColor}"></span>
             <div class="diff-row-info">
               <span class="diff-row-name">${diffName}</span>
@@ -1176,6 +1265,71 @@ class CreateMenu {
               }
             </div>
           `;
+
+          // Difficulty drag-and-drop listeners
+          const diffDragHandle = diffRow.querySelector(".diff-drag-handle");
+          if (diffDragHandle) {
+            diffDragHandle.addEventListener("dragstart", (e) => {
+              e.stopPropagation();
+              e.dataTransfer.setData("application/json", JSON.stringify({ type: "diff", songId: map.id, diffName }));
+              e.dataTransfer.effectAllowed = "move";
+              diffRow.classList.add("is-dragging");
+            });
+            diffDragHandle.addEventListener("dragend", () => {
+              diffRow.classList.remove("is-dragging");
+              childrenContainer.querySelectorAll(".difficulty-tree-row").forEach((r) => {
+                r.classList.remove("drop-target-before", "drop-target-after");
+              });
+            });
+          }
+
+          diffRow.addEventListener("dragover", (e) => {
+            const draggingDiff = childrenContainer.querySelector(".difficulty-tree-row.is-dragging");
+            if (!draggingDiff || draggingDiff === diffRow) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = "move";
+            const rect = diffRow.getBoundingClientRect();
+            const isBefore = e.clientY < rect.top + rect.height / 2;
+            diffRow.classList.toggle("drop-target-before", isBefore);
+            diffRow.classList.toggle("drop-target-after", !isBefore);
+          });
+
+          diffRow.addEventListener("dragleave", (e) => {
+            if (!diffRow.contains(e.relatedTarget)) {
+              diffRow.classList.remove("drop-target-before", "drop-target-after");
+            }
+          });
+
+          diffRow.addEventListener("drop", (e) => {
+            const draggingDiff = childrenContainer.querySelector(".difficulty-tree-row.is-dragging");
+            if (!draggingDiff || draggingDiff === diffRow) return;
+            e.preventDefault();
+            e.stopPropagation();
+            diffRow.classList.remove("drop-target-before", "drop-target-after");
+
+            let data = null;
+            try {
+              data = JSON.parse(e.dataTransfer.getData("application/json"));
+            } catch (err) {}
+
+            if (data && data.type === "diff" && data.songId === map.id && data.diffName !== diffName) {
+              const rect = diffRow.getBoundingClientRect();
+              const isBefore = e.clientY < rect.top + rect.height / 2;
+              if (isBefore) {
+                childrenContainer.insertBefore(draggingDiff, diffRow);
+              } else {
+                childrenContainer.insertBefore(draggingDiff, diffRow.nextSibling);
+              }
+              const newDiffOrder = Array.from(childrenContainer.querySelectorAll(".difficulty-tree-row"))
+                .map((r) => r.getAttribute("data-diff-name"))
+                .filter(Boolean);
+              if (this.mapStorage && typeof this.mapStorage.reorderDifficulties === "function") {
+                this.mapStorage.reorderDifficulties(map.id, newDiffOrder);
+              }
+              if (this.soundManager) this.soundManager.playClick();
+            }
+          });
 
           // Edit difficulty button
           const editBtn = diffRow.querySelector(".btn-diff-edit");
@@ -1571,6 +1725,8 @@ class CreateMenu {
     }
     this.activeSongParam = null;
     this.songParamBgConfig = null;
+    this.selectedSongAudioFile = null;
+    this.selectedSongAudioUrl = null;
     if (this.soundManager) this.soundManager.playClick();
   }
 
@@ -1708,6 +1864,11 @@ class CreateMenu {
     if (this.selectedSongAudioUrl) {
       song.file = this.selectedSongAudioUrl;
     }
+    if (this.selectedSongAudioFile && typeof window !== "undefined" && window.MediaStorage) {
+      window.MediaStorage.saveAudio(song.id, this.selectedSongAudioFile);
+      song.hasStoredAudio = true;
+    }
+    this.selectedSongAudioFile = null;
     if (this.selectedSongDuration) {
       song.durationSeconds = this.selectedSongDuration;
       const m = Math.floor(this.selectedSongDuration / 60);
