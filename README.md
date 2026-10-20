@@ -51,10 +51,15 @@ Project Alpha Plus features two distinct note types designed with a 3-phase timi
 - **Normal Notes (Classic Rhythm Circles):**
   - **Editor Placement:** Select the **Normal Note** tool (`1` or `N` hotkey) in the editor top bar. **Left-Click** to place a Red note, or **Right-Click** to place a Blue note while paused.
   - **Visuals:** Clean glowing orb with color identifier (`RED` / `BLUE`) and timestamp tag; no directional arrows.
-  - **Hit Mechanics:** Hit from **any angle** or position. Normal notes have zero direction restrictions and **never incur wrong-direction penalties**.
-  - **Scoring:** 200 points (Perfect) if hovered during the 1.0s grow phase; 150–50 points based on timing during the 1.0s full window.
+  - **Hit Mechanics:** Hit from **any angle** or position. Normal notes have zero direction restrictions.
+  - **Scoring:** 200 points for a perfect hit exactly when the note reaches full size after 1 second. During the following 1-second window, award 150–50 points linearly based on hit timing.
+- **Directional Notes (Vector Swipes):**
+  - **Editor Placement:** Select the **Directional** tool (`2` or `D` hotkey) in the editor top bar. Press and hold on the canvas, drag to set any angle (0–360°), then release to place. **Left-Click drag** places a Red directional note, and **Right-Click drag** places a Blue directional note.
+  - **Visuals:** Dynamic arrow with a thicker stroke on the required hit side and perimeter angle badge.
+  - **Hit Mechanics:** Trigonometry calculates the angle between the required direction and the player's approach vector. Tolerance: **±180°** (all approach directions accepted).
+  - **Scoring:** 200 points for a perfect hit exactly when reaching full size after 1 second, and 150–50 points linearly based on hit timing during the following 1-second window + combo bonus.
 - **Triangle Bomb Notes (Hazard Obstacles):**
-  - **Editor Placement:** Select the **Bomb** tool (`2` or `B` hotkey) in the editor top bar. Click anywhere on the canvas while paused to place a high-voltage yellow hazard bomb note. No Shift key required.
+  - **Editor Placement:** Select the **Bomb** tool (`3` or `B` hotkey) in the editor top bar. Click anywhere on the canvas while paused to place a high-voltage yellow hazard bomb note.
   - **Visuals:** High-voltage hazard amber/yellow triangle with warning indicator (`!`), timestamp tag, and circular countdown active ring.
   - **Hit Mechanics:** Hazard obstacle to be actively avoided. If either orb touches or clicks a bomb during its active window, it triggers an explosion and a **-200 points penalty**. Successfully avoiding it lets the note expire without penalty.
 

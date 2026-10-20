@@ -452,48 +452,79 @@ class GameEngine {
             return;
           }
         } else {
-          // Normal note hit detection (must match player orb color)
+          // Normal and Directional note hit detection (must match player orb color)
           if (this.playerOrb.color === note.color) {
             const hitDist = (orbRadius + baseRadius) * 1.15;
             const dist = Math.hypot(orbX - noteX, orbY - noteY);
             const seg = this.pointToSegmentDist(noteX, noteY, prevOrbX, prevOrbY, orbX, orbY);
             if (dist <= hitDist || seg.dist <= hitDist) {
-              note.hit = true;
-              this.hitsCount++;
-              this.combo++;
-              if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+              const isDirectional = note.type === "directional" || note.type === "arrow";
+              let approachAngleDeg = 0;
+              let angularDiff = 0;
 
-              const isPerfect = note.hittableProgress <= 0.25;
-              if (isPerfect) {
-                // Perfect hit (200 points) on beat / initial full-size precision window
-                this.perfectHits++;
-                const basePoints = 200;
-                const comboBonus = Math.min(this.combo, 10) * 5;
-                const totalPoints = basePoints + comboBonus;
-                this.totalBasePointsEarned += basePoints;
-                this.score += totalPoints;
+              if (isDirectional) {
+                // Trigonometry to calculate approach vector
+                let vx = orbX - prevOrbX;
+                let vy = orbY - prevOrbY;
 
-                if (this.soundManager && typeof this.soundManager.playPerfectTone === "function") {
-                  this.soundManager.playPerfectTone();
-                } else if (this.soundManager) {
-                  this.soundManager.playTestTone();
+                if (Math.hypot(vx, vy) < 0.5 && this.mouseHistory.length >= 2) {
+                  const recent = this.mouseHistory[this.mouseHistory.length - 1];
+                  const older = this.mouseHistory[Math.max(0, this.mouseHistory.length - 4)];
+                  vx = recent.x - older.x;
+                  vy = recent.y - older.y;
                 }
 
-                this.triggerPerfectHitAnimation(noteX, noteY, note.color, totalPoints);
-              } else {
-                // Normal/Good hit (150 down to 50 points based on timing)
-                this.goodHits++;
-                const lateRatio = (note.hittableProgress - 0.25) / 0.75;
-                const basePoints = Math.round(150 - 100 * lateRatio);
-                const comboBonus = Math.min(this.combo, 10) * 5;
-                const totalPoints = basePoints + comboBonus;
-                this.totalBasePointsEarned += basePoints;
-                this.score += totalPoints;
+                if (Math.hypot(vx, vy) >= 0.5) {
+                  approachAngleDeg = this.normalizeAngle360(Math.atan2(vy, vx) * 180 / Math.PI);
+                } else {
+                  approachAngleDeg = typeof note.angle === "number" ? note.angle : 0;
+                }
 
-                if (this.soundManager) this.soundManager.playTestTone();
-                this.triggerGoodHitAnimation(noteX, noteY, note.color, totalPoints);
+                const reqAngle = typeof note.angle === "number" ? note.angle : 0;
+                angularDiff = this.getAngularDistanceDeg(reqAngle, approachAngleDeg);
               }
-              return;
+
+              // Tolerance: ±180° (all directions accepted)
+              const isAngleAccepted = !isDirectional || angularDiff <= 180;
+
+              if (isAngleAccepted) {
+                note.hit = true;
+                this.hitsCount++;
+                this.combo++;
+                if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+
+                const isPerfect = note.hittableProgress <= 0.25;
+                if (isPerfect) {
+                  // Perfect hit (200 points) on beat / initial full-size precision window
+                  this.perfectHits++;
+                  const basePoints = 200;
+                  const comboBonus = Math.min(this.combo, 10) * 5;
+                  const totalPoints = basePoints + comboBonus;
+                  this.totalBasePointsEarned += basePoints;
+                  this.score += totalPoints;
+
+                  if (this.soundManager && typeof this.soundManager.playPerfectTone === "function") {
+                    this.soundManager.playPerfectTone();
+                  } else if (this.soundManager) {
+                    this.soundManager.playTestTone();
+                  }
+
+                  this.triggerPerfectHitAnimation(noteX, noteY, note.color, totalPoints);
+                } else {
+                  // Normal/Good hit (150 down to 50 points based on timing)
+                  this.goodHits++;
+                  const lateRatio = (note.hittableProgress - 0.25) / 0.75;
+                  const basePoints = Math.round(150 - 100 * lateRatio);
+                  const comboBonus = Math.min(this.combo, 10) * 5;
+                  const totalPoints = basePoints + comboBonus;
+                  this.totalBasePointsEarned += basePoints;
+                  this.score += totalPoints;
+
+                  if (this.soundManager) this.soundManager.playTestTone();
+                  this.triggerGoodHitAnimation(noteX, noteY, note.color, totalPoints);
+                }
+                return;
+              }
             }
           }
         }

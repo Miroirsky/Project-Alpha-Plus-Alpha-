@@ -33,10 +33,16 @@ class MapEditor {
     this._isClosing = false;
 
     // Placement Tool State (Selection-based placement system)
-    this.activeTool = "note"; // "note" | "bomb"
+    this.activeTool = "note"; // "note" | "directional" | "bomb"
     this.toolSelectorEl = document.getElementById("editor-tool-selector");
     this.toolBtnNote = document.getElementById("tool-btn-note");
+    this.toolBtnDirectional = document.getElementById("tool-btn-directional");
     this.toolBtnBomb = document.getElementById("tool-btn-bomb");
+
+    // Directional Note Drag-Placement State
+    this.isPlacingDirectional = false;
+    this.directionalDragStart = null;
+    this.directionalCurrentAngle = 0;
 
     // DOM Elements
     this.view = document.getElementById("map-editor-view");
@@ -211,13 +217,18 @@ class MapEditor {
 
     this.notes = (freshMap.notes || []).map((n) => {
       const isTriangle = n.type === "triangle" || n.type === "bomb";
-      return {
+      const isDirectional = n.type === "directional" || n.type === "arrow";
+      const item = {
         time: parseFloat(Number(n.time || 0).toFixed(3)),
         color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-        type: isTriangle ? "triangle" : "normal",
+        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
         x: parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)),
         y: parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))
       };
+      if (isDirectional) {
+        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+      }
+      return item;
     });
     this.duration = freshMap.durationSeconds || 180;
     this.currentTime = 0;
@@ -649,10 +660,17 @@ class MapEditor {
       });
     }
 
-    // Placement Tool Selector Buttons (Normal Note vs Bomb Hazard)
+    // Placement Tool Selector Buttons (Normal Note vs Directional Note vs Bomb Hazard)
     if (this.toolBtnNote) {
       this.toolBtnNote.addEventListener("click", () => {
         this.setTool("note");
+        if (this.soundManager) this.soundManager.playClick();
+      });
+    }
+
+    if (this.toolBtnDirectional) {
+      this.toolBtnDirectional.addEventListener("click", () => {
+        this.setTool("directional");
         if (this.soundManager) this.soundManager.playClick();
       });
     }
@@ -1493,14 +1511,20 @@ class MapEditor {
       }
     }
 
-    // Hotkeys to switch placement tools: 1 / N for Normal Note, 2 / B for Bomb
+    // Hotkeys to switch placement tools: 1 / N for Normal Note, 2 / D for Directional, 3 / B for Bomb
     if (e.key === "1" || e.key.toLowerCase() === "n") {
       e.preventDefault();
       this.setTool("note");
       if (this.soundManager) this.soundManager.playClick();
       return;
     }
-    if (e.key === "2" || e.key.toLowerCase() === "b") {
+    if (e.key === "2" || e.key.toLowerCase() === "d") {
+      e.preventDefault();
+      this.setTool("directional");
+      if (this.soundManager) this.soundManager.playClick();
+      return;
+    }
+    if (e.key === "3" || e.key.toLowerCase() === "b") {
       e.preventDefault();
       this.setTool("bomb");
       if (this.soundManager) this.soundManager.playClick();
@@ -1527,12 +1551,21 @@ class MapEditor {
   }
 
   /**
-   * Updates mouse coordinates on canvas.
+   * Updates mouse coordinates on canvas and tracks directional angle dragging.
    * @param {MouseEvent} e
    */
   onMouseMove(e) {
     this.mouse.x = e.clientX;
     this.mouse.y = e.clientY;
+
+    if (this.isPlacingDirectional && this.directionalDragStart) {
+      const dx = e.clientX - this.directionalDragStart.clientX;
+      const dy = e.clientY - this.directionalDragStart.clientY;
+      if (Math.hypot(dx, dy) >= 4) {
+        const rad = Math.atan2(dy, dx);
+        this.directionalCurrentAngle = ((Math.round(rad * 180 / Math.PI) % 360) + 360) % 360;
+      }
+    }
   }
 
   /**
@@ -1540,6 +1573,8 @@ class MapEditor {
    * When Normal Note tool is active:
    *   Left-click: places or toggles normal RED note.
    *   Right-click: places or toggles normal BLUE note.
+   * When Directional Note tool is active:
+   *   Press and hold to start angle drag (0-360°), finalize on release.
    * When Bomb tool is active:
    *   Click: places or toggles TRIANGLE BOMB hazard note (yellow).
    * @param {MouseEvent} e
@@ -1549,6 +1584,19 @@ class MapEditor {
     if (this.isPlaying) return;
 
     if (e.button !== 0 && e.button !== 2) return;
+
+    // Handle Directional Note drag start
+    if (this.activeTool === "directional") {
+      this.isPlacingDirectional = true;
+      this.directionalDragStart = {
+        clientX: e.clientX,
+        clientY: e.clientY,
+        button: e.button,
+        time: parseFloat(this.currentTime.toFixed(2))
+      };
+      this.directionalCurrentAngle = 0;
+      return;
+    }
 
     const isBomb = this.activeTool === "bomb";
     const noteType = isBomb ? "triangle" : "normal";
@@ -1597,11 +1645,74 @@ class MapEditor {
   }
 
   /**
-   * Mouse up handler.
+   * Finalizes directional note placement on mouse release.
    * @param {MouseEvent} e
    */
   onMouseUp(e) {
-    // No-op
+    if (!this.isPlacingDirectional || !this.directionalDragStart) {
+      this.isPlacingDirectional = false;
+      this.directionalDragStart = null;
+      return;
+    }
+
+    const start = this.directionalDragStart;
+    this.isPlacingDirectional = false;
+    this.directionalDragStart = null;
+
+    const dx = e.clientX - start.clientX;
+    const dy = e.clientY - start.clientY;
+    const dist = Math.hypot(dx, dy);
+
+    const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height);
+    const roundedTime = start.time;
+    const noteColor = start.button === 0 ? "red" : "blue";
+
+    // Check if clicking near an existing note at this timestamp to toggle/delete it (short click without drag)
+    const existingIndex = this.notes.findIndex((n) => {
+      const nx = playArea.toScreenX(n.x);
+      const ny = playArea.toScreenY(n.y);
+      return Math.abs(n.time - roundedTime) <= 0.25 && Math.hypot(nx - start.clientX, ny - start.clientY) <= (playArea.bigRadius * 1.25);
+    });
+
+    if (dist < 6 && existingIndex !== -1) {
+      // Toggle / remove note
+      this.notes.splice(existingIndex, 1);
+      if (this.selectedNote && Math.abs(this.selectedNote.time - roundedTime) <= 0.25) {
+        this.selectNote(null);
+      }
+      if (this.soundManager) this.soundManager.playClick();
+    } else {
+      let finalAngle = this.directionalCurrentAngle;
+      if (dist >= 6) {
+        const rad = Math.atan2(dy, dx);
+        finalAngle = ((Math.round(rad * 180 / Math.PI) % 360) + 360) % 360;
+      }
+
+      // If dragged from an existing note position, replace it
+      if (existingIndex !== -1) {
+        this.notes.splice(existingIndex, 1);
+      }
+
+      const normalizedX = playArea.clampNormalized(playArea.toLocalX(start.clientX));
+      const normalizedY = playArea.clampNormalized(playArea.toLocalY(start.clientY));
+
+      const newNote = {
+        time: roundedTime,
+        color: noteColor,
+        type: "directional",
+        angle: finalAngle,
+        x: normalizedX,
+        y: normalizedY
+      };
+      this.notes.push(newNote);
+      this.notes.sort((a, b) => a.time - b.time);
+      this.selectNote(newNote);
+      if (this.soundManager) this.soundManager.playClick();
+    }
+
+    this.markDirty();
+    this.saveMapState();
+    this.renderTimelineMarkers();
   }
 
   /**
@@ -1686,17 +1797,22 @@ class MapEditor {
   }
 
   /**
-   * Switches the active placement tool (normal note vs bomb).
-   * @param {"note"|"bomb"} tool
+   * Switches the active placement tool (normal note vs directional note vs bomb).
+   * @param {"note"|"directional"|"bomb"} tool
    */
   setTool(tool) {
-    if (tool !== "note" && tool !== "bomb") return;
+    if (tool !== "note" && tool !== "directional" && tool !== "bomb") return;
     this.activeTool = tool;
 
     if (this.toolBtnNote) {
       const isNote = tool === "note";
       this.toolBtnNote.classList.toggle("is-active", isNote);
       this.toolBtnNote.setAttribute("aria-pressed", isNote ? "true" : "false");
+    }
+    if (this.toolBtnDirectional) {
+      const isDirectional = tool === "directional";
+      this.toolBtnDirectional.classList.toggle("is-active", isDirectional);
+      this.toolBtnDirectional.setAttribute("aria-pressed", isDirectional ? "true" : "false");
     }
     if (this.toolBtnBomb) {
       const isBomb = tool === "bomb";
@@ -2068,6 +2184,47 @@ class MapEditor {
         ctx.fillStyle = "rgba(255, 211, 42, 0.9)";
         ctx.font = "8px monospace";
         ctx.fillText(`${note.time}s`, x, laneCenterY + 16);
+      } else if (note.type === "directional") {
+        // Directional Note: Semi-transparent circular ball displaying angle arrow
+        const fillAlpha = isSelected ? 0.65 : 0.45;
+        const fillColor = isRed
+          ? `rgba(255, 71, 87, ${fillAlpha})`
+          : `rgba(0, 212, 255, ${fillAlpha})`;
+        const strokeColor = isSelected
+          ? "#ffd700"
+          : (isRed ? "rgba(255, 120, 130, 0.95)" : "rgba(100, 230, 255, 0.95)");
+
+        ctx.beginPath();
+        ctx.arc(x, laneCenterY, 8.5, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = isSelected ? 2.5 : 1.75;
+        ctx.stroke();
+
+        // Mini arrow indicating angle
+        const angRad = ((note.angle || 0) * Math.PI) / 180;
+        ctx.save();
+        ctx.translate(x, laneCenterY);
+        ctx.rotate(angRad);
+        ctx.strokeStyle = "#ffffff";
+        ctx.fillStyle = "#ffffff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-4, 0);
+        ctx.lineTo(4, 0);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(1.5, -2.5);
+        ctx.lineTo(5, 0);
+        ctx.lineTo(1.5, 2.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+        ctx.font = "8px monospace";
+        ctx.fillText(`${note.time}s`, x, laneCenterY + 15);
       } else {
         // Normal Note: Semi-transparent circular ball displaying waveform through body
         const fillAlpha = isSelected ? 0.65 : 0.45;
@@ -2246,10 +2403,14 @@ class MapEditor {
     if (this.noteInspector) {
       this.noteInspector.style.display = "flex";
       const isTriangle = note.type === "triangle" || note.type === "bomb";
+      const isDirectional = note.type === "directional" || note.type === "arrow";
       if (this.inspectorNoteType) {
         if (isTriangle) {
           this.inspectorNoteType.textContent = "TRIANGLE BOMB Note";
           this.inspectorNoteType.style.color = "#ffd32a";
+        } else if (isDirectional) {
+          this.inspectorNoteType.textContent = `${note.color.toUpperCase()} Directional Note (${note.angle || 0}°)`;
+          this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : "#00d4ff";
         } else {
           this.inspectorNoteType.textContent = `${note.color.toUpperCase()} Normal Note`;
           this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : "#00d4ff";
@@ -2318,13 +2479,18 @@ class MapEditor {
 
       this.activeMap.notes = this.notes.map((n) => {
         const isTriangle = n.type === "triangle" || n.type === "bomb";
-        return {
+        const isDirectional = n.type === "directional" || n.type === "arrow";
+        const item = {
           time: parseFloat(Number(n.time || 0).toFixed(3)),
           color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-          type: isTriangle ? "triangle" : "normal",
+          type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
           x: parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)),
           y: parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))
         };
+        if (isDirectional) {
+          item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+        }
+        return item;
       });
 
       const saved = this.mapStorage.saveMap(this.activeMap);
@@ -2507,6 +2673,7 @@ class MapEditor {
         const noteX = playArea.toScreenX(note.x);
         const noteY = playArea.toScreenY(note.y);
         const isTriangle = note.type === "triangle" || note.type === "bomb";
+        const isDirectional = note.type === "directional" || note.type === "arrow";
         const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : "#00d4ff");
 
         // Proximity factor (1 = exact current time, 0 = at boundary)
@@ -2553,6 +2720,66 @@ class MapEditor {
           ctx.font = `bold ${Math.max(8, Math.round(radius * 0.35))}px monospace`;
           ctx.fillStyle = "rgba(255, 211, 42, 0.9)";
           ctx.fillText(`${note.time}s`, noteX, noteY + radius + 11);
+        } else if (isDirectional) {
+          // Directional Note (red/blue circle with arrow and thicker stroke on required hit side)
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, radius, 0, Math.PI * 2);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = Math.abs(timeDiff) < 0.1 ? 3.5 : 2;
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : "rgba(0, 212, 255, 0.3)";
+
+          if (Math.abs(timeDiff) < 0.1) {
+            ctx.shadowColor = colorHex;
+            ctx.shadowBlur = 20;
+          }
+
+          ctx.fill();
+          ctx.stroke();
+
+          // Thicker stroke on required hit side (arc along note.angle)
+          const rad = ((note.angle || 0) * Math.PI) / 180;
+          ctx.beginPath();
+          ctx.arc(noteX, noteY, radius, rad - Math.PI / 3, rad + Math.PI / 3);
+          ctx.strokeStyle = colorHex;
+          ctx.lineWidth = Math.abs(timeDiff) < 0.1 ? 6.5 : 4.5;
+          ctx.shadowColor = colorHex;
+          ctx.shadowBlur = 15;
+          ctx.stroke();
+
+          // Arrow pointing in direction note.angle
+          const shaftLen = radius * 0.55;
+          const sx = noteX - Math.cos(rad) * radius * 0.45;
+          const sy = noteY - Math.sin(rad) * radius * 0.45;
+          const ex = noteX + Math.cos(rad) * shaftLen;
+          const ey = noteY + Math.sin(rad) * shaftLen;
+
+          ctx.beginPath();
+          ctx.moveTo(sx, sy);
+          ctx.lineTo(ex, ey);
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = 3.2;
+          ctx.stroke();
+
+          // Arrow head
+          const headLen = radius * 0.4;
+          const headAngle = Math.PI / 5.5;
+          ctx.beginPath();
+          ctx.moveTo(ex, ey);
+          ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
+          ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+          ctx.closePath();
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+
+          // Labels
+          ctx.font = `bold ${Math.max(8, Math.round(radius * 0.35))}px monospace`;
+          ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${note.angle || 0}°`, noteX, noteY - radius - 8);
+
+          ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+          ctx.fillText(`${note.time}s`, noteX, noteY + radius + 10);
         } else {
           // Normal round note
           ctx.beginPath();
@@ -2584,11 +2811,90 @@ class MapEditor {
       }
     });
 
-    // 3. Draw cursor placement reticle (only when paused)
-    if (!this.isPlaying && this.mouse.isHovering) {
+    // 3. Interactive Directional Note Drag-Placement Preview (when dragging to set angle)
+    if (!this.isPlaying && this.isPlacingDirectional && this.directionalDragStart) {
+      const startX = this.directionalDragStart.clientX;
+      const startY = this.directionalDragStart.clientY;
+      const curX = this.mouse.x;
+      const curY = this.mouse.y;
+      const angle = this.directionalCurrentAngle;
+      const rad = (angle * Math.PI) / 180;
+      const radius = baseRadius;
+      const isRed = this.directionalDragStart.button === 0;
+      const colorHex = isRed ? "#ff4757" : "#00d4ff";
+
+      ctx.save();
+
+      // Dotted drag guide line from start center to mouse cursor
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(curX, curY);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Drag target circle
+      ctx.beginPath();
+      ctx.arc(startX, startY, radius, 0, Math.PI * 2);
+      ctx.fillStyle = isRed ? "rgba(255, 71, 87, 0.35)" : "rgba(0, 212, 255, 0.35)";
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 2.5;
+      ctx.fill();
+      ctx.stroke();
+
+      // Thicker stroke on required hit side (arc along angle)
+      ctx.beginPath();
+      ctx.arc(startX, startY, radius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 6;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+
+      // Arrow
+      const shaftLen = radius * 0.55;
+      const sx = startX - Math.cos(rad) * radius * 0.45;
+      const sy = startY - Math.sin(rad) * radius * 0.45;
+      const ex = startX + Math.cos(rad) * shaftLen;
+      const ey = startY + Math.sin(rad) * shaftLen;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+
+      const headLen = radius * 0.42;
+      const headAngle = Math.PI / 5.5;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.closePath();
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      // Floating angle badge beside cursor
+      ctx.font = "bold 12px monospace";
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 8;
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(`${angle}°`, curX + 14, curY - 10);
+
+      ctx.restore();
+    }
+
+    // 4. Draw cursor placement reticle (only when paused and not actively dragging)
+    if (!this.isPlaying && this.mouse.isHovering && !this.isPlacingDirectional) {
       const mx = this.mouse.x;
       const my = this.mouse.y;
       const isBombTool = this.activeTool === "bomb";
+      const isDirectionalTool = this.activeTool === "directional";
 
       ctx.save();
 
@@ -2635,6 +2941,29 @@ class MapEditor {
         ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
         ctx.shadowBlur = 0;
         ctx.fillText("Hazard note (avoid)", mx + r + 10, my + 13);
+      } else if (isDirectionalTool) {
+        // Directional Note Reticle
+        const reticleRadius = baseRadius;
+        ctx.beginPath();
+        ctx.arc(mx, my, reticleRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(56, 189, 248, 0.85)";
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        // Crosshair center dot
+        ctx.beginPath();
+        ctx.arc(mx, my, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fill();
+
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillText("[Press & Drag] DIRECTIONAL NOTE", mx + reticleRadius + 8, my - 5);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.fillText("Drag to set angle (0-360°)", mx + reticleRadius + 8, my + 11);
       } else {
         // Normal Note Placement Reticle: glowing dashed circle
         const reticleRadius = baseRadius;

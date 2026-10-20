@@ -294,13 +294,17 @@ class MapStorage {
       if (!Array.isArray(notesList)) return [];
       return notesList.map((n) => {
         const isTriangle = n.type === "triangle" || n.type === "bomb";
+        const isDirectional = n.type === "directional" || n.type === "arrow";
         const item = {
           time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
           color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-          type: isTriangle ? "triangle" : "normal",
+          type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
           x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
           y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
         };
+        if (isDirectional) {
+          item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+        }
         return item;
       }).sort((a, b) => a.time - b.time);
     };
@@ -435,13 +439,17 @@ class MapStorage {
     const notes = Array.isArray(map.notes) ? map.notes : [];
     const sanitizedNotes = notes.map((n) => {
       const isTriangle = n.type === "triangle" || n.type === "bomb";
+      const isDirectional = n.type === "directional" || n.type === "arrow";
       const item = {
         time: parseFloat(Number(n.time || 0).toFixed(3)),
         color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
-        type: isTriangle ? "triangle" : "normal",
+        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
         x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
         y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
       };
+      if (isDirectional) {
+        item.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+      }
       return item;
     });
 
@@ -587,6 +595,7 @@ class MapStorage {
       if (isNaN(time) || time < 0) continue;
 
       const isTriangle = n.type === "triangle" || n.type === "bomb";
+      const isDirectional = n.type === "directional" || n.type === "arrow";
       let color = String(n.color || "").toLowerCase();
       if (isTriangle) {
         color = "yellow";
@@ -601,10 +610,13 @@ class MapStorage {
       const note = {
         time: parseFloat(time.toFixed(3)),
         color,
-        type: isTriangle ? "triangle" : "normal",
+        type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
         x: Math.max(0.02, Math.min(0.98, parseFloat(x.toFixed(3)))),
         y: Math.max(0.02, Math.min(0.98, parseFloat(y.toFixed(3))))
       };
+      if (isDirectional) {
+        note.angle = typeof n.angle === "number" ? ((Math.round(n.angle) % 360) + 360) % 360 : 0;
+      }
 
       sanitizedNotes.push(note);
     }

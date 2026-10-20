@@ -179,6 +179,14 @@
   text-shadow: 0 0 6px rgba(255, 211, 42, 0.6);
 }
 
+.tool-btn-indicator.directional-indicator {
+  font-size: 0.85rem;
+  color: #38bdf8;
+  line-height: 1;
+  text-shadow: 0 0 6px rgba(56, 189, 248, 0.6);
+  transform: rotate(-45deg);
+}
+
 .tool-btn-key {
   display: inline-flex;
   align-items: center;
@@ -213,6 +221,25 @@
   color: #00d4ff;
   border-color: rgba(0, 212, 255, 0.4);
   background: rgba(0, 212, 255, 0.15);
+}
+
+/* Active State for Directional Note Tool */
+.editor-tool-btn.is-active[data-tool="directional"] {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%);
+  border-color: rgba(56, 189, 248, 0.85);
+  color: #38bdf8;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+}
+
+.editor-tool-btn.is-active[data-tool="directional"] .tool-btn-indicator.directional-indicator {
+  transform: rotate(-45deg) scale(1.25);
+  text-shadow: 0 0 10px #38bdf8;
+}
+
+.editor-tool-btn.is-active[data-tool="directional"] .tool-btn-key {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+  background: rgba(56, 189, 248, 0.15);
 }
 
 /* Active State for Bomb Tool */

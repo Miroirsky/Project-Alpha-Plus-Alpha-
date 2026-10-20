@@ -239,17 +239,22 @@
             <span id="editor-status-text" class="editor-status-badge">PAUSED</span>
           </div>
 
-          <!-- Placement Tool Selector (Normal Note vs Bomb Hazard) -->
+          <!-- Placement Tool Selector (Normal Note vs Directional Note vs Bomb Hazard) -->
           <div class="editor-tool-selector" id="editor-tool-selector" role="toolbar" aria-label="Placement Tool Selection">
             <button type="button" id="tool-btn-note" class="editor-tool-btn is-active" data-tool="note" aria-pressed="true" title="Normal Note tool (Press 1 or N)">
               <span class="tool-btn-indicator note-indicator" aria-hidden="true"></span>
               <span class="tool-btn-label">Normal Note</span>
               <span class="tool-btn-key">1</span>
             </button>
-            <button type="button" id="tool-btn-bomb" class="editor-tool-btn" data-tool="bomb" aria-pressed="false" title="Bomb Hazard tool (Press 2 or B)">
+            <button type="button" id="tool-btn-directional" class="editor-tool-btn" data-tool="directional" aria-pressed="false" title="Directional Note tool (Press 2 or D) - Drag on canvas to set angle">
+              <span class="tool-btn-indicator directional-indicator" aria-hidden="true">&#10140;</span>
+              <span class="tool-btn-label">Directional</span>
+              <span class="tool-btn-key">2</span>
+            </button>
+            <button type="button" id="tool-btn-bomb" class="editor-tool-btn" data-tool="bomb" aria-pressed="false" title="Bomb Hazard tool (Press 3 or B)">
               <span class="tool-btn-indicator bomb-indicator" aria-hidden="true">&#9650;</span>
               <span class="tool-btn-label">Bomb</span>
-              <span class="tool-btn-key">2</span>
+              <span class="tool-btn-key">3</span>
             </button>
           </div>
         </div>
@@ -382,10 +387,11 @@
           <span class="legend-item"><span class="key-tag">Mouse Wheel</span> Scroll Timeline</span>
           <span class="legend-item"><span class="key-tag">Ctrl + Wheel</span> Zoom Timeline</span>
           <span class="legend-item"><span class="key-tag">Click Note</span> Select &amp; Edit Time</span>
-          <span class="legend-item"><span class="key-tag">1 / 2</span> Tool Select</span>
-          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Red Note</span>
-          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Blue Note</span>
-          <span class="legend-item"><strong style="color: #ffd32a;">[Bomb Tool Active]</strong> Click Places Bomb</span>
+          <span class="legend-item"><span class="key-tag">1 / 2 / 3</span> Tool Select</span>
+          <span class="legend-item"><strong style="color: #ff4757;">[Left Click]</strong> Red</span>
+          <span class="legend-item"><strong style="color: #00d4ff;">[Right Click]</strong> Blue</span>
+          <span class="legend-item"><strong style="color: #38bdf8;">[Directional]</strong> Drag to set angle</span>
+          <span class="legend-item"><strong style="color: #ffd32a;">[Bomb]</strong> Click Places Bomb</span>
           <span class="legend-item"><span class="key-tag">Enter</span> Test Map</span>
         </div>
       </footer>

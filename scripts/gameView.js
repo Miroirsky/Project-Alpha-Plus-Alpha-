@@ -457,6 +457,19 @@ class GameView {
             growProgress,
             1.0
           );
+        } else if (note.type === "directional" || note.type === "arrow") {
+          this.drawDirectionalNote(
+            ctx,
+            noteX,
+            noteY,
+            currentRadius,
+            noteRadius,
+            note.color,
+            note.angle,
+            "growing",
+            growProgress,
+            1.0
+          );
         } else {
           // Normal single-ball note
           // Target outline
@@ -498,6 +511,19 @@ class GameView {
             noteY,
             noteRadius,
             noteRadius,
+            "full",
+            1.0,
+            remainingFraction
+          );
+        } else if (note.type === "directional" || note.type === "arrow") {
+          this.drawDirectionalNote(
+            ctx,
+            noteX,
+            noteY,
+            noteRadius,
+            noteRadius,
+            note.color,
+            note.angle,
             "full",
             1.0,
             remainingFraction
@@ -567,6 +593,19 @@ class GameView {
           ctx.lineWidth = 1.5;
           ctx.fill();
           ctx.stroke();
+        } else if (note.type === "directional" || note.type === "arrow") {
+          this.drawDirectionalNote(
+            ctx,
+            noteX,
+            noteY,
+            noteRadius * (0.8 + 0.2 * opacity),
+            noteRadius,
+            note.color,
+            note.angle,
+            "fading",
+            1.0,
+            1.0
+          );
         } else {
           ctx.beginPath();
           ctx.arc(noteX, noteY, baseRadius * (0.8 + 0.2 * opacity), 0, Math.PI * 2);
@@ -725,6 +764,168 @@ class GameView {
         ctx.shadowColor = "#ffa502";
         ctx.shadowBlur = 8;
         ctx.fill();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Draws a clearly recognizable Directional Note (red/blue circle with an arrow and thicker stroke on required hit side).
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} x
+   * @param {number} y
+   * @param {number} currentRadius
+   * @param {number} targetRadius
+   * @param {string} color - 'red' | 'blue'
+   * @param {number} angleDeg - required direction angle (0-360)
+   * @param {string} phase - 'growing' | 'full' | 'fading'
+   * @param {number} growProgress
+   * @param {number} remainingFraction
+   */
+  drawDirectionalNote(
+    ctx,
+    x,
+    y,
+    currentRadius,
+    targetRadius,
+    color,
+    angleDeg = 0,
+    phase = "full",
+    growProgress = 1.0,
+    remainingFraction = 1.0
+  ) {
+    const isGrowing = phase === "growing";
+    const colorHex = color === "red" ? "#ff4757" : "#00d4ff";
+    const rad = ((angleDeg * Math.PI) / 180);
+
+    ctx.save();
+
+    if (isGrowing) {
+      // 1. Target dashed outline at full size
+      ctx.beginPath();
+      ctx.arc(x, y, targetRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.globalAlpha = 0.35 + 0.35 * growProgress;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 2. Expanding directional note core
+      ctx.beginPath();
+      ctx.arc(x, y, currentRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 3.2;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+
+      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.42)" : "rgba(0, 212, 255, 0.42)";
+      ctx.fill();
+
+      // Thicker stroke on required hit side (scaled with current radius)
+      ctx.beginPath();
+      ctx.arc(x, y, currentRadius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 6;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 20;
+      ctx.stroke();
+
+      // Scaled directional arrow inside core
+      const shaftLen = currentRadius * 0.55;
+      const sx = x - Math.cos(rad) * currentRadius * 0.45;
+      const sy = y - Math.sin(rad) * currentRadius * 0.45;
+      const ex = x + Math.cos(rad) * shaftLen;
+      const ey = y + Math.sin(rad) * shaftLen;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = Math.max(1.5, currentRadius * 0.14);
+      ctx.stroke();
+
+      const headLen = currentRadius * 0.42;
+      const headAngle = Math.PI / 5.5;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.closePath();
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+    } else {
+      // Full active phase or fading
+      // 1. Circle body
+      ctx.beginPath();
+      ctx.arc(x, y, targetRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 3.2;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 20;
+      ctx.stroke();
+
+      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.35)" : "rgba(0, 212, 255, 0.35)";
+      ctx.fill();
+
+      // 2. Thicker stroke on required hit side (arc along angle)
+      ctx.beginPath();
+      ctx.arc(x, y, targetRadius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 6.5;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 22;
+      ctx.stroke();
+
+      // 3. Arrow pointing in required direction
+      const shaftLen = targetRadius * 0.58;
+      const sx = x - Math.cos(rad) * targetRadius * 0.48;
+      const sy = y - Math.sin(rad) * targetRadius * 0.48;
+      const ex = x + Math.cos(rad) * shaftLen;
+      const ey = y + Math.sin(rad) * shaftLen;
+
+      ctx.beginPath();
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(ex, ey);
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3.6;
+      ctx.stroke();
+
+      const headLen = targetRadius * 0.44;
+      const headAngle = Math.PI / 5.5;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.closePath();
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#ffffff";
+      ctx.shadowBlur = 8;
+      ctx.fill();
+
+      // 4. Circular countdown timing ring during full active phase
+      if (phase === "full") {
+        const arcStart = -Math.PI / 2;
+        const arcEnd = -Math.PI / 2 + Math.PI * 2 * remainingFraction;
+
+        ctx.beginPath();
+        ctx.arc(x, y, targetRadius + 6, arcStart, arcEnd);
+        ctx.strokeStyle = colorHex;
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+
+        if (remainingFraction > 0.02) {
+          const tipX = x + Math.cos(arcEnd) * (targetRadius + 6);
+          const tipY = y + Math.sin(arcEnd) * (targetRadius + 6);
+          ctx.beginPath();
+          ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
+          ctx.fillStyle = "#ffffff";
+          ctx.shadowColor = colorHex;
+          ctx.shadowBlur = 8;
+          ctx.fill();
+        }
       }
     }
 
