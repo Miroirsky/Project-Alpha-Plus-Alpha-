@@ -52,6 +52,7 @@ class MapStorage {
       this.healDefaultTracksAudio(this.defaultTracks);
       this.migrateMapOverridesToCustomCopies();
       this.applyMapOverrides();
+      this.unblacklistDefaultTracks();
     }
 
     // Asynchronously restore custom track audio from IndexedDB (MediaStorage) across reloads
@@ -263,6 +264,20 @@ class MapStorage {
     this.deletedTrackIds.delete(String(idOrName));
     this.deletedTrackIds.delete(String(idOrName).toLowerCase().trim());
     this.saveDeletedTrackIds();
+  }
+
+  /**
+   * Ensures default tracks are never blacklisted or treated as deleted.
+   */
+  unblacklistDefaultTracks() {
+    if (!this.deletedTrackIds || this.deletedTrackIds.size === 0) return;
+    const defaults = this.getDefaultMaps();
+    defaults.forEach((t) => {
+      if (t) {
+        if (t.id) this.removeDeletedTrackId(t.id);
+        if (t.name) this.removeDeletedTrackId(t.name);
+      }
+    });
   }
 
   /**
@@ -1010,11 +1025,6 @@ class MapStorage {
         ? songObj.id
         : `default_${this.hashString(songBaseSig)}`;
 
-      // Skip default track if the user has explicitly deleted it
-      if (this.isTrackDeleted(trackId) || this.isTrackDeleted(songObj.name)) {
-        return;
-      }
-
       songObj.id = trackId;
       songObj.isDefault = true;
       songObj.isCustom = false;
@@ -1746,26 +1756,25 @@ class MapStorage {
   }
 
   /**
-   * Deletes a specific difficulty from a map.
+   * Deletes a specific difficulty from a custom map.
+   * Default tracks are protected presets and cannot have difficulties deleted.
    * @param {string} songId
    * @param {string} diffName
    * @returns {boolean}
    */
   deleteDifficulty(songId, diffName) {
     if (!songId || !diffName) return false;
-    let map = this.customMaps.find((m) => m.id === songId);
-    if (!map) {
-      const def = (this.defaultTracks || []).find((m) => m.id === songId);
-      if (def && def.difficulties) {
-        const keys = Object.keys(def.difficulties);
-        if (keys.length <= 1) return false;
-        delete def.difficulties[diffName];
-        this.normalizeSongDifficulties(def);
-        this.notify();
-        return true;
-      }
+    const targetMap = this.getMap(songId);
+    if (!targetMap) return false;
+
+    // Strict guard: Default tracks can never have difficulties deleted directly!
+    if (this.isDefaultTrack(targetMap) || (this.defaultTracks && this.defaultTracks.some((m) => m.id === songId))) {
+      console.warn("Default tracks are protected presets and cannot have difficulties deleted:", songId);
       return false;
     }
+
+    const map = this.customMaps.find((m) => m.id === songId);
+    if (!map || !map.difficulties) return false;
     const keys = Object.keys(map.difficulties);
     if (keys.length <= 1) {
       console.warn("Cannot delete the only difficulty track for song:", songId);
@@ -1783,14 +1792,24 @@ class MapStorage {
   }
 
   /**
-   * Deletes a map permanently, ensuring it stays deleted across reloads and storage refreshes.
+   * Deletes a custom map permanently, ensuring it stays deleted across reloads and storage refreshes.
+   * Default tracks are protected presets and cannot be deleted.
    * Cleans up from memory, localStorage, and IndexedDB (MediaStorage).
    * @param {string} id
+   * @returns {boolean}
    */
   deleteMap(id) {
-    if (!id) return;
+    if (!id) return false;
     const targetMap = this.getMap(id);
-    const targetName = targetMap ? targetMap.name : "";
+    if (!targetMap) return false;
+
+    // Strict guard: Default tracks can NEVER be deleted!
+    if (this.isDefaultTrack(targetMap) || (this.defaultTracks && this.defaultTracks.some((m) => m.id === id))) {
+      console.warn("Default tracks are protected presets and cannot be deleted:", id);
+      return false;
+    }
+
+    const targetName = targetMap.name || "";
 
     // Record in persistent deleted tracks so it NEVER resurfaces across reloads/IndexedDB
     this.addDeletedTrackId(id);
@@ -1800,12 +1819,6 @@ class MapStorage {
 
     // Filter out from custom maps
     this.customMaps = this.customMaps.filter((m) => m.id !== id);
-
-    // Filter out from default tracks in memory if applicable
-    if (this.defaultTracks && Array.isArray(this.defaultTracks)) {
-      this.defaultTracks = this.defaultTracks.filter((m) => m.id !== id && (!targetName || m.name !== targetName));
-      this.saveDefaultTracksCache(this.defaultTracks);
-    }
 
     if (this.songOrder) {
       this.songOrder = this.songOrder.filter((songId) => songId !== id);
@@ -1835,6 +1848,7 @@ class MapStorage {
     }
 
     this.notify();
+    return true;
   }
 
   /**
