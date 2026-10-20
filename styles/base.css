@@ -24,7 +24,7 @@ body {
   height: 100%;
   overflow: hidden;
   font-family: var(--font-family-display);
-  background-color: var(--color-bg);
+  background-color: #FAE3E3;
   color: var(--color-text-primary);
   transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
   user-select: none;
@@ -41,7 +41,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-gradient);
+  background-color: #FAE3E3;
   overflow: hidden;
 }
 

@@ -33,40 +33,66 @@
   <script defer src="scripts/gameView.js"></script>
   <script defer src="scripts/settingsModal.js"></script>
   <script defer src="scripts/exitHandler.js"></script>
+  <script defer src="scripts/backgroundSquares.js"></script>
   <script defer src="scripts/main.js"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Visual background canvas elements -->
-    <div class="bg-grid" aria-hidden="true"></div>
-    <div class="bg-ambient-glow" aria-hidden="true"></div>
+    <!-- Main Menu Background Layer: Primary Background (#FAE3E3) & Procedural Floating Squares (#F7D4BC) -->
+    <div id="main-menu-bg" class="main-menu-bg" aria-hidden="true">
+      <div id="floating-squares-container" class="floating-squares-container"></div>
+    </div>
 
-    <!-- Main Menu Card -->
+    <!-- Main Menu Card: Primary (#954132) container with Secondary (#322214) buttons -->
     <main id="main-menu-card" class="menu-card" role="main">
       <header class="menu-header">
+        <div class="menu-badge">
+          <span class="menu-badge-dot" aria-hidden="true"></span>
+          <span>Rhythm Arcade</span>
+        </div>
         <h1 class="game-title">
-          Project <span class="game-title-highlight">Alpha</span>+
+          Project <span class="game-title-highlight">Alpha</span><span class="game-title-plus">+</span>
         </h1>
-        <p class="game-subtitle">Rhythm Arcade &bull; v0.3.0</p>
+        <p class="game-subtitle">Precision Sound &bull; Arcade Action &bull; v0.3.0</p>
       </header>
 
       <nav class="menu-actions" aria-label="Main Menu Actions">
         <button id="btn-play" class="menu-btn menu-btn-primary" type="button">
-          Play
+          <span class="menu-btn-content">
+            <span class="menu-btn-indicator" aria-hidden="true"></span>
+            <span class="menu-btn-text">Play</span>
+          </span>
+          <span class="menu-btn-icon" aria-hidden="true">&#9654;</span>
         </button>
         <button id="btn-create" class="menu-btn" type="button">
-          Create
+          <span class="menu-btn-content">
+            <span class="menu-btn-indicator" aria-hidden="true"></span>
+            <span class="menu-btn-text">Create</span>
+          </span>
+          <span class="menu-btn-icon" aria-hidden="true">&#10010;</span>
         </button>
         <button id="btn-settings" class="menu-btn" type="button">
-          Settings
+          <span class="menu-btn-content">
+            <span class="menu-btn-indicator" aria-hidden="true"></span>
+            <span class="menu-btn-text">Settings</span>
+          </span>
+          <span class="menu-btn-icon" aria-hidden="true">&#9881;</span>
         </button>
         <button id="btn-exit" class="menu-btn menu-btn-exit" type="button">
-          Exit
+          <span class="menu-btn-content">
+            <span class="menu-btn-indicator" aria-hidden="true"></span>
+            <span class="menu-btn-text">Exit</span>
+          </span>
+          <span class="menu-btn-icon" aria-hidden="true">&#10005;</span>
         </button>
       </nav>
 
       <footer class="menu-footer">
-        <span>PROJECT ALPHA PLUS &copy; 2026</span>
+        <div class="menu-footer-content">
+          <span>PROJECT ALPHA PLUS &copy; 2026</span>
+          <span class="menu-footer-dot" aria-hidden="true">&bull;</span>
+          <span>SYSTEM READY</span>
+        </div>
       </footer>
     </main>
 

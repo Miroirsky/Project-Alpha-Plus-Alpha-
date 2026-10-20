@@ -435,6 +435,10 @@ class CreateMenu {
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
     }
+    const mainMenuBg = document.getElementById("main-menu-bg");
+    if (mainMenuBg) {
+      mainMenuBg.style.display = "none";
+    }
     this.renderMapsList();
     if (this.view) {
       this.view.classList.add("is-active");
@@ -452,6 +456,10 @@ class CreateMenu {
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "";
+    }
+    const mainMenuBg = document.getElementById("main-menu-bg");
+    if (mainMenuBg) {
+      mainMenuBg.style.display = "";
     }
   }
 

@@ -543,6 +543,10 @@ class PlayMenu {
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
     }
+    const mainMenuBg = document.getElementById("main-menu-bg");
+    if (mainMenuBg) {
+      mainMenuBg.style.display = "none";
+    }
     if (this.view) {
       this.view.classList.add("is-active");
       this.view.setAttribute("aria-hidden", "false");
@@ -567,6 +571,10 @@ class PlayMenu {
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "";
+    }
+    const mainMenuBg = document.getElementById("main-menu-bg");
+    if (mainMenuBg) {
+      mainMenuBg.style.display = "";
     }
   }
 

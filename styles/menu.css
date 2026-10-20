@@ -1,6 +1,62 @@
 /* ==========================================================================
-   Project Alpha Plus - Main Menu Stylesheet
-   Responsibility: Main menu layout, game title, and primary action buttons.
+   Project Alpha Plus - Redesigned Main Menu Stylesheet
+   Color Palette:
+     - Primary:              #954132
+     - Secondary:            #322214
+     - Primary Background:   #FAE3E3
+     - Secondary Background: #F7D4BC
+   ========================================================================== */
+
+:root {
+  --menu-primary: #954132;
+  --menu-secondary: #58381c;
+  --menu-bg-primary: #FAE3E3;
+  --menu-bg-secondary: #F7D4BC;
+}
+
+/* ==========================================================================
+   1. Main Menu Page Background & Animated Floating Squares
+   ========================================================================== */
+
+.main-menu-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background-color: var(--menu-bg-primary);
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+/* Floating squares container */
+.floating-squares-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Procedural floating square element: solid #F7D4BC, no border-radius, no outlines, no transparency */
+.floating-square {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background-color: var(--menu-bg-secondary);
+  border-radius: 0 !important;
+  -webkit-border-radius: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  pointer-events: none;
+  will-change: transform;
+  transform-origin: center center;
+}
+
+/* ==========================================================================
+   2. Main Menu Card Container: Primary (#954132)
    ========================================================================== */
 
 .menu-card {
@@ -10,22 +66,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 2.25rem 2.5rem;
-  border-radius: 1.25rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-surface-border);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   width: 90%;
-  max-width: 420px;
-  animation: fade-in-scale 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  max-width: 440px;
+  padding: 2.75rem 2.25rem 2.25rem;
+  background-color: var(--menu-primary);
+  background: linear-gradient(168deg, #9f4737 0%, var(--menu-primary) 55%, #88392d 100%);
+  border: 1.5px solid rgba(247, 212, 188, 0.35);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 24px 64px rgba(50, 34, 20, 0.32),
+    0 8px 24px rgba(149, 65, 50, 0.24),
+    inset 0 1px 0 rgba(250, 227, 227, 0.35);
+  animation: menu-card-entrance 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes fade-in-scale {
+@keyframes menu-card-entrance {
   0% {
     opacity: 0;
-    transform: translateY(16px) scale(0.98);
+    transform: translateY(20px) scale(0.97);
   }
   100% {
     opacity: 1;
@@ -33,36 +91,83 @@
   }
 }
 
-/* Header & Game Title */
+/* ==========================================================================
+   3. Header, Title, Badges, and Subtitle
+   ========================================================================== */
+
 .menu-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  margin-bottom: 2.25rem;
+  margin-bottom: 2.15rem;
+  width: 100%;
 }
 
-.game-title {
-  font-size: 2.1rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
+/* Pill badge above game title */
+.menu-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.85rem;
+  margin-bottom: 0.85rem;
+  background: rgba(50, 34, 20, 0.32);
+  border: 1px solid rgba(247, 212, 188, 0.28);
+  border-radius: 999px;
+  color: var(--menu-bg-secondary);
+  font-family: var(--font-family-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-text-primary);
+}
+
+.menu-badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--menu-bg-secondary);
+  box-shadow: 0 0 8px rgba(247, 212, 188, 0.7);
+}
+
+/* Main title */
+.game-title {
+  font-size: 2.3rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--menu-bg-primary);
   line-height: 1.1;
+  text-shadow: 0 2px 14px rgba(50, 34, 20, 0.35);
 }
 
 .game-title-highlight {
-  color: var(--color-accent);
+  color: var(--menu-bg-secondary);
+  position: relative;
 }
 
+.game-title-plus {
+  color: var(--menu-bg-secondary);
+  font-weight: 900;
+  margin-left: 2px;
+}
+
+/* Subtitle */
 .game-subtitle {
-  margin-top: 0.5rem;
-  font-size: 0.76rem;
+  margin-top: 0.55rem;
+  font-size: 0.72rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--color-text-muted);
+  color: var(--menu-bg-secondary);
   font-family: var(--font-family-mono);
   font-weight: 600;
+  opacity: 0.92;
 }
 
-/* Menu Actions / Buttons */
+/* ==========================================================================
+   4. Menu Action Buttons: Secondary (#322214) with Primary Background (#FAE3E3) text
+   ========================================================================== */
+
 .menu-actions {
   display: flex;
   flex-direction: column;
@@ -76,85 +181,149 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0.95rem 1.4rem;
+  padding: 1.05rem 1.45rem;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--color-text-primary);
-  background: rgba(15, 23, 42, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.65rem;
+  background-color: var(--menu-secondary);
+  color: var(--menu-bg-primary);
+  border: 1.5px solid rgba(247, 212, 188, 0.18);
+  border-radius: 0.85rem;
   cursor: pointer;
   outline: none;
   overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 4px 14px rgba(50, 34, 20, 0.28),
+    inset 0 1px 0 rgba(250, 227, 227, 0.1);
 }
 
+/* Left accent bar on hover */
 .menu-btn::before {
   content: "";
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 3px;
-  background: transparent;
-  transition: background 0.2s ease, width 0.2s ease;
+  width: 0;
+  background: var(--menu-bg-secondary);
+  border-top-left-radius: 0.85rem;
+  border-bottom-left-radius: 0.85rem;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.menu-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  z-index: 1;
+}
+
+.menu-btn-indicator {
+  display: inline-block;
+  width: 4px;
+  height: 14px;
+  border-radius: 2px;
+  background: rgba(247, 212, 188, 0.45);
+  transition: background 0.2s ease, height 0.2s ease;
+}
+
+.menu-btn-text {
+  color: var(--menu-bg-primary);
+  font-family: var(--font-family-display);
+  transition: color 0.2s ease;
+}
+
+.menu-btn-icon {
+  font-size: 0.85rem;
+  color: var(--menu-bg-secondary);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s ease;
+  z-index: 1;
+}
+
+/* Hover State */
 .menu-btn:hover {
-  background: rgba(22, 33, 58, 0.85);
-  border-color: rgba(255, 255, 255, 0.2);
-  transform: translateX(4px);
-  color: #ffffff;
+  background-color: #3e2b1b;
+  border-color: var(--menu-bg-secondary);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 8px 24px rgba(50, 34, 20, 0.45),
+    0 0 0 1px var(--menu-bg-secondary);
 }
 
 .menu-btn:hover::before {
-  background: var(--color-accent);
-  width: 4px;
+  width: 5px;
 }
 
+.menu-btn:hover .menu-btn-indicator {
+  background: var(--menu-bg-secondary);
+  height: 18px;
+}
+
+.menu-btn:hover .menu-btn-text {
+  color: #ffffff;
+}
+
+.menu-btn:hover .menu-btn-icon {
+  transform: translateX(4px);
+  color: var(--menu-bg-primary);
+}
+
+/* Active / Pressed State */
 .menu-btn:active {
-  transform: translateX(2px) scale(0.99);
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 2px 8px rgba(50, 34, 20, 0.4);
 }
 
+/* Focus Visible Accessible State */
 .menu-btn:focus-visible {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-glow);
+  border-color: var(--menu-bg-secondary);
+  box-shadow:
+    0 0 0 3px var(--menu-bg-secondary),
+    0 4px 16px rgba(50, 34, 20, 0.5);
 }
 
-/* Button Variants */
+/* Play Button Accent */
 .menu-btn-primary {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.15) 0%, rgba(15, 23, 42, 0.8) 100%);
-  border-color: rgba(0, 229, 255, 0.35);
+  background: linear-gradient(135deg, #3d2a1a 0%, var(--menu-secondary) 100%);
+  border-color: rgba(247, 212, 188, 0.3);
 }
 
-.menu-btn-primary::before {
-  background: var(--color-accent);
+.menu-btn-primary .menu-btn-indicator {
+  background: var(--menu-bg-secondary);
 }
 
-.menu-btn-primary:hover {
-  background: linear-gradient(135deg, rgba(0, 229, 255, 0.25) 0%, rgba(20, 32, 58, 0.9) 100%);
-  border-color: var(--color-accent);
-}
-
+/* Exit Button Accent */
 .menu-btn-exit:hover {
-  border-color: rgba(255, 71, 87, 0.4);
-  color: #ff6b7e;
-  background: rgba(255, 71, 87, 0.08);
+  border-color: rgba(250, 227, 227, 0.65);
 }
 
 .menu-btn-exit:hover::before {
-  background: #ff4757;
+  background: var(--menu-bg-primary);
 }
 
-/* Footer / Version Info */
+/* ==========================================================================
+   5. Footer / Version Info
+   ========================================================================== */
+
 .menu-footer {
   margin-top: 2rem;
+  width: 100%;
+}
+
+.menu-footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   font-family: var(--font-family-mono);
-  font-size: 0.72rem;
-  color: var(--color-text-muted);
-  letter-spacing: 0.1em;
-  opacity: 0.7;
+  font-size: 0.68rem;
+  color: var(--menu-bg-secondary);
+  letter-spacing: 0.14em;
+  opacity: 0.88;
+}
+
+.menu-footer-dot {
+  opacity: 0.5;
 }
