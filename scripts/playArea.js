@@ -14,9 +14,10 @@ class PlayArea {
    * Side length equals the smaller dimension of the available window.
    * @param {number} [viewportWidth]
    * @param {number} [viewportHeight]
+   * @param {number} [margin=0] - Optional safety margin to inset the square arena
    * @returns {Object}
    */
-  static getMetrics(viewportWidth, viewportHeight) {
+  static getMetrics(viewportWidth, viewportHeight, margin = 0) {
     const w = typeof viewportWidth === "number" && viewportWidth > 0
       ? viewportWidth
       : (typeof window !== "undefined" && window.innerWidth ? window.innerWidth : 1000);
@@ -24,8 +25,12 @@ class PlayArea {
       ? viewportHeight
       : (typeof window !== "undefined" && window.innerHeight ? window.innerHeight : 1000);
 
+    const safeMargin = typeof margin === "number" && margin >= 0 ? margin : 0;
+    const availW = Math.max(50, w - safeMargin * 2);
+    const availH = Math.max(50, h - safeMargin * 2);
+
     // Play area is a square whose side length equals the smaller dimension
-    const size = Math.min(w, h);
+    const size = Math.min(availW, availH);
     const offsetX = (w - size) / 2;
     const offsetY = (h - size) / 2;
 

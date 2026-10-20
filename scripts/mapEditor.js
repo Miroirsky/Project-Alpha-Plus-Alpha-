@@ -47,6 +47,7 @@ class MapEditor {
     // DOM Elements
     this.view = document.getElementById("map-editor-view");
     this.canvas = document.getElementById("editor-canvas");
+    this.canvasContainer = document.querySelector(".editor-canvas-container");
     this.ctx = this.canvas ? this.canvas.getContext("2d") : null;
 
     this.titleEl = document.getElementById("editor-map-title");
@@ -266,6 +267,13 @@ class MapEditor {
     if (this.view) {
       this.view.classList.add("is-active");
       this.view.setAttribute("aria-hidden", "false");
+    }
+
+    // Recalculate layout once view becomes active to get exact flex container dimensions
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => {
+        this.resizeCanvas();
+      });
     }
 
     this.animFrameId = requestAnimationFrame(this.boundTick);
@@ -596,12 +604,22 @@ class MapEditor {
   }
 
   /**
-   * Adjusts canvas resolution to match window.
+   * Adjusts canvas resolution to match container and window.
+   * Keeps play area fully visible and centered without overlap from timeline dock.
    */
   resizeCanvas() {
     if (!this.canvas) return;
-    this.canvas.width = window.innerWidth;
-    this.canvas.height = window.innerHeight;
+    const container = this.canvasContainer || (this.canvas ? this.canvas.parentElement : null);
+    if (container) {
+      const rect = container.getBoundingClientRect();
+      const w = Math.floor(rect.width) || window.innerWidth;
+      const h = Math.floor(rect.height) || Math.max(260, window.innerHeight - 340);
+      this.canvas.width = Math.max(100, w);
+      this.canvas.height = Math.max(100, h);
+    } else {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = Math.max(260, window.innerHeight - 340);
+    }
 
     this.resizeTimelineContent();
     this.renderTimeline();
@@ -1555,12 +1573,24 @@ class MapEditor {
    * @param {MouseEvent} e
    */
   onMouseMove(e) {
-    this.mouse.x = e.clientX;
-    this.mouse.y = e.clientY;
+    if (this.canvas) {
+      const rect = this.canvas.getBoundingClientRect();
+      this.mouse.x = e.clientX - rect.left;
+      this.mouse.y = e.clientY - rect.top;
+      this.mouse.isHovering = (
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom
+      );
+    } else {
+      this.mouse.x = e.clientX;
+      this.mouse.y = e.clientY;
+    }
 
     if (this.isPlacingDirectional && this.directionalDragStart) {
-      const dx = e.clientX - this.directionalDragStart.clientX;
-      const dy = e.clientY - this.directionalDragStart.clientY;
+      const dx = this.mouse.x - this.directionalDragStart.canvasX;
+      const dy = this.mouse.y - this.directionalDragStart.canvasY;
       if (Math.hypot(dx, dy) >= 4) {
         const rad = Math.atan2(dy, dx);
         this.directionalCurrentAngle = ((Math.round(rad * 180 / Math.PI) % 360) + 360) % 360;
@@ -1569,7 +1599,7 @@ class MapEditor {
   }
 
   /**
-   * Handles note placement while paused:
+   * Handles note placement both while paused and during live music playback:
    * When Normal Note tool is active:
    *   Left-click: places or toggles normal RED note.
    *   Right-click: places or toggles normal BLUE note.
@@ -1580,19 +1610,32 @@ class MapEditor {
    * @param {MouseEvent} e
    */
   onMouseDown(e) {
-    // Only place notes when paused!
-    if (this.isPlaying) return;
-
     if (e.button !== 0 && e.button !== 2) return;
+    if (!this.canvas) return;
+
+    const rect = this.canvas.getBoundingClientRect();
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    // Ignore clicks outside canvas bounds
+    if (canvasX < 0 || canvasX > this.canvas.width || canvasY < 0 || canvasY > this.canvas.height) {
+      return;
+    }
+
+    // Automatically assign active playback position when playing, or paused scrub position
+    const currentPos = (this.isPlaying && this.audio) ? this.audio.currentTime : this.currentTime;
+    const roundedTime = parseFloat(currentPos.toFixed(2));
 
     // Handle Directional Note drag start
     if (this.activeTool === "directional") {
       this.isPlacingDirectional = true;
       this.directionalDragStart = {
+        canvasX,
+        canvasY,
         clientX: e.clientX,
         clientY: e.clientY,
         button: e.button,
-        time: parseFloat(this.currentTime.toFixed(2))
+        time: roundedTime
       };
       this.directionalCurrentAngle = 0;
       return;
@@ -1602,23 +1645,24 @@ class MapEditor {
     const noteType = isBomb ? "triangle" : "normal";
     const noteColor = isBomb ? "yellow" : (e.button === 0 ? "red" : "blue");
 
-    const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height);
-    const roundedTime = parseFloat(this.currentTime.toFixed(2));
-    const normalizedX = playArea.clampNormalized(playArea.toLocalX(e.clientX));
-    const normalizedY = playArea.clampNormalized(playArea.toLocalY(e.clientY));
+    const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height, 24);
+    const normalizedX = playArea.clampNormalized(playArea.toLocalX(canvasX));
+    const normalizedY = playArea.clampNormalized(playArea.toLocalY(canvasY));
 
     // Check if clicking near an existing note at this timestamp to toggle/delete it
+    // When playing, use tighter 0.12s tolerance; when paused use standard 0.25s
+    const timeTolerance = this.isPlaying ? 0.12 : 0.25;
     const existingIndex = this.notes.findIndex((n) => {
-      const dx = playArea.toScreenX(n.x) - e.clientX;
-      const dy = playArea.toScreenY(n.y) - e.clientY;
+      const dx = playArea.toScreenX(n.x) - canvasX;
+      const dy = playArea.toScreenY(n.y) - canvasY;
       const dist = Math.hypot(dx, dy);
-      return Math.abs(n.time - roundedTime) <= 0.25 && dist <= (playArea.bigRadius * 1.25);
+      return Math.abs(n.time - roundedTime) <= timeTolerance && dist <= (playArea.bigRadius * 1.25);
     });
 
     if (existingIndex !== -1) {
       // Toggle / remove note
       this.notes.splice(existingIndex, 1);
-      if (this.selectedNote && Math.abs(this.selectedNote.time - roundedTime) <= 0.25) {
+      if (this.selectedNote && Math.abs(this.selectedNote.time - roundedTime) <= timeTolerance) {
         this.selectNote(null);
       }
       if (this.soundManager) this.soundManager.playClick();
@@ -1659,25 +1703,29 @@ class MapEditor {
     this.isPlacingDirectional = false;
     this.directionalDragStart = null;
 
-    const dx = e.clientX - start.clientX;
-    const dy = e.clientY - start.clientY;
+    const rect = this.canvas ? this.canvas.getBoundingClientRect() : { left: 0, top: 0 };
+    const curCanvasX = e.clientX - rect.left;
+    const curCanvasY = e.clientY - rect.top;
+    const dx = curCanvasX - start.canvasX;
+    const dy = curCanvasY - start.canvasY;
     const dist = Math.hypot(dx, dy);
 
-    const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height);
+    const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height, 24);
     const roundedTime = start.time;
     const noteColor = start.button === 0 ? "red" : "blue";
 
     // Check if clicking near an existing note at this timestamp to toggle/delete it (short click without drag)
+    const timeTolerance = this.isPlaying ? 0.12 : 0.25;
     const existingIndex = this.notes.findIndex((n) => {
       const nx = playArea.toScreenX(n.x);
       const ny = playArea.toScreenY(n.y);
-      return Math.abs(n.time - roundedTime) <= 0.25 && Math.hypot(nx - start.clientX, ny - start.clientY) <= (playArea.bigRadius * 1.25);
+      return Math.abs(n.time - roundedTime) <= timeTolerance && Math.hypot(nx - start.canvasX, ny - start.canvasY) <= (playArea.bigRadius * 1.25);
     });
 
     if (dist < 6 && existingIndex !== -1) {
       // Toggle / remove note
       this.notes.splice(existingIndex, 1);
-      if (this.selectedNote && Math.abs(this.selectedNote.time - roundedTime) <= 0.25) {
+      if (this.selectedNote && Math.abs(this.selectedNote.time - roundedTime) <= timeTolerance) {
         this.selectNote(null);
       }
       if (this.soundManager) this.soundManager.playClick();
@@ -1693,8 +1741,8 @@ class MapEditor {
         this.notes.splice(existingIndex, 1);
       }
 
-      const normalizedX = playArea.clampNormalized(playArea.toLocalX(start.clientX));
-      const normalizedY = playArea.clampNormalized(playArea.toLocalY(start.clientY));
+      const normalizedX = playArea.clampNormalized(playArea.toLocalX(start.canvasX));
+      const normalizedY = playArea.clampNormalized(playArea.toLocalY(start.canvasY));
 
       const newNote = {
         time: roundedTime,
@@ -2568,7 +2616,7 @@ class MapEditor {
     const width = this.canvas.width;
     const height = this.canvas.height;
     const time = this.currentTime;
-    const playArea = PlayArea.getMetrics(width, height);
+    const playArea = PlayArea.getMetrics(width, height, 24);
 
     ctx.clearRect(0, 0, width, height);
 
@@ -2812,9 +2860,9 @@ class MapEditor {
     });
 
     // 3. Interactive Directional Note Drag-Placement Preview (when dragging to set angle)
-    if (!this.isPlaying && this.isPlacingDirectional && this.directionalDragStart) {
-      const startX = this.directionalDragStart.clientX;
-      const startY = this.directionalDragStart.clientY;
+    if (this.isPlacingDirectional && this.directionalDragStart) {
+      const startX = this.directionalDragStart.canvasX;
+      const startY = this.directionalDragStart.canvasY;
       const curX = this.mouse.x;
       const curY = this.mouse.y;
       const angle = this.directionalCurrentAngle;
@@ -2889,12 +2937,13 @@ class MapEditor {
       ctx.restore();
     }
 
-    // 4. Draw cursor placement reticle (only when paused and not actively dragging)
-    if (!this.isPlaying && this.mouse.isHovering && !this.isPlacingDirectional) {
+    // 4. Draw cursor placement reticle (both while paused and during live music playback)
+    if (this.mouse.isHovering && !this.isPlacingDirectional) {
       const mx = this.mouse.x;
       const my = this.mouse.y;
       const isBombTool = this.activeTool === "bomb";
       const isDirectionalTool = this.activeTool === "directional";
+      const liveBadge = this.isPlaying ? `[LIVE ${this.currentTime.toFixed(1)}s] ` : "[Click] ";
 
       ctx.save();
 
@@ -2937,10 +2986,10 @@ class MapEditor {
         ctx.textBaseline = "alphabetic";
         ctx.fillStyle = "#ffd32a";
         ctx.shadowBlur = 6;
-        ctx.fillText("[Click] PLACE BOMB", mx + r + 10, my - 2);
+        ctx.fillText(`${liveBadge}PLACE BOMB`, mx + r + 10, my - 2);
         ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
         ctx.shadowBlur = 0;
-        ctx.fillText("Hazard note (avoid)", mx + r + 10, my + 13);
+        ctx.fillText(this.isPlaying ? "Recording live on beat" : "Hazard note (avoid)", mx + r + 10, my + 13);
       } else if (isDirectionalTool) {
         // Directional Note Reticle
         const reticleRadius = baseRadius;
@@ -2961,7 +3010,8 @@ class MapEditor {
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
         ctx.fillStyle = "#38bdf8";
-        ctx.fillText("[Press & Drag] DIRECTIONAL NOTE", mx + reticleRadius + 8, my - 5);
+        const dragBadge = this.isPlaying ? `[LIVE ${this.currentTime.toFixed(1)}s] ` : "[Press & Drag] ";
+        ctx.fillText(`${dragBadge}DIRECTIONAL NOTE`, mx + reticleRadius + 8, my - 5);
         ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
         ctx.fillText("Drag to set angle (0-360°)", mx + reticleRadius + 8, my + 11);
       } else {
@@ -2985,9 +3035,10 @@ class MapEditor {
         ctx.textAlign = "left";
         ctx.textBaseline = "alphabetic";
         ctx.fillStyle = "#ff4757";
-        ctx.fillText("[Click] RED NOTE", mx + reticleRadius + 8, my - 5);
+        ctx.fillText(`${liveBadge}RED NOTE`, mx + reticleRadius + 8, my - 5);
         ctx.fillStyle = "#00d4ff";
-        ctx.fillText("[Right Click] BLUE NOTE", mx + reticleRadius + 8, my + 11);
+        const rightBadge = this.isPlaying ? `[LIVE ${this.currentTime.toFixed(1)}s] ` : "[Right Click] ";
+        ctx.fillText(`${rightBadge}BLUE NOTE`, mx + reticleRadius + 8, my + 11);
       }
 
       ctx.restore();
