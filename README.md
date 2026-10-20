@@ -47,6 +47,11 @@ Project Alpha Plus/
 
 Project Alpha Plus features two distinct note types designed with a 3-phase timing-based model:
 
+### 0. 5-Second Pre-Track Countdown (Play & Test Mode)
+- **Ready Timer:** Before music playback begins, a 5-second countdown timer runs in both Play and Editor Test modes.
+- **Player Preparation:** Players can move their orb, test mouse positioning, and switch colors (Left/Right-click) with full visual and sound feedback before the track starts.
+- **Skip Option:** Press **Space** at any point during the countdown to immediately start music playback and gameplay.
+
 ### 1. Note Types & Placement Controls
 - **Normal Notes (Classic Rhythm Circles):**
   - **Editor Placement:** Select the **Normal Note** tool (`1` or `N` hotkey) in the editor top bar. **Left-Click** to place a Red note, or **Right-Click** to place a Blue note while paused.

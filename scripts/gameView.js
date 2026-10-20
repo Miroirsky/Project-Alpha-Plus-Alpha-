@@ -217,9 +217,14 @@ class GameView {
     }
 
     if (this.progressTime) {
-      const curStr = this.formatTime(state.currentTime);
-      const durStr = this.formatTime(state.duration);
-      this.progressTime.textContent = `${curStr} / ${durStr}`;
+      if (state.isCountingDown) {
+        const secsLeft = Math.ceil(Math.max(0, state.countdownRemaining));
+        this.progressTime.textContent = `Starting in ${secsLeft}s... / ${this.formatTime(state.duration)}`;
+      } else {
+        const curStr = this.formatTime(state.currentTime);
+        const durStr = this.formatTime(state.duration);
+        this.progressTime.textContent = `${curStr} / ${durStr}`;
+      }
     }
 
     if (this.remainingNotesBadge) {
@@ -297,6 +302,108 @@ class GameView {
     this.drawNotes(ctx, width, height, state.notes, state.currentTime);
     this.drawEffects(ctx, state.effects);
     this.drawPlayerOrb(ctx, state.playerOrb);
+
+    if (state.isCountingDown) {
+      this.drawCountdownOverlay(ctx, width, height, state);
+    }
+  }
+
+  /**
+   * Draws a sleek countdown overlay before music starts (5s timer in play & test mode).
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} width
+   * @param {number} height
+   * @param {Object} state
+   */
+  drawCountdownOverlay(ctx, width, height, state) {
+    const playArea = PlayArea.getMetrics(width, height);
+    const cx = playArea.centerX;
+    const cy = playArea.centerY;
+    const remaining = Math.max(0, state.countdownRemaining || 0);
+    const duration = state.countdownDuration || 5.0;
+    const progress = Math.max(0, Math.min(1, remaining / duration));
+    const seconds = Math.ceil(remaining);
+
+    ctx.save();
+
+    // 1. Ambient radial backdrop
+    const ambientGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 180);
+    ambientGrad.addColorStop(0, "rgba(8, 14, 28, 0.75)");
+    ambientGrad.addColorStop(0.7, "rgba(8, 14, 28, 0.45)");
+    ambientGrad.addColorStop(1, "rgba(8, 14, 28, 0)");
+    ctx.fillStyle = ambientGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 180, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Countdown Circular Progress Ring
+    const ringRadius = 72;
+    const ringWidth = 8;
+
+    // Background track ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = ringWidth;
+    ctx.stroke();
+
+    // Active progress arc
+    if (progress > 0) {
+      const startAngle = -Math.PI / 2;
+      const endAngle = startAngle + (Math.PI * 2 * progress);
+      ctx.beginPath();
+      ctx.arc(cx, cy, ringRadius, startAngle, endAngle, false);
+      ctx.strokeStyle = "#00d4ff";
+      ctx.lineWidth = ringWidth;
+      ctx.lineCap = "round";
+      ctx.shadowColor = "#00d4ff";
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+    }
+
+    // 3. Sub-second pulse calculation for the number
+    const subSec = remaining % 1;
+    const pulseScale = 1.0 + Math.pow(subSec, 2) * 0.15;
+
+    // 4. Center Number or "GO!"
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    if (seconds > 0) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(pulseScale, pulseScale);
+      ctx.font = "900 64px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.shadowColor = "#00d4ff";
+      ctx.shadowBlur = 20;
+      ctx.fillText(String(seconds), 0, 2);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.font = "900 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillStyle = "#00ffaa";
+      ctx.shadowColor = "#00ffaa";
+      ctx.shadowBlur = 24;
+      ctx.fillText("GO!", 0, 2);
+      ctx.restore();
+    }
+
+    // 5. Header Label above ring
+    ctx.font = "700 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.shadowColor = "#000000";
+    ctx.shadowBlur = 6;
+    ctx.fillText("MUSIC STARTING IN", cx, cy - ringRadius - 28);
+
+    // 6. Controls hint below ring
+    ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.shadowBlur = 0;
+    ctx.fillText("Press [Space] to skip", cx, cy + ringRadius + 30);
+
+    ctx.restore();
   }
 
   /**

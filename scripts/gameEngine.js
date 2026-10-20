@@ -82,6 +82,12 @@ class GameEngine {
     this.lastNoteProcessedTime = null;
     this.lastNoteProcessedWallTime = null;
 
+    // 5-second countdown timer before music starts (in play and test mode)
+    this.countdownDuration = 5.0;
+    this.countdownRemaining = 5.0;
+    this.isCountingDown = true;
+    this.countdownLastTickSec = 5;
+
     // Visual Effects Collection
     this.effects = [];
 
@@ -112,14 +118,47 @@ class GameEngine {
   }
 
   /**
-   * Starts the gameplay session and begins track playback.
+   * Starts the gameplay session with a 5-second countdown timer before music start.
    */
   start() {
     this.isRunning = true;
+    this.isCountingDown = true;
+    this.countdownDuration = 5.0;
+    this.countdownRemaining = this.countdownDuration;
+    this.countdownLastTickSec = Math.ceil(this.countdownRemaining);
     this.currentTime = 0;
     this.lastWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     this.lastAudioTime = 0;
     this.bindInputs();
+
+    // Start tick loop; audio will start when countdown completes
+    this.animFrameId = requestAnimationFrame(this.boundTick);
+  }
+
+  /**
+   * Starts audio playback and transitions from countdown into active gameplay.
+   */
+  startAudioAndGameplay() {
+    this.isCountingDown = false;
+    this.countdownRemaining = 0;
+    this.currentTime = 0;
+    this.lastAudioTime = 0;
+    this.lastWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+
+    if (this.soundManager && typeof this.soundManager.playClick === "function") {
+      this.soundManager.playClick();
+    }
+
+    // Expanding shockwave from center to announce track start
+    this.addEffect({
+      type: "switch-pulse",
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+      color: "#00d4ff",
+      radius: 40,
+      maxRadius: 220,
+      opacity: 0.95
+    });
 
     if (this.musicPlayer) {
       this.musicPlayer.playSong(this.song, {
@@ -135,8 +174,14 @@ class GameEngine {
         }
       });
     }
+  }
 
-    this.animFrameId = requestAnimationFrame(this.boundTick);
+  /**
+   * Allows player to skip countdown with Space key.
+   */
+  skipCountdown() {
+    if (!this.isCountingDown) return;
+    this.startAudioAndGameplay();
   }
 
   /**
@@ -168,6 +213,11 @@ class GameEngine {
     if (e.key === "Escape") {
       e.preventDefault();
       this.abandonRun();
+    } else if (e.code === "Space" || e.key === " ") {
+      if (this.isCountingDown) {
+        e.preventDefault();
+        this.skipCountdown();
+      }
     }
   }
 
@@ -300,6 +350,44 @@ class GameEngine {
       const now = typeof performance !== "undefined" ? performance.now() : Date.now();
       const dt = this.lastWallTime > 0 ? (now - this.lastWallTime) / 1000 : 0;
       this.lastWallTime = now;
+
+      // Handle 5-second countdown timer before music starts
+      if (this.isCountingDown) {
+        this.countdownRemaining -= dt;
+
+        const currentSec = Math.ceil(this.countdownRemaining);
+        if (currentSec !== this.countdownLastTickSec && currentSec > 0 && currentSec <= 5) {
+          this.countdownLastTickSec = currentSec;
+          if (this.soundManager && typeof this.soundManager.playHover === "function") {
+            this.soundManager.playHover();
+          }
+        }
+
+        if (this.countdownRemaining <= 0) {
+          this.startAudioAndGameplay();
+        } else {
+          this.updateEffects();
+          if (this.onStateChange) {
+            this.onStateChange({
+              isCountingDown: true,
+              countdownRemaining: Math.max(0, this.countdownRemaining),
+              countdownDuration: this.countdownDuration,
+              currentTime: 0,
+              duration: this.duration,
+              progress: 0,
+              remainingNotes: this.remainingNotes,
+              score: this.score,
+              combo: this.combo,
+              color: this.playerOrb.color,
+              playerOrb: this.playerOrb,
+              notes: [],
+              effects: this.effects,
+              canExitNormally: false
+            });
+          }
+          return;
+        }
+      }
 
       // Resilient clock synchronization
       if (this.musicPlayer) {
@@ -1015,6 +1103,7 @@ class GameEngine {
    */
   stop() {
     this.isRunning = false;
+    this.isCountingDown = false;
     this.unbindInputs();
 
     if (this.animFrameId) {
