@@ -326,6 +326,7 @@ class MediaStorage {
 
   /**
    * Persists all custom maps to IndexedDB for zero-quota safety.
+   * Clears old records so deleted maps never persist in IndexedDB.
    * @param {Array} maps
    */
   static async saveMaps(maps) {
@@ -335,11 +336,26 @@ class MediaStorage {
       if (!db || !db.objectStoreNames.contains("custom_maps")) return;
       const tx = db.transaction("custom_maps", "readwrite");
       const store = tx.objectStore("custom_maps");
+      store.clear();
       for (const map of maps) {
         if (map && map.id) {
           store.put(map);
         }
       }
+    } catch (e) {}
+  }
+
+  /**
+   * Deletes a custom map from IndexedDB.
+   * @param {string} id
+   */
+  static async deleteMap(id) {
+    if (!id) return;
+    try {
+      const db = await this.getDB();
+      if (!db || !db.objectStoreNames.contains("custom_maps")) return;
+      const tx = db.transaction("custom_maps", "readwrite");
+      tx.objectStore("custom_maps").delete(id);
     } catch (e) {}
   }
 

@@ -1127,11 +1127,7 @@ class CreateMenu {
             <span class="param-icon">⚙</span>
             <span>Parameters</span>
           </button>
-          ${
-            map.isCustom
-              ? `<button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete song ${map.name}" title="Delete song">&times;</button>`
-              : ""
-          }
+          <button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete song ${map.name}" title="Delete song">&times;</button>
         </div>
       `;
 
@@ -1235,7 +1231,7 @@ class CreateMenu {
       if (songDelBtn) {
         songDelBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (confirm(`Delete custom song "${map.name}" and all its difficulty tracks?`)) {
+          if (confirm(`Delete song "${map.name}" and all its difficulty tracks?`)) {
             if (this.soundManager) this.soundManager.playClick();
             this.mapStorage.deleteMap(map.id);
           }
@@ -1254,7 +1250,7 @@ class CreateMenu {
           const noteCount = (diffData.notes && diffData.notes.length) || 0;
           const nps = typeof diffData.nps === "number" ? diffData.nps : 0;
           const diffColor = diffData.color || map.color || "#00d4ff";
-          const canDelete = Boolean(map.isCustom) && diffKeys.length > 1;
+          const canDelete = diffKeys.length > 1;
 
           const diffRow = document.createElement("div");
           diffRow.className = "difficulty-tree-row";

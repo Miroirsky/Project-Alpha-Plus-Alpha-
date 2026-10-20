@@ -7,6 +7,7 @@
 
 const CUSTOM_MAPS_STORAGE_KEY = "project_alpha_custom_maps";
 const MAP_OVERRIDES_STORAGE_KEY = "project_alpha_map_overrides";
+const DELETED_TRACKS_STORAGE_KEY = "project_alpha_deleted_tracks";
 const HIGHSCORES_STORAGE_KEY = "project_alpha_highscores";
 const DEFAULT_TRACKS_CACHE_KEY = "project_alpha_default_tracks_cache";
 const DEFAULT_TRACKS_FILES_KEY = "project_alpha_default_tracks_filenames";
@@ -17,6 +18,7 @@ const DIFFICULTY_ORDERS_STORAGE_KEY = "project_alpha_difficulty_orders";
 class MapStorage {
   constructor(config = null) {
     this.config = this.resolveConfig(config);
+    this.deletedTrackIds = this.loadDeletedTrackIds();
     this.customMaps = this.loadCustomMaps();
     this.mapOverrides = this.loadMapOverrides();
     this.highscores = this.loadHighscores();
@@ -195,6 +197,75 @@ class MapStorage {
   }
 
   /**
+   * Loads persisted set of deleted track IDs/signatures from localStorage.
+   * @returns {Set<string>}
+   */
+  loadDeletedTrackIds() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(DELETED_TRACKS_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            return new Set(parsed);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Unable to load deleted track IDs from localStorage:", err);
+    }
+    return new Set();
+  }
+
+  /**
+   * Saves deleted track IDs set to localStorage.
+   */
+  saveDeletedTrackIds() {
+    try {
+      if (typeof localStorage !== "undefined" && this.deletedTrackIds) {
+        localStorage.setItem(DELETED_TRACKS_STORAGE_KEY, JSON.stringify([...this.deletedTrackIds]));
+      }
+    } catch (err) {
+      console.warn("Unable to save deleted track IDs to localStorage:", err);
+    }
+  }
+
+  /**
+   * Checks whether a track (by ID or name) has been deleted by the user.
+   * @param {string} idOrName
+   * @returns {boolean}
+   */
+  isTrackDeleted(idOrName) {
+    if (!idOrName || !this.deletedTrackIds) return false;
+    const raw = String(idOrName);
+    const clean = raw.toLowerCase().trim();
+    return this.deletedTrackIds.has(raw) || this.deletedTrackIds.has(clean);
+  }
+
+  /**
+   * Marks a track ID or name as deleted and saves to storage.
+   * @param {string} idOrName
+   */
+  addDeletedTrackId(idOrName) {
+    if (!idOrName) return;
+    if (!this.deletedTrackIds) this.deletedTrackIds = new Set();
+    this.deletedTrackIds.add(String(idOrName));
+    this.deletedTrackIds.add(String(idOrName).toLowerCase().trim());
+    this.saveDeletedTrackIds();
+  }
+
+  /**
+   * Removes a track ID or name from deleted blacklist (e.g. on new creation or manual import).
+   * @param {string} idOrName
+   */
+  removeDeletedTrackId(idOrName) {
+    if (!idOrName || !this.deletedTrackIds) return;
+    this.deletedTrackIds.delete(String(idOrName));
+    this.deletedTrackIds.delete(String(idOrName).toLowerCase().trim());
+    this.saveDeletedTrackIds();
+  }
+
+  /**
    * Loads custom maps from localStorage.
    * @returns {Array}
    */
@@ -208,7 +279,7 @@ class MapStorage {
             const uniqueMaps = [];
             const seenIds = new Set();
             for (const m of parsed) {
-              if (m && m.id && !seenIds.has(m.id)) {
+              if (m && m.id && !seenIds.has(m.id) && !this.isTrackDeleted(m.id) && (!m.name || !this.isTrackDeleted(m.name))) {
                 seenIds.add(m.id);
                 const customMap = {
                   ...m,
@@ -502,11 +573,20 @@ class MapStorage {
         if (Array.isArray(idbMaps) && idbMaps.length > 0) {
           const mapIdSet = new Set(this.customMaps.map((m) => m.id));
           for (const im of idbMaps) {
-            if (im && im.id && !mapIdSet.has(im.id)) {
-              this.normalizeSongDifficulties(im);
-              this.customMaps.push(im);
-              mapIdSet.add(im.id);
-              modified = true;
+            if (im && im.id) {
+              // NEVER restore a track that has been deleted!
+              if (this.isTrackDeleted(im.id) || (im.name && this.isTrackDeleted(im.name))) {
+                if (typeof window.MediaStorage.deleteMap === "function") {
+                  window.MediaStorage.deleteMap(im.id);
+                }
+                continue;
+              }
+              if (!mapIdSet.has(im.id)) {
+                this.normalizeSongDifficulties(im);
+                this.customMaps.push(im);
+                mapIdSet.add(im.id);
+                modified = true;
+              }
             }
           }
         }
@@ -537,7 +617,7 @@ class MapStorage {
    * to fresh, playable Blob URLs for the active session.
    */
   async initDefaultTracksAudio() {
-    if (typeof window === "undefined" || !window.MediaStorage) return;
+    if (typeof window === "undefined" || !window.MediaStorage || typeof window.MediaStorage.getAudio !== "function") return;
     const audioData = window.DEFAULT_AUDIO_DATA || {};
     let modified = false;
 
@@ -929,6 +1009,11 @@ class MapStorage {
       const trackId = songObj.id && String(songObj.id).startsWith("default_")
         ? songObj.id
         : `default_${this.hashString(songBaseSig)}`;
+
+      // Skip default track if the user has explicitly deleted it
+      if (this.isTrackDeleted(trackId) || this.isTrackDeleted(songObj.name)) {
+        return;
+      }
 
       songObj.id = trackId;
       songObj.isDefault = true;
@@ -1437,6 +1522,8 @@ class MapStorage {
     };
 
     this.customMaps.unshift(newMap);
+    this.removeDeletedTrackId(newMap.id);
+    if (newMap.name) this.removeDeletedTrackId(newMap.name);
     if (Array.isArray(this.songOrder) && this.songOrder.length > 0) {
       this.songOrder.unshift(newMap.id);
       this.saveSongOrder(this.songOrder);
@@ -1610,6 +1697,8 @@ class MapStorage {
 
       // Prepend to customMaps and update order
       this.customMaps.unshift(newCopy);
+      this.removeDeletedTrackId(copyId);
+      if (copyName) this.removeDeletedTrackId(copyName);
       if (Array.isArray(this.songOrder)) {
         this.songOrder.unshift(newCopy.id);
         this.saveSongOrder(this.songOrder);
@@ -1644,6 +1733,8 @@ class MapStorage {
       difficulties: sanitizedDifficulties
     };
     this.customMaps.unshift(newCustomMap);
+    this.removeDeletedTrackId(newCustomMap.id);
+    if (newCustomMap.name) this.removeDeletedTrackId(newCustomMap.name);
     if (Array.isArray(this.songOrder)) {
       this.songOrder.unshift(newCustomMap.id);
       this.saveSongOrder(this.songOrder);
@@ -1655,15 +1746,26 @@ class MapStorage {
   }
 
   /**
-   * Deletes a specific difficulty from a custom map.
+   * Deletes a specific difficulty from a map.
    * @param {string} songId
    * @param {string} diffName
    * @returns {boolean}
    */
   deleteDifficulty(songId, diffName) {
     if (!songId || !diffName) return false;
-    const map = this.customMaps.find((m) => m.id === songId);
-    if (!map || !map.difficulties) return false;
+    let map = this.customMaps.find((m) => m.id === songId);
+    if (!map) {
+      const def = (this.defaultTracks || []).find((m) => m.id === songId);
+      if (def && def.difficulties) {
+        const keys = Object.keys(def.difficulties);
+        if (keys.length <= 1) return false;
+        delete def.difficulties[diffName];
+        this.normalizeSongDifficulties(def);
+        this.notify();
+        return true;
+      }
+      return false;
+    }
     const keys = Object.keys(map.difficulties);
     if (keys.length <= 1) {
       console.warn("Cannot delete the only difficulty track for song:", songId);
@@ -1676,24 +1778,63 @@ class MapStorage {
     }
     this.normalizeSongDifficulties(map);
     this.saveCustomMapsToStorage();
+    this.notify();
     return true;
   }
 
   /**
-   * Deletes a custom map.
+   * Deletes a map permanently, ensuring it stays deleted across reloads and storage refreshes.
+   * Cleans up from memory, localStorage, and IndexedDB (MediaStorage).
    * @param {string} id
    */
   deleteMap(id) {
+    if (!id) return;
+    const targetMap = this.getMap(id);
+    const targetName = targetMap ? targetMap.name : "";
+
+    // Record in persistent deleted tracks so it NEVER resurfaces across reloads/IndexedDB
+    this.addDeletedTrackId(id);
+    if (targetName) {
+      this.addDeletedTrackId(targetName);
+    }
+
+    // Filter out from custom maps
     this.customMaps = this.customMaps.filter((m) => m.id !== id);
+
+    // Filter out from default tracks in memory if applicable
+    if (this.defaultTracks && Array.isArray(this.defaultTracks)) {
+      this.defaultTracks = this.defaultTracks.filter((m) => m.id !== id && (!targetName || m.name !== targetName));
+      this.saveDefaultTracksCache(this.defaultTracks);
+    }
+
     if (this.songOrder) {
       this.songOrder = this.songOrder.filter((songId) => songId !== id);
       this.saveSongOrder(this.songOrder);
     }
     this.saveCustomMapsToStorage();
+
+    // Clean up completely from IndexedDB (MediaStorage)
+    if (typeof window !== "undefined" && window.MediaStorage) {
+      if (typeof window.MediaStorage.deleteMap === "function") {
+        window.MediaStorage.deleteMap(id);
+      }
+      if (typeof window.MediaStorage.deleteAudio === "function") {
+        window.MediaStorage.deleteAudio(id);
+      }
+      if (typeof window.MediaStorage.deleteBackgroundMedia === "function") {
+        window.MediaStorage.deleteBackgroundMedia(id);
+      }
+      if (typeof window.MediaStorage.saveMaps === "function") {
+        window.MediaStorage.saveMaps(this.customMaps);
+      }
+    }
+
     if (this.selectedSongId === id) {
       const all = this.getAllMaps();
       this.setSelectedSongId(all.length > 0 ? all[0].id : null);
     }
+
+    this.notify();
   }
 
   /**
@@ -2101,6 +2242,9 @@ class MapStorage {
     if (!validatedSong || !validatedSong.name) {
       throw new Error("Invalid song data provided to importTrack.");
     }
+
+    if (validatedSong.id) this.removeDeletedTrackId(validatedSong.id);
+    if (validatedSong.name) this.removeDeletedTrackId(validatedSong.name);
 
     this.normalizeSongDifficulties(validatedSong);
 

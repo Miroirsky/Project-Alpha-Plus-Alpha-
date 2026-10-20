@@ -49,6 +49,7 @@ const APP_CONFIG = {
   storageKeys: {
     customMaps: "project_alpha_custom_maps",
     mapOverrides: "project_alpha_map_overrides",
+    deletedTracks: "project_alpha_deleted_tracks",
     highscores: "project_alpha_highscores",
     defaultTracksCache: "project_alpha_default_tracks_cache",
     defaultTracksFilenames: "project_alpha_default_tracks_filenames",
