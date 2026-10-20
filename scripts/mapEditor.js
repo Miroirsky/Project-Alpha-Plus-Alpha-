@@ -1,8 +1,9 @@
 /**
  * @file mapEditor.js
  * @description Interactive Rhythm Map Editor for Project Alpha Plus.
- * Allows timeline navigation, Spacebar play/pause, placing red notes with left-click
- * and blue notes with right-click while paused, scrubbing, and playtesting with Enter.
+ * Allows timeline navigation, Spacebar play/pause, tool-based placement of normal notes
+ * (red left-click, blue right-click) and triangle bomb hazards with dedicated selection tool,
+ * scrubbing, and playtesting with Enter.
  */
 
 class MapEditor {
@@ -30,6 +31,12 @@ class MapEditor {
     this.isSeeking = false;
     this.isDirty = false;
     this._isClosing = false;
+
+    // Placement Tool State (Selection-based placement system)
+    this.activeTool = "note"; // "note" | "bomb"
+    this.toolSelectorEl = document.getElementById("editor-tool-selector");
+    this.toolBtnNote = document.getElementById("tool-btn-note");
+    this.toolBtnBomb = document.getElementById("tool-btn-bomb");
 
     // DOM Elements
     this.view = document.getElementById("map-editor-view");
@@ -195,6 +202,7 @@ class MapEditor {
     const freshMap = (this.mapStorage && map.id && this.mapStorage.getMap(map.id)) || map;
     this.activeMap = freshMap;
     this.isDirty = false;
+    this.setTool("note");
 
     if (this.saveIndicatorEl) {
       this.saveIndicatorEl.textContent = "✓ All changes saved";
@@ -638,6 +646,21 @@ class MapEditor {
           this.saveMapState();
           this.renderTimelineMarkers();
         }
+      });
+    }
+
+    // Placement Tool Selector Buttons (Normal Note vs Bomb Hazard)
+    if (this.toolBtnNote) {
+      this.toolBtnNote.addEventListener("click", () => {
+        this.setTool("note");
+        if (this.soundManager) this.soundManager.playClick();
+      });
+    }
+
+    if (this.toolBtnBomb) {
+      this.toolBtnBomb.addEventListener("click", () => {
+        this.setTool("bomb");
+        if (this.soundManager) this.soundManager.playClick();
       });
     }
 
@@ -1470,6 +1493,20 @@ class MapEditor {
       }
     }
 
+    // Hotkeys to switch placement tools: 1 / N for Normal Note, 2 / B for Bomb
+    if (e.key === "1" || e.key.toLowerCase() === "n") {
+      e.preventDefault();
+      this.setTool("note");
+      if (this.soundManager) this.soundManager.playClick();
+      return;
+    }
+    if (e.key === "2" || e.key.toLowerCase() === "b") {
+      e.preventDefault();
+      this.setTool("bomb");
+      if (this.soundManager) this.soundManager.playClick();
+      return;
+    }
+
     if (e.code === "Space") {
       e.preventDefault();
       // Ignore key repeat to prevent rapid fluttering on held Spacebar
@@ -1500,9 +1537,11 @@ class MapEditor {
 
   /**
    * Handles note placement while paused:
-   * Left-click: places or toggles normal RED note.
-   * Right-click: places or toggles normal BLUE note.
-   * Shift + Left/Right click: places or toggles TRIANGLE BOMB note.
+   * When Normal Note tool is active:
+   *   Left-click: places or toggles normal RED note.
+   *   Right-click: places or toggles normal BLUE note.
+   * When Bomb tool is active:
+   *   Click: places or toggles TRIANGLE BOMB hazard note (yellow).
    * @param {MouseEvent} e
    */
   onMouseDown(e) {
@@ -1511,9 +1550,9 @@ class MapEditor {
 
     if (e.button !== 0 && e.button !== 2) return;
 
-    const isShift = e.shiftKey;
-    const noteType = isShift ? "triangle" : "normal";
-    const noteColor = isShift ? "yellow" : (e.button === 0 ? "red" : "blue");
+    const isBomb = this.activeTool === "bomb";
+    const noteType = isBomb ? "triangle" : "normal";
+    const noteColor = isBomb ? "yellow" : (e.button === 0 ? "red" : "blue");
 
     const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height);
     const roundedTime = parseFloat(this.currentTime.toFixed(2));
@@ -1536,7 +1575,7 @@ class MapEditor {
       }
       if (this.soundManager) this.soundManager.playClick();
     } else {
-      // Add new note (normal or triangle)
+      // Add new note (normal or triangle bomb)
       const newNote = {
         time: roundedTime,
         color: noteColor,
@@ -1562,7 +1601,7 @@ class MapEditor {
    * @param {MouseEvent} e
    */
   onMouseUp(e) {
-    // No-op (triangle notes are placed with Shift + Click, no drag needed)
+    // No-op
   }
 
   /**
@@ -1643,6 +1682,26 @@ class MapEditor {
     this.seekTo(target);
     if (this.soundManager) {
       this.soundManager.playClick();
+    }
+  }
+
+  /**
+   * Switches the active placement tool (normal note vs bomb).
+   * @param {"note"|"bomb"} tool
+   */
+  setTool(tool) {
+    if (tool !== "note" && tool !== "bomb") return;
+    this.activeTool = tool;
+
+    if (this.toolBtnNote) {
+      const isNote = tool === "note";
+      this.toolBtnNote.classList.toggle("is-active", isNote);
+      this.toolBtnNote.setAttribute("aria-pressed", isNote ? "true" : "false");
+    }
+    if (this.toolBtnBomb) {
+      const isBomb = tool === "bomb";
+      this.toolBtnBomb.classList.toggle("is-active", isBomb);
+      this.toolBtnBomb.setAttribute("aria-pressed", isBomb ? "true" : "false");
     }
   }
 
@@ -2529,31 +2588,78 @@ class MapEditor {
     if (!this.isPlaying && this.mouse.isHovering) {
       const mx = this.mouse.x;
       const my = this.mouse.y;
-      const reticleRadius = baseRadius;
+      const isBombTool = this.activeTool === "bomb";
 
       ctx.save();
-      // Glowing placement circle
-      ctx.beginPath();
-      ctx.arc(mx, my, reticleRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4, 4]);
-      ctx.stroke();
 
-      // Crosshair center dot
-      ctx.beginPath();
-      ctx.arc(mx, my, 3, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
+      if (isBombTool) {
+        // Bomb Hazard Placement Reticle: glowing yellow dashed triangle
+        const r = triangleRadius;
+        const topX = mx;
+        const topY = my - r;
+        const brX = mx + r * Math.cos(Math.PI / 6);
+        const brY = my + r * Math.sin(Math.PI / 6);
+        const blX = mx - r * Math.cos(Math.PI / 6);
+        const blY = my + r * Math.sin(Math.PI / 6);
 
-      // Text hints beside cursor
-      ctx.font = "bold 11px sans-serif";
-      ctx.fillStyle = "#ff4757";
-      ctx.fillText("[Click] RED NOTE", mx + reticleRadius + 8, my - 12);
-      ctx.fillStyle = "#00d4ff";
-      ctx.fillText("[Right Click] BLUE NOTE", mx + reticleRadius + 8, my + 3);
-      ctx.fillStyle = "#ffd32a";
-      ctx.fillText("[Shift + Click] TRIANGLE BOMB", mx + reticleRadius + 8, my + 18);
+        ctx.beginPath();
+        ctx.moveTo(topX, topY);
+        ctx.lineTo(brX, brY);
+        ctx.lineTo(blX, blY);
+        ctx.closePath();
+
+        ctx.strokeStyle = "#ffd32a";
+        ctx.lineWidth = 1.8;
+        ctx.setLineDash([4, 4]);
+        ctx.fillStyle = "rgba(255, 211, 42, 0.18)";
+        ctx.shadowColor = "#ffd32a";
+        ctx.shadowBlur = 12;
+        ctx.fill();
+        ctx.stroke();
+
+        // Crosshair / warning symbol at center
+        ctx.setLineDash([]);
+        ctx.font = `bold ${Math.max(10, Math.round(r * 0.52))}px monospace`;
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("!", mx, my + 3);
+
+        // Text hints beside cursor
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#ffd32a";
+        ctx.shadowBlur = 6;
+        ctx.fillText("[Click] PLACE BOMB", mx + r + 10, my - 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.shadowBlur = 0;
+        ctx.fillText("Hazard note (avoid)", mx + r + 10, my + 13);
+      } else {
+        // Normal Note Placement Reticle: glowing dashed circle
+        const reticleRadius = baseRadius;
+        ctx.beginPath();
+        ctx.arc(mx, my, reticleRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.75)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.stroke();
+
+        // Crosshair center dot
+        ctx.beginPath();
+        ctx.arc(mx, my, 3, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+
+        // Text hints beside cursor
+        ctx.font = "bold 11px sans-serif";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillStyle = "#ff4757";
+        ctx.fillText("[Click] RED NOTE", mx + reticleRadius + 8, my - 5);
+        ctx.fillStyle = "#00d4ff";
+        ctx.fillText("[Right Click] BLUE NOTE", mx + reticleRadius + 8, my + 11);
+      }
 
       ctx.restore();
     }

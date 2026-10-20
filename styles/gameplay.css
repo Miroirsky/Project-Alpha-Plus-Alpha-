@@ -82,6 +82,21 @@
   box-shadow: 0 0 15px rgba(255, 71, 87, 0.3);
 }
 
+.btn-game-exit.can-finish {
+  background: rgba(46, 213, 115, 0.15);
+  border-color: rgba(46, 213, 115, 0.6);
+  color: #2ed573;
+  box-shadow: 0 0 16px rgba(46, 213, 115, 0.35);
+}
+
+.btn-game-exit.can-finish:hover {
+  background: rgba(46, 213, 115, 0.28);
+  border-color: #2ed573;
+  color: #ffffff;
+  box-shadow: 0 0 24px rgba(46, 213, 115, 0.55);
+  transform: translateY(-1px);
+}
+
 /* Track Title & Artist */
 .game-track-info {
   display: flex;

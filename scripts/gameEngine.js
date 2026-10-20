@@ -78,6 +78,10 @@ class GameEngine {
     this.lastWallTime = 0;
     this.lastAudioTime = 0;
 
+    // Track Normal Completion State (allows normal exit 5s after last note processed)
+    this.lastNoteProcessedTime = null;
+    this.lastNoteProcessedWallTime = null;
+
     // Visual Effects Collection
     this.effects = [];
 
@@ -338,7 +342,8 @@ class GameEngine {
           color: this.playerOrb.color,
           playerOrb: this.playerOrb,
           notes: this.notes,
-          effects: this.effects
+          effects: this.effects,
+          canExitNormally: this.canExitNormally()
         });
       }
     } catch (err) {
@@ -540,6 +545,57 @@ class GameEngine {
     });
 
     this.remainingNotes = this.notes.filter((n) => !n.hit && !n.missed && n.type !== "triangle" && n.type !== "bomb").length;
+
+    // Check if all notes in track have finished processing (hit or missed)
+    if (this.lastNoteProcessedTime === null) {
+      if (this.totalNotes === 0) {
+        this.lastNoteProcessedTime = 0;
+        this.lastNoteProcessedWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+      } else {
+        const allProcessed = this.notes.every((n) => n.hit || n.missed);
+        if (allProcessed) {
+          this.lastNoteProcessedTime = this.currentTime;
+          this.lastNoteProcessedWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
+        }
+      }
+    }
+  }
+
+  /**
+   * Determines if the player is allowed to exit the track normally.
+   * A run can be completed normally once 5 seconds have passed since the last note was processed,
+   * even if the song has not reached its end duration.
+   * @returns {boolean}
+   */
+  canExitNormally() {
+    if (!this.isRunning) return false;
+
+    // Empty track with no notes: allow normal exit after 5s of playback
+    if (this.totalNotes === 0) {
+      return this.currentTime >= 5.0;
+    }
+
+    const allProcessed = this.notes.every((n) => n.hit || n.missed);
+    if (!allProcessed) {
+      return false;
+    }
+
+    if (this.lastNoteProcessedTime !== null) {
+      if ((this.currentTime - this.lastNoteProcessedTime) >= 5.0) {
+        return true;
+      }
+    }
+
+    if (this.lastNoteProcessedWallTime !== null) {
+      const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+      if ((now - this.lastNoteProcessedWallTime) / 1000 >= 5.0) {
+        return true;
+      }
+    }
+
+    // Fallback: check maximum note time + 1.0s active window + 5.0s buffer
+    const maxNoteTime = this.notes.reduce((max, n) => Math.max(max, n.time || 0), 0);
+    return this.currentTime >= (maxNoteTime + 1.0 + 5.0);
   }
 
   /**
@@ -904,11 +960,21 @@ class GameEngine {
   }
 
   /**
-   * Called when player leaves a song early.
-   * Halts session and presents End Screen flagged as abandoned.
+   * Called when player leaves a song during gameplay (Exit button or Escape).
+   * If 5 seconds have passed since the last note was processed, treats the run as
+   * completed normally (calculates score, saves to high scores, no early-exit restrictions).
+   * Otherwise, halts session and presents End Screen flagged as abandoned.
    */
   abandonRun() {
-    this.handleSongCompletion(false);
+    const isCompleted = this.canExitNormally();
+    this.handleSongCompletion(isCompleted);
+  }
+
+  /**
+   * Alias for exiting the track session.
+   */
+  requestExit() {
+    this.abandonRun();
   }
 
   /**

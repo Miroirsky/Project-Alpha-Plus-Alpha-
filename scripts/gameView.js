@@ -121,6 +121,12 @@ class GameView {
     if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} &bull; Mapped by ${song.mapper || "Mapper"}`;
     this.hideResults();
 
+    if (this.exitBtn) {
+      this.exitBtn.classList.remove("can-finish");
+      this.exitBtn.innerHTML = "&larr; Exit Track";
+      this.exitBtn.title = "Exit track early (Run abandoned)";
+    }
+
     this.cleanupBackgroundMedia();
     if (song && song.background) {
       this.initBackgroundMedia(song.background);
@@ -234,6 +240,22 @@ class GameView {
         this.colorDot.className = "color-dot blue";
         this.colorText.textContent = "BLUE [Right Click]";
         this.colorText.style.color = "#00d4ff";
+      }
+    }
+
+    if (this.exitBtn) {
+      if (state.canExitNormally) {
+        if (!this.exitBtn.classList.contains("can-finish")) {
+          this.exitBtn.classList.add("can-finish");
+          this.exitBtn.innerHTML = "&check; Finish Track";
+          this.exitBtn.title = "All notes completed. Click or press Escape to complete track.";
+        }
+      } else {
+        if (this.exitBtn.classList.contains("can-finish")) {
+          this.exitBtn.classList.remove("can-finish");
+          this.exitBtn.innerHTML = "&larr; Exit Track";
+          this.exitBtn.title = "Exit track early (Run abandoned)";
+        }
       }
     }
   }

@@ -49,14 +49,14 @@ Project Alpha Plus features two distinct note types designed with a 3-phase timi
 
 ### 1. Note Types & Placement Controls
 - **Normal Notes (Classic Rhythm Circles):**
-  - **Editor Placement:** Plain **Left-Click** (Red) or **Right-Click** (Blue) while paused without Shift.
+  - **Editor Placement:** Select the **Normal Note** tool (`1` or `N` hotkey) in the editor top bar. **Left-Click** to place a Red note, or **Right-Click** to place a Blue note while paused.
   - **Visuals:** Clean glowing orb with color identifier (`RED` / `BLUE`) and timestamp tag; no directional arrows.
   - **Hit Mechanics:** Hit from **any angle** or position. Normal notes have zero direction restrictions and **never incur wrong-direction penalties**.
   - **Scoring:** 200 points (Perfect) if hovered during the 1.0s grow phase; 150–50 points based on timing during the 1.0s full window.
-- **Directional Arrow Notes (Vector Swipes):**
-  - **Editor Placement:** Hold **Shift + Left-Click** (Red) or **Shift + Right-Click** (Blue) to begin placing. While holding, drag the mouse to orient the arrow toward the cursor in real time (with angle badge and guideline). Releasing the mouse button finalizes and places the directional note.
-  - **Visuals:** Dynamic directional arrow oriented along the vector, accompanied by an exterior perimeter entry chevron indicating entry gate.
-  - **Hit Mechanics & Angular Tolerance (±90°):** Evaluated using full 360° angle calculations with proper wraparound. A hit is valid if the mouse's approach vector is within **±90°** (up to 90° clockwise or counterclockwise) of the arrow's required direction. Any approach outside this range is rejected as a wrong-direction hit.
+- **Triangle Bomb Notes (Hazard Obstacles):**
+  - **Editor Placement:** Select the **Bomb** tool (`2` or `B` hotkey) in the editor top bar. Click anywhere on the canvas while paused to place a high-voltage yellow hazard bomb note. No Shift key required.
+  - **Visuals:** High-voltage hazard amber/yellow triangle with warning indicator (`!`), timestamp tag, and circular countdown active ring.
+  - **Hit Mechanics:** Hazard obstacle to be actively avoided. If either orb touches or clicks a bomb during its active window, it triggers an explosion and a **-200 points penalty**. Successfully avoiding it lets the note expire without penalty.
 
 ### 2. Note Lifecycle & Timing Phases
 1. **Grow-In Phase (1.0 Second):**
@@ -86,10 +86,10 @@ Project Alpha Plus features two distinct note types designed with a 3-phase timi
 The results screen displays performance analytics both on normal completion and when leaving a song early:
 
 1. **Completion & Early Abandonment Status:**
-   - **Full Completion:** Displays `Track Completed`, `FULL COMBO!`, or `ALL PERFECT!` status banners.
-   - **Abandoned Early:** Displays `RUN ABANDONED` banner with amber illumination when clicking `← Exit Track` during gameplay.
+   - **Full Completion:** Displays `Track Completed`, `FULL COMBO!`, or `ALL PERFECT!` status banners. A run is treated as completed normally either when the song finishes, or when the player exits after **5 seconds have passed since the last note was processed**.
+   - **Abandoned Early:** Displays `RUN ABANDONED` banner with amber illumination only when exiting while active notes remain or before 5 seconds have elapsed since the final note.
 2. **High Score Safeguard (Strict Rule):**
-   - **Completed runs** save to `localStorage` and can set a **New Best Score**.
+   - **Completed runs** (including exit after 5s post-last-note) save to `localStorage` and can set a **New Best Score**.
    - **Abandoned runs NEVER overwrite existing records** and **never count as a new best score**, regardless of score attained.
 3. **Performance Metrics:**
    - **Total Score & Best Score:** Current run score (with wrong-direction penalties accounted for) and preserved personal best.
