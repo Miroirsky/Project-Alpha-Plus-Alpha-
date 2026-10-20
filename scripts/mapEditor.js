@@ -640,18 +640,59 @@ class MapEditor {
    * Also loads audio waveform peaks for the timeline visualizer.
    * @param {string} file
    */
-  initAudio(file) {
+  async initAudio(file) {
     if (this.audio) {
       try {
         this.audio.pause();
-        this.audio.src = "";
+        this.audio.removeAttribute("src");
+        this.audio.load();
       } catch (e) {
         // Ignore pause cleanup error
       }
       this.audio = null;
     }
 
-    const safeFile = file || "Assets/Songs/IMG_2449.mp3";
+    let safeFile = file;
+    // Resolve fresh live Blob URL or bundled default audio
+    if (typeof window !== "undefined" && this.activeMap) {
+      if (window.MediaStorage && this.activeMap.id) {
+        try {
+          const blobUrl = await window.MediaStorage.getAudioUrl(this.activeMap.id);
+          if (blobUrl) {
+            safeFile = blobUrl;
+          }
+        } catch (e) {}
+      }
+      if ((!safeFile || safeFile.startsWith("Assets/")) && window.DEFAULT_AUDIO_DATA) {
+        const key = this.activeMap.id || this.activeMap.name;
+        let bundled = window.DEFAULT_AUDIO_DATA[key] ||
+                      window.DEFAULT_AUDIO_DATA[String(key).replace("default_", "")] ||
+                      window.DEFAULT_AUDIO_DATA[String(key).replace("default_", "").replace(/_/g, " ")];
+        if (!bundled) {
+          const target = String(key || "").toLowerCase().replace("default_", "").replace(/_/g, " ").trim();
+          for (const [k, v] of Object.entries(window.DEFAULT_AUDIO_DATA)) {
+            if (k.toLowerCase().replace("default_", "").replace(/_/g, " ").trim() === target) {
+              bundled = v;
+              break;
+            }
+          }
+        }
+        if (bundled) {
+          if (window.MediaStorage && typeof window.MediaStorage.dataUrlToBlob === "function") {
+            const blob = window.MediaStorage.dataUrlToBlob(bundled);
+            if (blob) {
+              safeFile = URL.createObjectURL(blob);
+              window.MediaStorage.saveAudio(this.activeMap.id, blob).catch(() => {});
+            }
+          } else {
+            safeFile = bundled;
+          }
+        }
+      }
+    }
+    if (!safeFile) {
+      safeFile = file || "Assets/Songs/IMG_2449.mp3";
+    }
 
     // Trigger waveform loading/decoding (cached, bundled, or dynamic Web Audio API)
     this.loadAudioWaveform(safeFile);
@@ -669,15 +710,10 @@ class MapEditor {
         console.warn(`Audio loading issue for "${safeFile}":`, err);
         if (typeof window !== "undefined" && window.MediaStorage && this.activeMap && this.activeMap.id) {
           try {
-            const stored = await window.MediaStorage.getAudio(this.activeMap.id);
-            if (stored) {
-              const freshUrl = (typeof Blob !== "undefined" && stored instanceof Blob)
-                ? URL.createObjectURL(stored)
-                : stored;
-              if (freshUrl && this.audio === audio) {
-                audio.src = freshUrl;
-                this.loadAudioWaveform(freshUrl);
-              }
+            const freshUrl = await window.MediaStorage.getAudioUrl(this.activeMap.id);
+            if (freshUrl && freshUrl !== safeFile && this.audio === audio) {
+              audio.src = freshUrl;
+              this.loadAudioWaveform(freshUrl);
             }
           } catch (e) {}
         }
@@ -851,7 +887,8 @@ class MapEditor {
     if (this.bgMedia && this.bgMediaType === "video") {
       try {
         this.bgMedia.pause();
-        this.bgMedia.src = "";
+        this.bgMedia.removeAttribute("src");
+        this.bgMedia.load();
       } catch (e) {}
     }
     this.bgMedia = null;
@@ -3565,15 +3602,19 @@ class MapEditor {
       }
 
       if (this.audio) {
-        this.audio.pause();
-        this.audio.src = "";
+        try {
+          this.audio.pause();
+          this.audio.removeAttribute("src");
+          this.audio.load();
+        } catch (e) {}
         this.audio = null;
       }
 
       if (this.bgMedia && this.bgMediaType === "video") {
         try {
           this.bgMedia.pause();
-          this.bgMedia.src = "";
+          this.bgMedia.removeAttribute("src");
+          this.bgMedia.load();
         } catch (e) {}
       }
       this.bgMedia = null;

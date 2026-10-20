@@ -45,14 +45,16 @@ class MapStorage {
       this.autoDetectDefaultTracks();
     }
 
-    // Ensure default tracks in memory have clean audio paths
+    // Ensure default tracks in memory have clean audio paths and apply saved overrides
     if (this.defaultTracks && Array.isArray(this.defaultTracks)) {
       this.healDefaultTracksAudio(this.defaultTracks);
+      this.applyMapOverrides();
     }
 
     // Asynchronously restore custom track audio from IndexedDB (MediaStorage) across reloads
     if (typeof window !== "undefined") {
       this.restoreCustomAudio();
+      this.initDefaultTracksAudio();
     }
   }
 
@@ -477,7 +479,7 @@ class MapStorage {
         t.id = meta.id;
         t.isDefault = true;
         t.isCustom = false;
-        if (!t.file || t.file.startsWith("blob:") || t.file.startsWith("data:") || t.file.includes("miroirsky.github.io")) {
+        if (!t.file || t.file.includes("miroirsky.github.io")) {
           t.file = meta.file;
         }
       }
@@ -491,6 +493,24 @@ class MapStorage {
   async restoreCustomAudio() {
     if (typeof window === "undefined" || !window.MediaStorage) return;
     let modified = false;
+
+    // Check if IndexedDB has custom maps (safety fallback if localStorage quota was hit)
+    try {
+      if (typeof window.MediaStorage.getMaps === "function") {
+        const idbMaps = await window.MediaStorage.getMaps();
+        if (Array.isArray(idbMaps) && idbMaps.length > 0) {
+          const mapIdSet = new Set(this.customMaps.map((m) => m.id));
+          for (const im of idbMaps) {
+            if (im && im.id && !mapIdSet.has(im.id)) {
+              this.normalizeSongDifficulties(im);
+              this.customMaps.push(im);
+              mapIdSet.add(im.id);
+              modified = true;
+            }
+          }
+        }
+      }
+    } catch (err) {}
 
     for (const map of this.customMaps) {
       if (!map.file || map.file.startsWith("blob:") || map.hasStoredAudio) {
@@ -511,62 +531,65 @@ class MapStorage {
   }
 
   /**
+   * Initializes audio for default tracks in the exact same manner as imported songs.
+   * Ensures the audio data is saved into IndexedDB (MediaStorage) and resolved
+   * to fresh, playable Blob URLs for the active session.
+   */
+  async initDefaultTracksAudio() {
+    if (typeof window === "undefined" || !window.MediaStorage) return;
+    const audioData = window.DEFAULT_AUDIO_DATA || {};
+    let modified = false;
+
+    for (const song of (this.defaultTracks || [])) {
+      if (!song || !song.id) continue;
+
+      let audioSource = audioData[song.id] || audioData[song.name] || (typeof song.file === "string" && song.file.startsWith("data:audio") ? song.file : null);
+
+      let existingAudio = await window.MediaStorage.getAudio(song.id);
+      if (!existingAudio && audioSource) {
+        await window.MediaStorage.saveAudio(song.id, audioSource);
+        existingAudio = audioSource;
+      }
+
+      if (existingAudio) {
+        const freshUrl = await window.MediaStorage.getAudioUrl(song.id);
+        if (freshUrl && (!song.file || song.file.startsWith("blob:") || song.file.startsWith("data:") || song.file.startsWith("Assets/"))) {
+          song.file = freshUrl;
+          modified = true;
+        }
+      }
+    }
+
+    if (modified) {
+      this.notify();
+    }
+  }
+
+  /**
    * Loads cached default tracks from localStorage.
+   * Cleans any legacy bulky cache to preserve localStorage quota for custom maps.
    * @returns {Array}
    */
   loadDefaultTracksCache() {
     try {
       if (typeof localStorage !== "undefined") {
-        const cached = localStorage.getItem(DEFAULT_TRACKS_CACHE_KEY);
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            this.healDefaultTracksAudio(parsed);
-            return parsed;
-          }
-        }
+        localStorage.removeItem(DEFAULT_TRACKS_CACHE_KEY);
       }
     } catch (e) {}
     return [];
   }
 
   /**
-   * Persists cached default tracks to localStorage, safely guarding against quota limits.
+   * Guards localStorage quota by avoiding multi-megabyte default track caches,
+   * since DEFAULT_TRACKS_FALLBACK is already bundled directly in memory.
    * @param {Array} tracks
    */
   saveDefaultTracksCache(tracks) {
     try {
-      if (typeof localStorage !== "undefined" && Array.isArray(tracks)) {
-        this.healDefaultTracksAudio(tracks);
-        // Strip out massive base64 images and audio from the localStorage cache so we never hit the 5MB browser quota
-        const safeTracks = tracks.map((t) => {
-          const copy = { ...t };
-          if (copy.file && typeof copy.file === "string" && (copy.file.startsWith("blob:") || (copy.file.startsWith("data:") && copy.file.length > 32768))) {
-            const defaultAudioMap = {
-              "chance": "Assets/Songs/IMG_2449.mp3",
-              "default_chance": "Assets/Songs/IMG_2449.mp3",
-              "beating like hearth": "Assets/Songs/Sanstitre10juin20251715.mp3",
-              "default_beating_like_hearth": "Assets/Songs/Sanstitre10juin20251715.mp3",
-              "moodmode": "Assets/Songs/Sanstitre9juin20251019.mp3",
-              "default_moodmode": "Assets/Songs/Sanstitre9juin20251019.mp3"
-            };
-            const idKey = (copy.id || "").toLowerCase();
-            const nameKey = (copy.name || "").toLowerCase().trim();
-            copy.file = defaultAudioMap[idKey] || defaultAudioMap[nameKey] || "Assets/Songs/IMG_2449.mp3";
-          }
-          if (copy.cover && typeof copy.cover === "string" && copy.cover.startsWith("data:") && copy.cover.length > 32768) {
-            copy.cover = "Assets/Tracks Placeholders/Default-0.png";
-          }
-          if (copy.background && copy.background.url && typeof copy.background.url === "string" && copy.background.url.length > 32768) {
-            copy.background = { ...copy.background, url: "" };
-          }
-          return copy;
-        });
-        localStorage.setItem(DEFAULT_TRACKS_CACHE_KEY, JSON.stringify(safeTracks));
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(DEFAULT_TRACKS_CACHE_KEY);
       }
-    } catch (e) {
-      console.warn("[MapStorage] Could not persist default tracks cache to localStorage:", e);
-    }
+    } catch (e) {}
   }
 
   /**
@@ -612,18 +635,29 @@ class MapStorage {
               copy.file = ""; // Cleaned for localStorage quota; restored from IndexedDB on startup
             }
           }
-          if (copy.cover && typeof copy.cover === "string" && copy.cover.length > 65536) {
+          if (copy.cover && typeof copy.cover === "string" && copy.cover.length > 32768) {
             copy.cover = "Assets/Tracks Placeholders/Default-0.png";
           }
-          if (copy.background && copy.background.url && typeof copy.background.url === "string" && copy.background.url.length > 65536) {
+          if (copy.background && copy.background.url && typeof copy.background.url === "string" && copy.background.url.length > 32768) {
             copy.background = { ...copy.background, url: "" };
           }
           return copy;
         });
-        localStorage.setItem(CUSTOM_MAPS_STORAGE_KEY, JSON.stringify(safeCustomMaps));
+        try {
+          localStorage.setItem(CUSTOM_MAPS_STORAGE_KEY, JSON.stringify(safeCustomMaps));
+        } catch (quotaErr) {
+          console.warn("[MapStorage] Quota exceeded on custom maps, clearing dead caches and retrying:", quotaErr);
+          localStorage.removeItem(DEFAULT_TRACKS_CACHE_KEY);
+          localStorage.setItem(CUSTOM_MAPS_STORAGE_KEY, JSON.stringify(safeCustomMaps));
+        }
       }
     } catch (err) {
       console.warn("Unable to save custom maps to localStorage:", err);
+    }
+
+    // Also persist directly to IndexedDB for unlimited capacity!
+    if (typeof window !== "undefined" && window.MediaStorage && typeof window.MediaStorage.saveMaps === "function") {
+      window.MediaStorage.saveMaps(this.customMaps);
     }
     this.notify();
   }
@@ -633,11 +667,54 @@ class MapStorage {
    */
   saveOverridesToStorage() {
     try {
-      localStorage.setItem(MAP_OVERRIDES_STORAGE_KEY, JSON.stringify(this.mapOverrides));
+      if (typeof localStorage !== "undefined") {
+        const safeOverrides = {};
+        for (const [id, track] of Object.entries(this.mapOverrides || {})) {
+          if (!track) continue;
+          const copy = { ...track };
+          if (copy.file && typeof copy.file === "string" && (copy.file.startsWith("blob:") || (copy.file.startsWith("data:") && copy.file.length > 32768))) {
+            delete copy.file;
+          }
+          if (copy.cover && typeof copy.cover === "string" && copy.cover.length > 32768) {
+            copy.cover = "Assets/Tracks Placeholders/Default-0.png";
+          }
+          if (copy.background && copy.background.url && typeof copy.background.url === "string" && copy.background.url.length > 32768) {
+            copy.background = { ...copy.background, url: "" };
+          }
+          safeOverrides[id] = copy;
+        }
+        localStorage.setItem(MAP_OVERRIDES_STORAGE_KEY, JSON.stringify(safeOverrides));
+      }
     } catch (err) {
       console.warn("Unable to save map overrides to localStorage:", err);
     }
     this.notify();
+  }
+
+  /**
+   * Applies persisted default track overrides (e.g. edited notes, difficulties, parameters).
+   */
+  applyMapOverrides() {
+    if (!this.mapOverrides || typeof this.mapOverrides !== "object") return;
+    for (const [id, override] of Object.entries(this.mapOverrides)) {
+      if (!override) continue;
+      const index = (this.defaultTracks || []).findIndex((m) => m.id === id);
+      if (index !== -1) {
+        const origFile = this.defaultTracks[index].file;
+        this.defaultTracks[index] = {
+          ...this.defaultTracks[index],
+          ...override,
+          id: id
+        };
+        // Preserve original audio file if override did not specify one
+        if (!this.defaultTracks[index].file) {
+          this.defaultTracks[index].file = origFile;
+        }
+        this.normalizeSongDifficulties(this.defaultTracks[index]);
+      }
+    }
+    // Re-heal default tracks audio after applying overrides
+    this.healDefaultTracksAudio(this.defaultTracks);
   }
 
   /**
@@ -884,37 +961,144 @@ class MapStorage {
     try {
       const fs = require("fs");
       const path = require("path");
-      const trackList = this.getDefaultTracksList();
+      const defaultTracksDir = path.resolve(this.getDefaultTracksPath().replace(/[/\\]+/g, path.sep));
       const rawItems = [];
+      const seenFiles = new Set();
+      const validTrackFileNames = [];
 
+      // 1. Automatically scan the Default Tracks directory for all .json track files
+      if (fs.existsSync(defaultTracksDir) && fs.statSync(defaultTracksDir).isDirectory()) {
+        const files = fs.readdirSync(defaultTracksDir);
+        for (const file of files) {
+          if (!file.toLowerCase().endsWith(".json") || file.toLowerCase() === "manifest.json") continue;
+          const fullPath = path.join(defaultTracksDir, file);
+          try {
+            const content = fs.readFileSync(fullPath, "utf8");
+            const parsed = JSON.parse(content);
+            rawItems.push(parsed);
+            seenFiles.add(file.toLowerCase());
+            validTrackFileNames.push(file);
+            this.removeLoadError(file);
+          } catch (e) {
+            console.error(`[MapStorage] Failed reading track file "${fullPath}":`, e.message);
+            this.recordLoadError(file, fullPath, `Parse error: ${e.message}`);
+          }
+        }
+      }
+
+      // 2. Also check any additional configured tracks from APP_CONFIG.defaultTracks
+      const trackList = this.getDefaultTracksList();
       trackList.forEach((trackPath) => {
         if (!trackPath || typeof trackPath !== "string") return;
         const cleanPath = trackPath.replace(/[/\\]+/g, path.sep);
         const resolvedPath = path.isAbsolute(cleanPath) ? cleanPath : path.resolve(cleanPath);
+        const fileName = path.basename(resolvedPath);
+        if (seenFiles.has(fileName.toLowerCase())) return;
 
         if (fs.existsSync(resolvedPath)) {
           try {
             const content = fs.readFileSync(resolvedPath, "utf8");
             const parsed = JSON.parse(content);
             rawItems.push(parsed);
+            seenFiles.add(fileName.toLowerCase());
+            validTrackFileNames.push(fileName);
             this.removeLoadError(trackPath);
           } catch (e) {
             console.error(`[MapStorage] Failed reading track file "${resolvedPath}":`, e.message);
             this.recordLoadError(trackPath, resolvedPath, `Parse error: ${e.message}`);
           }
         } else {
-          console.warn(`[MapStorage] Track file not found: "${resolvedPath}"`);
           this.recordLoadError(trackPath, resolvedPath, `File not found: "${trackPath}"`);
         }
       });
 
       if (rawItems.length > 0) {
         this.defaultTracks = this.processDefaultTrackItems(rawItems);
-        this.saveDefaultTracksCache(this.defaultTracks);
+        this.applyMapOverrides();
       }
+
+      // 3. Keep manifest.json up-to-date in Default Tracks folder
+      try {
+        if (fs.existsSync(defaultTracksDir) && validTrackFileNames.length > 0) {
+          const manifestPath = path.join(defaultTracksDir, "manifest.json");
+          const manifestData = {
+            updatedAt: new Date().toISOString(),
+            tracks: validTrackFileNames
+          };
+          fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2), "utf8");
+        }
+      } catch (manifestErr) {}
     } catch (e) {
       console.error("[MapStorage] syncDetectLocalTracks error:", e);
     }
+  }
+
+  /**
+   * Loads tracks dynamically from a FileSystemDirectoryHandle (File System Access API).
+   * Automatically discovers and loads all .json track files in the directory.
+   * @param {FileSystemDirectoryHandle} dirHandle
+   * @returns {Promise<Array>} Loaded tracks
+   */
+  async loadTracksFromDirectoryHandle(dirHandle) {
+    if (!dirHandle || typeof dirHandle.entries !== "function") return [];
+    const rawItems = [];
+    const validFileNames = [];
+    try {
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === "file" && name.toLowerCase().endsWith(".json") && name.toLowerCase() !== "manifest.json") {
+          try {
+            const file = await handle.getFile();
+            const text = await file.text();
+            const parsed = JSON.parse(text);
+            rawItems.push(parsed);
+            validFileNames.push(name);
+            this.removeLoadError(name);
+          } catch (readErr) {
+            console.error(`[MapStorage] Failed to read ${name} from folder handle:`, readErr);
+            this.recordLoadError(name, name, readErr.message);
+          }
+        }
+      }
+      if (rawItems.length > 0) {
+        const processed = this.processDefaultTrackItems(rawItems);
+        this.defaultTracks = processed;
+        this.saveDefaultTracksCache(processed);
+        this.applyMapOverrides();
+        await this.initDefaultTracksAudio();
+        this.notify();
+        return processed;
+      }
+    } catch (e) {
+      console.warn("[MapStorage] Error reading from directory handle:", e);
+    }
+    return [];
+  }
+
+  /**
+   * Prompts user to select the "Default Tracks" directory using the File System Access API.
+   * Persists the directory handle in IndexedDB so all present and future songs in that folder
+   * are automatically loaded on every application startup without manual lists!
+   * @returns {Promise<Array>} Loaded tracks
+   */
+  async linkDefaultTracksDirectory() {
+    if (typeof window === "undefined" || typeof window.showDirectoryPicker !== "function") {
+      throw new Error("File System Access API is not supported in this browser. Please use the folder selector or run a local server.");
+    }
+    try {
+      const dirHandle = await window.showDirectoryPicker({ mode: "read" });
+      if (dirHandle) {
+        if (window.MediaStorage && typeof window.MediaStorage.saveFolderHandle === "function") {
+          await window.MediaStorage.saveFolderHandle("default_tracks", dirHandle);
+        }
+        return await this.loadTracksFromDirectoryHandle(dirHandle);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("[MapStorage] Failed to link directory:", err);
+        throw err;
+      }
+    }
+    return this.defaultTracks;
   }
 
   /**
@@ -923,7 +1107,7 @@ class MapStorage {
    * @returns {Promise<Array>} Loaded default tracks
    */
   async autoDetectDefaultTracks() {
-    // In Node.js / testing, run sync detection
+    // 1. In Node.js / testing, run sync detection
     if (typeof process !== "undefined" && typeof require === "function") {
       this.syncDetectLocalTracks();
       return this.defaultTracks;
@@ -933,7 +1117,25 @@ class MapStorage {
       return this.defaultTracks;
     }
 
-    // When running under file:/// protocol, direct fetch() of local filesystem files
+    // 2. Check if user previously linked the Default Tracks directory via File System Access API
+    if (window.MediaStorage && typeof window.MediaStorage.getFolderHandle === "function") {
+      try {
+        const savedHandle = await window.MediaStorage.getFolderHandle("default_tracks");
+        if (savedHandle && typeof savedHandle.queryPermission === "function") {
+          const perm = await savedHandle.queryPermission({ mode: "read" });
+          if (perm === "granted") {
+            const tracks = await this.loadTracksFromDirectoryHandle(savedHandle);
+            if (tracks && tracks.length > 0) {
+              return tracks;
+            }
+          }
+        }
+      } catch (handleErr) {
+        console.warn("[MapStorage] Could not query stored directory handle:", handleErr);
+      }
+    }
+
+    // 3. When running under file:/// protocol, direct fetch() of local filesystem files
     // is blocked by browser CORS sandbox policies (origin: null).
     // Ensure bundled fallback default tracks are active and skip failing fetch calls.
     if (window.location && window.location.protocol === "file:") {
@@ -941,6 +1143,8 @@ class MapStorage {
         this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
         this.saveDefaultTracksCache(this.defaultTracks);
       }
+      this.applyMapOverrides();
+      await this.initDefaultTracksAudio();
       this.notify();
       return this.defaultTracks;
     }
@@ -949,15 +1153,56 @@ class MapStorage {
       return this.defaultTracks;
     }
 
-    const trackList = this.getDefaultTracksList();
     const rawItems = [];
     const validTrackPaths = [];
+    const seenPaths = new Set();
+    const basePath = this.getDefaultTracksPath().replace(/\\/g, "/");
 
+    // 4. Try fetching manifest.json from Default Tracks folder
+    const manifestCandidates = [
+      `${basePath}/manifest.json`,
+      `./${basePath}/manifest.json`,
+      "Default Tracks/manifest.json",
+      "./Default Tracks/manifest.json",
+      "manifest.json"
+    ];
+
+    for (const mUrl of manifestCandidates) {
+      try {
+        const mRes = await fetch(mUrl);
+        if (mRes.ok) {
+          const mData = await mRes.json();
+          if (mData && Array.isArray(mData.tracks)) {
+            for (const tName of mData.tracks) {
+              if (tName && tName.toLowerCase().endsWith(".json") && tName.toLowerCase() !== "manifest.json") {
+                const fullTPath = `${basePath}/${tName}`;
+                if (!seenPaths.has(fullTPath.toLowerCase())) {
+                  seenPaths.add(fullTPath.toLowerCase());
+                  try {
+                    const tRes = await fetch(encodeURI(fullTPath));
+                    if (tRes.ok) {
+                      const tJson = await tRes.json();
+                      rawItems.push(tJson);
+                      validTrackPaths.push(fullTPath);
+                      this.removeLoadError(tName);
+                    }
+                  } catch (e) {}
+                }
+              }
+            }
+            if (rawItems.length > 0) break;
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 5. Also try configured default tracks list
+    const trackList = this.getDefaultTracksList();
     const fetchPromises = trackList.map(async (trackPath) => {
       if (!trackPath || typeof trackPath !== "string") return null;
-
-      // Normalize slashes to forward slashes for HTTP requests
       const normalized = trackPath.replace(/\\/g, "/");
+      if (seenPaths.has(normalized.toLowerCase())) return null;
+
       const parts = normalized.split("/");
       const fileName = parts.pop();
       const encFile = encodeURIComponent(fileName);
@@ -984,7 +1229,6 @@ class MapStorage {
               return { trackPath, json };
             } catch (parseErr) {
               lastErr = `Invalid JSON syntax: ${parseErr.message}`;
-              console.error(`[MapStorage] Failed to parse JSON from ${candidate}:`, parseErr);
               this.recordLoadError(trackPath, candidate, lastErr);
               return null;
             }
@@ -998,7 +1242,6 @@ class MapStorage {
 
       const errorDetail = lastErr || (lastStatus ? `HTTP ${lastStatus}` : "File not found or unreachable");
       this.recordLoadError(trackPath, normalized, errorDetail);
-      console.warn(`[MapStorage] Could not load track file "${trackPath}": ${errorDetail}`);
       return null;
     });
 
@@ -1007,6 +1250,7 @@ class MapStorage {
       if (res && res.json) {
         rawItems.push(res.json);
         validTrackPaths.push(res.trackPath);
+        seenPaths.add(res.trackPath.toLowerCase());
       }
     });
 
@@ -1018,6 +1262,8 @@ class MapStorage {
       const processed = this.processDefaultTrackItems(rawItems);
       this.defaultTracks = processed;
       this.saveDefaultTracksCache(processed);
+      this.applyMapOverrides();
+      await this.initDefaultTracksAudio();
       this.notify();
       return processed;
     }
@@ -1025,6 +1271,8 @@ class MapStorage {
     if ((!this.defaultTracks || this.defaultTracks.length === 0) && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
       this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
       this.saveDefaultTracksCache(this.defaultTracks);
+      this.applyMapOverrides();
+      await this.initDefaultTracksAudio();
     }
 
     this.notify();
@@ -1198,21 +1446,19 @@ class MapStorage {
       updatedMap.difficulties = {};
     }
 
-    // If difficulties dictionary exists for active difficulty, preserve its notes;
-    // otherwise populate from updatedMap.notes if present
-    if (updatedMap.difficulties && updatedMap.difficulties[activeDiff] && Array.isArray(updatedMap.difficulties[activeDiff].notes)) {
-      if (Array.isArray(updatedMap.notes) && updatedMap.notes.length > 0 && updatedMap.selectedDifficulty === activeDiff) {
-        const cloned = this.cloneNotes(updatedMap.notes);
+    // Always ensure active difficulty notes are updated from updatedMap.notes if provided
+    if (Array.isArray(updatedMap.notes)) {
+      const cloned = this.cloneNotes(updatedMap.notes);
+      if (!updatedMap.difficulties[activeDiff]) {
+        updatedMap.difficulties[activeDiff] = {
+          difficulty: activeDiff,
+          notes: cloned,
+          nps: this.computeNps(cloned, durationSec)
+        };
+      } else {
         updatedMap.difficulties[activeDiff].notes = cloned;
         updatedMap.difficulties[activeDiff].nps = this.computeNps(cloned, durationSec);
       }
-    } else if (Object.keys(updatedMap.difficulties).length === 0 && Array.isArray(updatedMap.notes)) {
-      const cloned = this.cloneNotes(updatedMap.notes);
-      updatedMap.difficulties[activeDiff] = {
-        difficulty: activeDiff,
-        notes: cloned,
-        nps: this.computeNps(cloned, durationSec)
-      };
     }
 
     // Ensure difficulties dictionary exists and is normalized
@@ -1268,33 +1514,28 @@ class MapStorage {
       return this.customMaps[customIndex];
     }
 
-    // 2. The only exception: editing a default track creates a separate custom copy!
-    if (this.isDefaultTrack(updatedMap)) {
-      const copyId = `custom_copy_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-      const originalTrack = this.getMap(updatedMap.id);
-      const isRenamed = updatedMap.name && originalTrack && updatedMap.name !== originalTrack.name;
-      const copyName = isRenamed
-        ? updatedMap.name
-        : (updatedMap.name.includes("(Copy)") ? updatedMap.name : `${updatedMap.name} (Copy)`);
-
-      const copyMap = {
+    // 2. If this track is in defaultTracks, update it directly in-place and save the override!
+    // NEVER create an unwanted duplicate copy!
+    const defaultIndex = (this.defaultTracks || []).findIndex((m) => m.id === updatedMap.id);
+    if (defaultIndex !== -1) {
+      this.defaultTracks[defaultIndex] = {
+        ...this.defaultTracks[defaultIndex],
         ...updatedMap,
-        id: copyId,
-        name: copyName,
+        id: updatedMap.id, // Strictly preserve existing ID
         cover: trackCover,
-        isCustom: true,
-        isDefault: false,
         nps: computedNps,
-        date: new Date().toISOString().split("T")[0],
         notes: notesClone,
         difficulty: primaryKey,
         difficulties: sanitizedDifficulties
       };
-
-      this.customMaps.unshift(copyMap);
-      this.saveCustomMapsToStorage();
-      this.setSelectedSongId(copyMap.id);
-      return copyMap;
+      if (!this.mapOverrides) this.mapOverrides = {};
+      this.mapOverrides[updatedMap.id] = {
+        ...this.defaultTracks[defaultIndex]
+      };
+      this.saveOverridesToStorage();
+      this.setSelectedSongId(updatedMap.id);
+      this.notify();
+      return this.defaultTracks[defaultIndex];
     }
 
     // 3. Fallback: custom track not yet in customMaps (e.g. freshly created custom map)
@@ -1436,6 +1677,32 @@ class MapStorage {
    * @returns {{ code: string, json: string, payload: Object }}
    */
   /**
+   * Asynchronously exports an entire song, guaranteeing that any audio in MediaStorage
+   * or memory is embedded as a Base64 data URL in the resulting package.
+   * @param {Object} mapOrSong
+   * @returns {Promise<{ code: string, json: string, payload: Object, filename: string, totalNotes: number, diffCount: number, difficulties: Array<string> }>}
+   */
+  async exportTrackWithAudioAsync(mapOrSong) {
+    if (!mapOrSong) throw new Error("No song specified for export.");
+    let songWithAudio = { ...mapOrSong };
+    if ((!songWithAudio.file || songWithAudio.file.startsWith("blob:") || songWithAudio.hasStoredAudio) && typeof window !== "undefined" && window.MediaStorage) {
+      try {
+        const dataUrl = await window.MediaStorage.getAudioAsDataUrl(mapOrSong.id);
+        if (dataUrl && dataUrl.startsWith("data:")) {
+          songWithAudio.file = dataUrl;
+        }
+      } catch (e) {}
+    }
+    if ((!songWithAudio.file || !songWithAudio.file.startsWith("data:audio")) && typeof window !== "undefined" && window.DEFAULT_AUDIO_DATA) {
+      const bundled = window.DEFAULT_AUDIO_DATA[mapOrSong.id] || window.DEFAULT_AUDIO_DATA[mapOrSong.name];
+      if (bundled) {
+        songWithAudio.file = bundled;
+      }
+    }
+    return this.exportTrack(songWithAudio);
+  }
+
+  /**
    * Exports an entire song, including all difficulty tracks, song metadata, and arena background parameters.
    * Does NOT modify the current track or create duplicate saves.
    * @param {Object} mapOrSong
@@ -1466,6 +1733,18 @@ class MapStorage {
     const primaryKey = diffKeys[0] || "Normal";
     const primaryDiff = exportedDifficulties[primaryKey] || { difficulty: "Normal", notes: [], nps: 0 };
 
+    // Resolve audio file if bundled audio exists in DEFAULT_AUDIO_DATA
+    let audioFile = mapOrSong.file;
+    if ((!audioFile || !audioFile.startsWith("data:audio")) && typeof window !== "undefined" && window.DEFAULT_AUDIO_DATA) {
+      const bundled = window.DEFAULT_AUDIO_DATA[mapOrSong.id] || window.DEFAULT_AUDIO_DATA[mapOrSong.name];
+      if (bundled) {
+        audioFile = bundled;
+      }
+    }
+    if (!audioFile) {
+      audioFile = "Assets/Songs/IMG_2449.mp3";
+    }
+
     const songPayload = {
       id: mapOrSong.id || `song_${Date.now()}`,
       name: mapOrSong.name || "Untitled Song",
@@ -1473,7 +1752,7 @@ class MapStorage {
       creator: mapOrSong.creator || "Unknown Artist",
       duration: mapOrSong.duration || "03:00",
       durationSeconds: Math.max(10, Number(mapOrSong.durationSeconds) || 180),
-      file: mapOrSong.file || "Assets/Songs/IMG_2449.mp3",
+      file: audioFile,
       color: mapOrSong.color || "#00d4ff",
       cover: mapOrSong.cover || mapOrSong.image || mapOrSong.artwork || "Assets/Tracks Placeholders/Default-0.png",
       difficulty: primaryKey,
@@ -1776,7 +2055,14 @@ class MapStorage {
     if (typeof importedSong.file === "string" && (importedSong.file.startsWith("data:audio") || importedSong.file.startsWith("blob:"))) {
       importedSong.hasStoredAudio = true;
       if (typeof window !== "undefined" && window.MediaStorage) {
-        window.MediaStorage.saveAudio(importedSong.id, importedSong.file);
+        window.MediaStorage.saveAudio(importedSong.id, importedSong.file).then(() => {
+          window.MediaStorage.getAudioUrl(importedSong.id).then((freshUrl) => {
+            if (freshUrl) {
+              importedSong.file = freshUrl;
+              this.notify();
+            }
+          });
+        });
       }
     }
     this.normalizeSongDifficulties(importedSong);
@@ -1788,6 +2074,26 @@ class MapStorage {
     }
     this.saveCustomMapsToStorage();
     this.setSelectedSongId(importedSong.id);
+    return importedSong;
+  }
+
+  /**
+   * Asynchronously imports a validated song, ensuring audio is saved to MediaStorage
+   * and resolved to a fresh Blob URL before returning.
+   * @param {Object} validatedSong
+   * @returns {Promise<Object>} importedSong
+   */
+  async importTrackAsync(validatedSong) {
+    const importedSong = this.importTrack(validatedSong);
+    if (importedSong && importedSong.hasStoredAudio && typeof window !== "undefined" && window.MediaStorage) {
+      try {
+        const freshUrl = await window.MediaStorage.getAudioUrl(importedSong.id);
+        if (freshUrl) {
+          importedSong.file = freshUrl;
+        }
+      } catch (e) {}
+    }
+    this.notify();
     return importedSong;
   }
 

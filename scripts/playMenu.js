@@ -50,9 +50,13 @@ class PlayMenu {
     this.bindEvents();
     if (this.songs && this.songs.length > 0) {
       const activeId = (this.mapStorage && this.mapStorage.getSelectedSongId()) || null;
-      let targetIdx = activeId ? this.songs.findIndex((s) => s.id === activeId) : 0;
-      if (targetIdx === -1) targetIdx = 0;
-      this.selectSongByIndex(targetIdx, false, false);
+      let targetIdx = activeId ? this.songs.findIndex((s) => s.id === activeId) : -1;
+      let persist = true;
+      if (targetIdx === -1) {
+        targetIdx = 0;
+        persist = !activeId; // Don't overwrite saved activeId if custom maps are still loading
+      }
+      this.selectSongByIndex(targetIdx, false, false, persist);
     } else {
       this.renderDefaultDetails();
     }
@@ -70,11 +74,13 @@ class PlayMenu {
 
       if (this.songs.length > 0) {
         let targetIdx = activeId ? this.songs.findIndex((s) => s.id === activeId) : -1;
+        let persist = true;
         if (targetIdx === -1) {
           targetIdx = (this.selectedIndex >= 0 && this.selectedIndex < this.songs.length) ? this.selectedIndex : 0;
+          persist = !activeId;
         }
         // Never play preview audio or click sound during background updates
-        this.selectSongByIndex(targetIdx, false, false);
+        this.selectSongByIndex(targetIdx, false, false, persist);
       } else {
         this.selectedSong = null;
         this.selectedIndex = -1;
@@ -313,10 +319,113 @@ class PlayMenu {
       });
     }
 
+    // Import Song via file input in header
+    const importInput = document.getElementById("play-song-import-input");
+    if (importInput) {
+      importInput.addEventListener("change", async (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          try {
+            const text = await file.text();
+            await this.importSongContent(text);
+          } catch (err) {
+            alert("Failed to read song file: " + err.message);
+          }
+          importInput.value = "";
+        }
+      });
+    }
+
+    // Link Default Tracks Folder button in header
+    const linkFolderBtn = document.getElementById("btn-link-default-tracks");
+    if (linkFolderBtn) {
+      linkFolderBtn.addEventListener("click", async () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (this.mapStorage && typeof this.mapStorage.linkDefaultTracksDirectory === "function") {
+          try {
+            const tracks = await this.mapStorage.linkDefaultTracksDirectory();
+            if (tracks && tracks.length > 0) {
+              this.updateSongs(this.mapStorage.getAllMaps());
+              alert(`Successfully linked Default Tracks folder! Loaded ${tracks.length} track(s).`);
+            }
+          } catch (err) {
+            alert("Could not link folder: " + err.message);
+          }
+        }
+      });
+    }
+
+    // Drag-and-drop song files directly onto Play Menu
+    if (this.view) {
+      this.view.addEventListener("dragover", (e) => {
+        if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.view.classList.add("is-dragover");
+        }
+      });
+
+      this.view.addEventListener("dragleave", (e) => {
+        if (!this.view.contains(e.relatedTarget)) {
+          this.view.classList.remove("is-dragover");
+        }
+      });
+
+      this.view.addEventListener("drop", async (e) => {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          this.view.classList.remove("is-dragover");
+          const files = Array.from(e.dataTransfer.files).filter((f) => f.name.toLowerCase().endsWith(".json"));
+          if (files.length === 0) {
+            alert("Please drop a valid .json song file.");
+            return;
+          }
+          let lastImportedId = null;
+          for (const f of files) {
+            try {
+              const text = await f.text();
+              const imported = await this.importSongContent(text, false);
+              if (imported && imported.id) lastImportedId = imported.id;
+            } catch (err) {
+              console.error("Drop import failed:", err);
+            }
+          }
+          if (lastImportedId) {
+            this.updateSongs(this.mapStorage.getAllMaps());
+            this.selectSongById(lastImportedId, true, true);
+          }
+        }
+      });
+    }
+
     // Window keyboard listener for ArrowUp, ArrowDown, Enter, Escape
     if (typeof window !== "undefined" && window.addEventListener) {
       window.addEventListener("keydown", this.boundKeyDown);
     }
+  }
+
+  /**
+   * Parses, validates, and imports raw song code or JSON string, then selects it.
+   * @param {string} rawString
+   * @param {boolean} updateUi
+   * @returns {Promise<Object|null>}
+   */
+  async importSongContent(rawString, updateUi = true) {
+    if (!this.mapStorage) return null;
+    const validation = this.mapStorage.validateAndParseTrackCode(rawString);
+    if (!validation.valid || (!validation.song && !validation.track)) {
+      alert("Invalid song file: " + (validation.error || "Malformed song structure."));
+      return null;
+    }
+    const songData = validation.song || validation.track;
+    const imported = await this.mapStorage.importTrackAsync(songData);
+    if (updateUi) {
+      this.updateSongs(this.mapStorage.getAllMaps());
+      this.selectSongById(imported.id, true, true);
+      if (this.soundManager) this.soundManager.playClick();
+    }
+    return imported;
   }
 
   /**
@@ -407,15 +516,16 @@ class PlayMenu {
    * @param {number} idx
    * @param {boolean} playSound
    * @param {boolean} playMusic
+   * @param {boolean} persistSelection
    */
-  selectSongByIndex(idx, playSound = true, playMusic = false) {
+  selectSongByIndex(idx, playSound = true, playMusic = false, persistSelection = true) {
     if (!this.songs || idx < 0 || idx >= this.songs.length) return;
 
     const previousSongId = this.selectedSong ? this.selectedSong.id : null;
     this.selectedIndex = idx;
     this.selectedSong = this.songs[idx];
 
-    if (this.selectedSong && this.mapStorage) {
+    if (persistSelection && this.selectedSong && this.mapStorage) {
       this.mapStorage.setSelectedSongId(this.selectedSong.id);
     }
 
@@ -456,6 +566,20 @@ class PlayMenu {
       if (activeCard && typeof activeCard.scrollIntoView === "function") {
         activeCard.scrollIntoView({ block: "nearest", behavior: "smooth" });
       }
+    }
+  }
+
+  /**
+   * Selects a song by unique song ID.
+   * @param {string} songId
+   * @param {boolean} playSound
+   * @param {boolean} playMusic
+   */
+  selectSongById(songId, playSound = false, playMusic = false) {
+    if (!songId || !this.songs || !this.songs.length) return;
+    const idx = this.songs.findIndex((s) => s.id === songId);
+    if (idx !== -1) {
+      this.selectSongByIndex(idx, playSound, playMusic, true);
     }
   }
 

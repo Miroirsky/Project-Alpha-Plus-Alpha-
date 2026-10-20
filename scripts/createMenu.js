@@ -354,6 +354,32 @@ class CreateMenu {
       });
     }
 
+    if (this.importModal) {
+      this.importModal.addEventListener("dragover", (e) => {
+        if (e.dataTransfer && e.dataTransfer.types && Array.from(e.dataTransfer.types).includes("Files")) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      });
+      this.importModal.addEventListener("drop", (e) => {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          e.preventDefault();
+          e.stopPropagation();
+          const file = e.dataTransfer.files[0];
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            if (this.importCodeArea) {
+              this.importCodeArea.value = evt.target.result;
+            }
+            if (this.importFileStatusEl) {
+              this.importFileStatusEl.textContent = `Dropped file: ${file.name}`;
+            }
+          };
+          reader.readAsText(file);
+        }
+      });
+    }
+
     // Export Modal listeners
     if (this.closeExportBtn) {
       this.closeExportBtn.addEventListener("click", () => {
@@ -730,19 +756,13 @@ class CreateMenu {
     if (!song || !this.mapStorage) return;
 
     try {
-      let exportSong = { ...song };
-
-      // If file is a blob: URL, convert it to Base64 data URL so it's fully embedded in the exported file!
-      if (typeof exportSong.file === "string" && exportSong.file.startsWith("blob:")) {
-        if (typeof window !== "undefined" && window.MediaStorage) {
-          const dataUrl = await window.MediaStorage.resolveBlobToDataUrl(exportSong.file);
-          if (dataUrl && (dataUrl.startsWith("data:") || dataUrl.startsWith("Assets/"))) {
-            exportSong.file = dataUrl;
-          }
-        }
+      let exportResult;
+      if (typeof this.mapStorage.exportTrackWithAudioAsync === "function") {
+        exportResult = await this.mapStorage.exportTrackWithAudioAsync(song);
+      } else {
+        exportResult = this.mapStorage.exportTrack(song);
       }
 
-      const exportResult = this.mapStorage.exportTrack(exportSong);
       this.lastExportData = { ...exportResult, songId: song.id };
       if (this.mapStorage) {
         this.mapStorage.setSelectedSongId(song.id);
@@ -1817,19 +1837,40 @@ class CreateMenu {
     }
 
     if (bg.type === "video") {
-      if (this.songBgPreviewImg) this.songBgPreviewImg.style.display = "none";
-      if (this.songBgPreviewVideo) {
-        this.songBgPreviewVideo.src = bg.url || "";
-        this.songBgPreviewVideo.style.display = "block";
-      }
-      if (this.songBgPreviewEmpty) this.songBgPreviewEmpty.style.display = "none";
-    } else {
-      if (this.songBgPreviewVideo) this.songBgPreviewVideo.style.display = "none";
       if (this.songBgPreviewImg) {
-        this.songBgPreviewImg.src = bg.url || "";
-        this.songBgPreviewImg.style.display = "block";
+        this.songBgPreviewImg.style.display = "none";
+        this.songBgPreviewImg.removeAttribute("src");
       }
-      if (this.songBgPreviewEmpty) this.songBgPreviewEmpty.style.display = "none";
+      if (this.songBgPreviewVideo) {
+        if (bg.url) {
+          this.songBgPreviewVideo.src = bg.url;
+          this.songBgPreviewVideo.style.display = "block";
+        } else {
+          this.songBgPreviewVideo.removeAttribute("src");
+          this.songBgPreviewVideo.load();
+          this.songBgPreviewVideo.style.display = "none";
+        }
+      }
+      if (this.songBgPreviewEmpty) this.songBgPreviewEmpty.style.display = bg.url ? "none" : "block";
+    } else {
+      if (this.songBgPreviewVideo) {
+        try {
+          this.songBgPreviewVideo.pause();
+          this.songBgPreviewVideo.removeAttribute("src");
+          this.songBgPreviewVideo.load();
+        } catch (e) {}
+        this.songBgPreviewVideo.style.display = "none";
+      }
+      if (this.songBgPreviewImg) {
+        if (bg.url) {
+          this.songBgPreviewImg.src = bg.url;
+          this.songBgPreviewImg.style.display = "block";
+        } else {
+          this.songBgPreviewImg.removeAttribute("src");
+          this.songBgPreviewImg.style.display = "none";
+        }
+      }
+      if (this.songBgPreviewEmpty) this.songBgPreviewEmpty.style.display = bg.url ? "none" : "block";
     }
   }
 

@@ -141,7 +141,8 @@ class GameView {
     if (this.bgMedia && this.bgMediaType === "video") {
       try {
         this.bgMedia.pause();
-        this.bgMedia.src = "";
+        this.bgMedia.removeAttribute("src");
+        this.bgMedia.load();
       } catch (e) {}
     }
     this.bgMedia = null;
