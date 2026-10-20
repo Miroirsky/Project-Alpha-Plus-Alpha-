@@ -99,3 +99,136 @@ body {
   pointer-events: none;
   z-index: 1;
 }
+
+/* ==========================================================================
+   Drag and Drop Reordering Styles
+   ========================================================================== */
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  user-select: none;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  opacity: 0.7;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.12);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.2);
+  transition: all 0.18s ease;
+  flex-shrink: 0;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.28);
+  border-color: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.45);
+  color: #ffffff;
+  transform: scale(1.08);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.is-dragging {
+  opacity: 0.4 !important;
+  transform: scale(0.985);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  border: 2px dashed var(--palette-primary, #954132) !important;
+}
+
+/* Vertical Drop Target Placement Indicators */
+.drop-target-before {
+  position: relative !important;
+}
+.drop-target-before::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--palette-primary, #954132);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.drop-target-after {
+  position: relative !important;
+}
+.drop-target-after::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--palette-primary, #954132);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Horizontal Drop Target Placement Indicators (Tabs, difficulty chips) */
+.drop-target-h-before {
+  position: relative !important;
+}
+.drop-target-h-before::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 4px;
+  background: var(--palette-primary, #954132);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.drop-target-h-after {
+  position: relative !important;
+}
+.drop-target-h-after::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: -4px;
+  width: 4px;
+  background: var(--palette-primary, #954132);
+  border-radius: 2px;
+  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Specific Drag Handle Placements */
+.song-card-drag-wrapper {
+  margin-right: 0.35rem;
+}
+
+.editor-diff-tab .tab-drag-handle,
+.diff-select-btn .diff-btn-drag {
+  font-size: 0.75rem;
+  padding: 0 0.2rem;
+  opacity: 0.55;
+  background: transparent;
+  border: none;
+  cursor: grab;
+}
+
+.editor-diff-tab .tab-drag-handle:hover,
+.diff-select-btn .diff-btn-drag:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.2);
+}
