@@ -610,6 +610,31 @@
   color: var(--palette-bg-secondary, #F7D4BC);
 }
 
+.btn-song-params-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 0.75rem;
+  background-color: rgba(var(--palette-bg-secondary-rgb), 0.15);
+  color: var(--palette-bg-primary, #FAE3E3);
+  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb), 0.4);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.btn-song-params-action:hover {
+  background-color: rgba(var(--palette-bg-secondary-rgb), 0.28);
+  border-color: var(--palette-bg-secondary, #F7D4BC);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
 .btn-start-action {
   display: inline-flex;
   align-items: center;
