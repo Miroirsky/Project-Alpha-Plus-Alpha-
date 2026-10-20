@@ -201,10 +201,13 @@ function initApp() {
   });
   playMenu.init();
 
-  // Keep play menu updated whenever map storage changes (if open)
+  // Keep play menu and create menu updated whenever map storage changes
   mapStorage.onChange((updatedMaps) => {
-    if (playMenu.isOpen()) {
+    if (playMenu && typeof playMenu.updateSongs === "function") {
       playMenu.updateSongs(updatedMaps);
+    }
+    if (createMenu && typeof createMenu.renderMapsList === "function") {
+      createMenu.renderMapsList();
     }
   });
 

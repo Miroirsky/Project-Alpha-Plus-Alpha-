@@ -86,6 +86,27 @@ class PlayMenu {
     this.songListContainer.innerHTML = "";
 
     if (!this.songs || this.songs.length === 0) {
+      const loadErrors = this.mapStorage ? this.mapStorage.getLoadErrors() : [];
+      const errorHtml = loadErrors.length > 0
+        ? `
+          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 8px; font-size: 0.82rem; text-align: left; max-width: 380px;">
+            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">⚠️ Loading Diagnostics:</div>
+            <ul style="margin: 0; padding-left: 18px; color: var(--color-secondary, #322214);">
+              ${loadErrors.map(e => `<li><strong>${e.file}</strong>: ${e.error}</li>`).join("")}
+            </ul>
+          </div>
+        `
+        : "";
+
+      const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
+      const fileProtocolHint = isFileProtocol
+        ? `
+          <p style="font-size: 0.8rem; opacity: 0.85; margin-top: 8px;">
+            Note: Browsers block direct file loading when opened as <code>file:///</code>. Run a local web server (e.g. <code>npx serve</code>, Live Server) or select the folder below:
+          </p>
+        `
+        : "";
+
       const emptyState = document.createElement("div");
       emptyState.className = "song-list-empty";
       emptyState.innerHTML = `
@@ -96,7 +117,26 @@ class PlayMenu {
         <p class="empty-state-desc">
           Place exported song files into the <code>Default Tracks</code> folder or create a new map in the <strong>Create</strong> menu.
         </p>
+        ${fileProtocolHint}
+        ${errorHtml}
+        <div class="empty-state-actions" style="margin-top: 14px;">
+          <label class="btn-theme-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-primary, #954132); color: #fff;">
+            <span>📁 Load Default Tracks Folder</span>
+            <input type="file" class="empty-folder-input" webkitdirectory directory multiple style="display: none;">
+          </label>
+        </div>
       `;
+
+      const folderInput = emptyState.querySelector(".empty-folder-input");
+      if (folderInput) {
+        folderInput.addEventListener("change", async (e) => {
+          if (e.target.files && e.target.files.length > 0 && this.mapStorage) {
+            await this.mapStorage.loadTracksFromFiles(e.target.files);
+            this.updateSongs(this.mapStorage.getAllMaps());
+          }
+        });
+      }
+
       this.songListContainer.appendChild(emptyState);
       return;
     }
@@ -426,10 +466,11 @@ class PlayMenu {
     if (!this.songDetailsContainer) return;
 
     const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+    const safeCoverUrl = coverSrc ? coverSrc.replace(/'/g, "%27") : "Assets/Tracks Placeholders/Default-0.png";
     const isPlaying = this.isSongPlaying(song);
 
     this.songDetailsContainer.innerHTML = `
-      <div class="selected-song-view hover-mode" style="background-image: url('${coverSrc}');">
+      <div class="selected-song-view hover-mode" style="background-image: url('${safeCoverUrl}');">
         <div class="song-details-backdrop-overlay"></div>
         <div class="song-details-content">
           <div class="song-info-header">
@@ -501,6 +542,7 @@ class PlayMenu {
     if (!this.songDetailsContainer) return;
 
     const coverSrc = song.cover || "Assets/Tracks Placeholders/Default-0.png";
+    const safeCoverUrl = coverSrc ? coverSrc.replace(/'/g, "%27") : "Assets/Tracks Placeholders/Default-0.png";
     const diffs = (this.mapStorage && this.mapStorage.getSongDifficulties(song)) || song.difficulties || {};
     const availableDiffKeys = Object.keys(diffs);
 
@@ -518,7 +560,7 @@ class PlayMenu {
     const isPlaying = this.isSongPlaying(song);
 
     this.songDetailsContainer.innerHTML = `
-      <div class="selected-song-view" style="background-image: url('${coverSrc}');">
+      <div class="selected-song-view" style="background-image: url('${safeCoverUrl}');">
         <div class="song-details-backdrop-overlay"></div>
         <div class="song-details-content">
           <div class="song-info-header">
@@ -653,6 +695,9 @@ class PlayMenu {
   open() {
     if (this.musicPlayer) {
       this.musicPlayer.stop();
+    }
+    if (this.mapStorage && typeof this.mapStorage.getAllMaps === "function") {
+      this.updateSongs(this.mapStorage.getAllMaps());
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";

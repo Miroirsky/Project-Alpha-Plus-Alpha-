@@ -792,11 +792,52 @@ class CreateMenu {
     const allMaps = this.mapStorage.getAllMaps();
 
     if (allMaps.length === 0) {
+      const loadErrors = this.mapStorage ? this.mapStorage.getLoadErrors() : [];
+      const errorHtml = loadErrors.length > 0
+        ? `
+          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 8px; font-size: 0.82rem; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto;">
+            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">⚠️ Loading Diagnostics:</div>
+            <ul style="margin: 0; padding-left: 18px; color: var(--color-secondary, #322214);">
+              ${loadErrors.map(e => `<li><strong>${e.file}</strong>: ${e.error}</li>`).join("")}
+            </ul>
+          </div>
+        `
+        : "";
+
+      const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
+      const fileProtocolHint = isFileProtocol
+        ? `
+          <p style="font-size: 0.8rem; opacity: 0.85; margin-top: 8px;">
+            Note: Browsers block direct file access on <code>file:///</code>. Run a web server (e.g. <code>npx serve</code>, Live Server) or select the folder below:
+          </p>
+        `
+        : "";
+
       this.mapsListContainer.innerHTML = `
-        <div class="empty-maps-notice">
-          No maps found. Create a new map to start mapping notes!
+        <div class="empty-maps-notice" style="text-align: center; padding: 24px 16px;">
+          <p style="margin: 0 0 8px 0; font-weight: 600;">No maps found. Create a new map to start mapping notes!</p>
+          <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">Or load existing songs from the <code>Default Tracks</code> folder.</p>
+          ${fileProtocolHint}
+          ${errorHtml}
+          <div style="margin-top: 16px;">
+            <label class="btn-theme-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-primary, #954132); color: #fff;">
+              <span>📁 Load Default Tracks Folder</span>
+              <input type="file" class="empty-maps-folder-input" webkitdirectory directory multiple style="display: none;">
+            </label>
+          </div>
         </div>
       `;
+
+      const folderInput = this.mapsListContainer.querySelector(".empty-maps-folder-input");
+      if (folderInput) {
+        folderInput.addEventListener("change", async (e) => {
+          if (e.target.files && e.target.files.length > 0 && this.mapStorage) {
+            await this.mapStorage.loadTracksFromFiles(e.target.files);
+            this.renderMapsList();
+          }
+        });
+      }
+
       return;
     }
 
@@ -815,6 +856,7 @@ class CreateMenu {
       const diffKeys = Object.keys(songDiffs);
       const isExpanded = this.expandedSongIds.has(map.id);
       const coverUrl = map.cover || map.image || map.artwork || "Assets/Tracks Placeholders/Default-0.png";
+      const safeCoverUrl = coverUrl ? coverUrl.replace(/'/g, "%27") : "Assets/Tracks Placeholders/Default-0.png";
 
       // Compute total notes across all difficulties
       let totalNotes = 0;
@@ -836,7 +878,7 @@ class CreateMenu {
         <button class="song-toggle-btn" type="button" aria-label="Toggle difficulty tracks" title="${isExpanded ? "Collapse Tracks" : "Expand Tracks"}">
           <span class="toggle-icon">${isExpanded ? "▼" : "▶"}</span>
         </button>
-        <div class="map-card-thumb" style="background-image: url('${coverUrl}');"></div>
+        <div class="map-card-thumb" style="background-image: url('${safeCoverUrl}');"></div>
         <div class="song-parent-info">
           <div class="song-parent-header">
             <span class="song-name">${map.name}</span>

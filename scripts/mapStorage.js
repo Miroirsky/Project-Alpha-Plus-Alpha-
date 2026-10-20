@@ -8,6 +8,8 @@
 const CUSTOM_MAPS_STORAGE_KEY = "project_alpha_custom_maps";
 const MAP_OVERRIDES_STORAGE_KEY = "project_alpha_map_overrides";
 const HIGHSCORES_STORAGE_KEY = "project_alpha_highscores";
+const DEFAULT_TRACKS_CACHE_KEY = "project_alpha_default_tracks_cache";
+const DEFAULT_TRACKS_FILES_KEY = "project_alpha_default_tracks_filenames";
 
 class MapStorage {
   constructor() {
@@ -15,6 +17,69 @@ class MapStorage {
     this.mapOverrides = this.loadMapOverrides();
     this.highscores = this.loadHighscores();
     this.listeners = new Set();
+    this.loadErrors = [];
+    this.defaultTracks = this.loadDefaultTracksCache();
+
+    // In browser environment running under file:/// protocol (or if cache is empty),
+    // immediately initialize with bundled fallback tracks so songs appear with zero delay
+    const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
+    if ((!this.defaultTracks || this.defaultTracks.length === 0 || isFileProtocol) && typeof window !== "undefined" && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
+      this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
+      this.saveDefaultTracksCache(this.defaultTracks);
+    }
+
+    // In Node.js / CLI / testing environment, immediately scan filesystem
+    if (typeof process !== "undefined" && typeof require === "function") {
+      this.syncDetectLocalTracks();
+    }
+
+    // In browser environment, automatically detect every track in Default Tracks folder
+    if (typeof window !== "undefined") {
+      this.autoDetectDefaultTracks();
+    }
+  }
+
+  /**
+   * Records a track loading error for diagnostics and UI notification.
+   * @param {string} file
+   * @param {string} url
+   * @param {string} error
+   */
+  recordLoadError(file, url, error) {
+    if (!this.loadErrors) this.loadErrors = [];
+    const exists = this.loadErrors.some(e => e.file === file && e.error === error);
+    if (!exists) {
+      this.loadErrors.push({
+        file: file || "Unknown file",
+        url: url || "",
+        error: String(error || "Unknown error"),
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  /**
+   * Removes any recorded load error for a file that loaded successfully.
+   * @param {string} fileName
+   */
+  removeLoadError(fileName) {
+    if (!this.loadErrors || !this.loadErrors.length) return;
+    this.loadErrors = this.loadErrors.filter(e => e.file !== fileName);
+  }
+
+  /**
+   * Returns list of any errors encountered while loading default track files.
+   * @returns {Array<{file: string, url: string, error: string, timestamp: number}>}
+   */
+  getLoadErrors() {
+    return Array.isArray(this.loadErrors) ? [...this.loadErrors] : [];
+  }
+
+  /**
+   * Clears recorded track loading errors.
+   */
+  clearLoadErrors() {
+    this.loadErrors = [];
   }
 
   /**
@@ -23,31 +88,33 @@ class MapStorage {
    */
   loadCustomMaps() {
     try {
-      const saved = localStorage.getItem(CUSTOM_MAPS_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const uniqueMaps = [];
-          const seenIds = new Set();
-          for (const m of parsed) {
-            if (m && m.id && !seenIds.has(m.id)) {
-              seenIds.add(m.id);
-              // Clean up expired blob URLs from previous browser sessions
-              let audioFile = m.file;
-              if (audioFile && typeof audioFile === "string" && audioFile.startsWith("blob:")) {
-                audioFile = "Assets/Songs/IMG_2449.mp3";
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(CUSTOM_MAPS_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            const uniqueMaps = [];
+            const seenIds = new Set();
+            for (const m of parsed) {
+              if (m && m.id && !seenIds.has(m.id)) {
+                seenIds.add(m.id);
+                // Clean up expired blob URLs from previous browser sessions
+                let audioFile = m.file;
+                if (audioFile && typeof audioFile === "string" && audioFile.startsWith("blob:")) {
+                  audioFile = "Assets/Songs/IMG_2449.mp3";
+                }
+                const customMap = {
+                  ...m,
+                  file: audioFile || "Assets/Songs/IMG_2449.mp3",
+                  isCustom: true,
+                  isDefault: false
+                };
+                this.normalizeSongDifficulties(customMap);
+                uniqueMaps.push(customMap);
               }
-              const customMap = {
-                ...m,
-                file: audioFile || "Assets/Songs/IMG_2449.mp3",
-                isCustom: true,
-                isDefault: false
-              };
-              this.normalizeSongDifficulties(customMap);
-              uniqueMaps.push(customMap);
             }
+            return uniqueMaps;
           }
-          return uniqueMaps;
         }
       }
     } catch (err) {
@@ -62,11 +129,13 @@ class MapStorage {
    */
   loadMapOverrides() {
     try {
-      const saved = localStorage.getItem(MAP_OVERRIDES_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed === "object" && parsed !== null) {
-          return parsed;
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(MAP_OVERRIDES_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (typeof parsed === "object" && parsed !== null) {
+            return parsed;
+          }
         }
       }
     } catch (err) {
@@ -81,17 +150,92 @@ class MapStorage {
    */
   loadHighscores() {
     try {
-      const saved = localStorage.getItem(HIGHSCORES_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (typeof parsed === "object" && parsed !== null) {
-          return parsed;
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(HIGHSCORES_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (typeof parsed === "object" && parsed !== null) {
+            return parsed;
+          }
         }
       }
     } catch (err) {
       console.warn("Unable to load highscores from localStorage:", err);
     }
     return {};
+  }
+
+  /**
+   * Loads cached default tracks from localStorage.
+   * @returns {Array}
+   */
+  loadDefaultTracksCache() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const cached = localStorage.getItem(DEFAULT_TRACKS_CACHE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed;
+          }
+        }
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  /**
+   * Persists cached default tracks to localStorage, safely guarding against quota limits.
+   * @param {Array} tracks
+   */
+  saveDefaultTracksCache(tracks) {
+    try {
+      if (typeof localStorage !== "undefined" && Array.isArray(tracks)) {
+        // Strip out massive base64 images from the localStorage cache so we never hit the 5MB browser quota
+        const safeTracks = tracks.map((t) => {
+          const copy = { ...t };
+          if (copy.cover && typeof copy.cover === "string" && copy.cover.startsWith("data:") && copy.cover.length > 32768) {
+            copy.cover = "Assets/Tracks Placeholders/Default-0.png";
+          }
+          if (copy.background && copy.background.url && typeof copy.background.url === "string" && copy.background.url.length > 32768) {
+            copy.background = { ...copy.background, url: "" };
+          }
+          return copy;
+        });
+        localStorage.setItem(DEFAULT_TRACKS_CACHE_KEY, JSON.stringify(safeTracks));
+      }
+    } catch (e) {
+      console.warn("[MapStorage] Could not persist default tracks cache to localStorage:", e);
+    }
+  }
+
+  /**
+   * Loads discovered track filenames from cache.
+   * @returns {string[]}
+   */
+  loadCachedTrackFileNames() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const cached = localStorage.getItem(DEFAULT_TRACKS_FILES_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  /**
+   * Persists discovered track filenames to cache.
+   * @param {string[]} fileNames
+   */
+  saveCachedTrackFileNames(fileNames) {
+    try {
+      if (typeof localStorage !== "undefined" && Array.isArray(fileNames)) {
+        localStorage.setItem(DEFAULT_TRACKS_FILES_KEY, JSON.stringify(fileNames));
+      }
+    } catch (e) {}
   }
 
   /**
@@ -232,44 +376,13 @@ class MapStorage {
   }
 
   /**
-   * Automatically detects and loads default tracks directly from the `Default Tracks` folder.
-   * Checks window.DEFAULT_TRACKS (registered by Default Tracks/defaultTracks.js),
-   * filesystem in Node.js, and normalizes all difficulty tracks under a stable default song ID.
-   * @returns {Array} defaultTracks
+   * Processes an array of raw track objects or JSON strings,
+   * validating each track and grouping difficulty tracks under one stable default song ID.
+   * @param {Array} rawItems
+   * @returns {Array} Processed default song objects
    */
-  loadDefaultTracks() {
-    const rawItems = [];
-
-    // 1. Detect default tracks registered from Default Tracks/defaultTracks.js
-    if (typeof window !== "undefined" && Array.isArray(window.DEFAULT_TRACKS)) {
-      rawItems.push(...window.DEFAULT_TRACKS);
-    }
-
-    // 2. In Node.js / testing environment, directly read JSON files from Default Tracks / Assets/Default Tracks
-    if (typeof process !== "undefined" && typeof require === "function") {
-      try {
-        const fs = require("fs");
-        const path = require("path");
-        const dirs = [
-          path.resolve("Default Tracks"),
-          path.resolve("Assets", "Default Tracks")
-        ];
-        dirs.forEach((dir) => {
-          if (fs.existsSync(dir)) {
-            const files = fs.readdirSync(dir);
-            files.forEach((f) => {
-              if (f.endsWith(".json") && f !== "manifest.json") {
-                try {
-                  const content = fs.readFileSync(path.join(dir, f), "utf8");
-                  const parsed = JSON.parse(content);
-                  rawItems.push(parsed);
-                } catch (e) {}
-              }
-            });
-          }
-        });
-      } catch (e) {}
-    }
+  processDefaultTrackItems(rawItems) {
+    if (!Array.isArray(rawItems)) return [];
 
     const defaultTracks = [];
     const songMap = new Map(); // key: base song signature -> song object
@@ -281,7 +394,10 @@ class MapStorage {
 
       const result = this.validateAndParseTrackCode(rawString);
       if (!result.valid || (!result.song && !result.track)) {
-        console.warn("Skipping invalid default track:", result.error || "Unknown validation error");
+        const trackTitle = (item && (item.name || (item.song && item.song.name))) || "Unknown Track";
+        const validationErr = result.error || "Invalid track structure or missing required properties";
+        console.warn(`[MapStorage] Skipping invalid default track (${trackTitle}):`, validationErr);
+        this.recordLoadError(trackTitle, "", validationErr);
         return;
       }
 
@@ -317,11 +433,303 @@ class MapStorage {
   }
 
   /**
+   * Parses an HTML directory listing string and extracts all .json filenames.
+   * @param {string} htmlText
+   * @returns {string[]} Discovered .json filenames
+   */
+  extractJsonFileNames(htmlText) {
+    if (!htmlText || typeof htmlText !== "string") return [];
+    const jsonFiles = new Set();
+
+    // 1. If DOMParser is available (browser)
+    if (typeof DOMParser !== "undefined") {
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, "text/html");
+        const links = doc.querySelectorAll("a");
+        links.forEach((a) => {
+          const href = a.getAttribute("href") || "";
+          const text = a.textContent || "";
+          const candidateHref = href.split("?")[0].split("#")[0];
+          if (candidateHref.toLowerCase().endsWith(".json")) {
+            const fileName = decodeURIComponent(candidateHref.split("/").pop()).trim();
+            if (fileName && fileName.toLowerCase().endsWith(".json")) {
+              jsonFiles.add(fileName);
+            }
+          } else if (text.trim().toLowerCase().endsWith(".json")) {
+            const fileName = decodeURIComponent(text.trim().split("/").pop()).trim();
+            if (fileName && fileName.toLowerCase().endsWith(".json")) {
+              jsonFiles.add(fileName);
+            }
+          }
+        });
+      } catch (e) {}
+    }
+
+    // 2. Regular expression fallback (Node.js or partial responses)
+    const regex = /(?:href=["'])([^"']+\.json(?:[?#][^"']*)?)|([a-zA-Z0-9_\-.\s%()]+\.json)/gi;
+    let match;
+    while ((match = regex.exec(htmlText)) !== null) {
+      const raw = match[1] || match[2];
+      if (raw) {
+        const clean = raw.split("?")[0].split("#")[0];
+        const fileName = decodeURIComponent(clean.split("/").pop()).trim();
+        if (fileName && fileName.toLowerCase().endsWith(".json")) {
+          jsonFiles.add(fileName);
+        }
+      }
+    }
+
+    return Array.from(jsonFiles);
+  }
+
+  /**
+   * Synchronously detects and reads all .json track files from Default Tracks in Node.js / CLI.
+   */
+  syncDetectLocalTracks() {
+    if (typeof process === "undefined" || typeof require !== "function") return;
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const dirs = [
+        path.resolve("Default Tracks"),
+        path.resolve("Assets", "Default Tracks")
+      ];
+      const rawItems = [];
+      dirs.forEach((dir) => {
+        if (fs.existsSync(dir)) {
+          const files = fs.readdirSync(dir);
+          files.forEach((f) => {
+            if (f.toLowerCase().endsWith(".json")) {
+              try {
+                const content = fs.readFileSync(path.join(dir, f), "utf8");
+                const parsed = JSON.parse(content);
+                rawItems.push(parsed);
+              } catch (e) {}
+            }
+          });
+        }
+      });
+      if (rawItems.length > 0) {
+        this.defaultTracks = this.processDefaultTrackItems(rawItems);
+        this.saveDefaultTracksCache(this.defaultTracks);
+      }
+    } catch (e) {}
+  }
+
+  /**
+   * Automatically detects and loads every supported track file in the `Default Tracks` folder.
+   * No manual file list or configuration files required.
+   * Discovers tracks via:
+   *  1. Local filesystem read (Node / desktop / testing)
+   *  2. Server directory listing auto-detection (Apache, Nginx, Python, Live Server, Caddy)
+   *  3. GitHub Pages Contents API (real-time repository folder detection on GitHub)
+   *  4. Direct probing of track candidates
+   * @returns {Promise<Array>} Loaded default tracks
+   */
+  async autoDetectDefaultTracks() {
+    // In Node.js / testing, run sync detection
+    if (typeof process !== "undefined" && typeof require === "function") {
+      this.syncDetectLocalTracks();
+      return this.defaultTracks;
+    }
+
+    if (typeof window === "undefined") {
+      return this.defaultTracks;
+    }
+
+    // When running under file:/// protocol, direct fetch() of local filesystem files
+    // is blocked by browser CORS sandbox policies (origin: null).
+    // Ensure bundled fallback default tracks are active and skip failing fetch calls.
+    if (window.location && window.location.protocol === "file:") {
+      if ((!this.defaultTracks || this.defaultTracks.length === 0) && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
+        this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
+        this.saveDefaultTracksCache(this.defaultTracks);
+      }
+      this.notify();
+      return this.defaultTracks;
+    }
+
+    if (typeof fetch !== "function") {
+      return this.defaultTracks;
+    }
+
+    const discoveredFiles = new Set();
+    const rawItems = [];
+
+    // Strategy 1: Server directory listing (Apache, Nginx, Python http.server, Live Server, Caddy)
+    const directoryEndpoints = ["Default%20Tracks/", "Default Tracks/", "./Default%20Tracks/", "./Default Tracks/"];
+    for (const endpoint of directoryEndpoints) {
+      try {
+        const res = await fetch(endpoint, { method: "GET" });
+        if (res.ok) {
+          const contentType = res.headers.get("content-type") || "";
+          const text = await res.text();
+          if (contentType.includes("json")) {
+            try {
+              const list = JSON.parse(text);
+              if (Array.isArray(list)) {
+                list.forEach((item) => {
+                  const name = typeof item === "string" ? item : (item.name || item.path || "");
+                  if (name.toLowerCase().endsWith(".json")) discoveredFiles.add(name);
+                });
+              }
+            } catch (e) {}
+          } else {
+            const extracted = this.extractJsonFileNames(text);
+            extracted.forEach((f) => discoveredFiles.add(f));
+          }
+          if (discoveredFiles.size > 0) break;
+        }
+      } catch (e) {}
+    }
+
+    // Strategy 2: GitHub Pages API auto-detection (detects any newly committed tracks on GitHub automatically)
+    if (window.location && window.location.hostname && window.location.hostname.endsWith("github.io")) {
+      try {
+        const owner = window.location.hostname.split(".")[0];
+        const segments = window.location.pathname.split("/").filter(Boolean);
+        const repo = segments[0];
+        if (owner && repo) {
+          const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/Default%20Tracks`;
+          const apiRes = await fetch(apiUrl);
+          if (apiRes.ok) {
+            const apiItems = await apiRes.json();
+            if (Array.isArray(apiItems)) {
+              apiItems.forEach((item) => {
+                if (item.name && item.name.toLowerCase().endsWith(".json")) {
+                  discoveredFiles.add(item.name);
+                }
+              });
+            }
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Strategy 3: Probe any cached filenames from previous sessions
+    const cachedFilenames = this.loadCachedTrackFileNames();
+    cachedFilenames.forEach((f) => discoveredFiles.add(f));
+
+    // Fallback known tracks probe
+    const knownProbeTracks = ["Chance.json", "Beating Like Hearth.json"];
+    knownProbeTracks.forEach((f) => discoveredFiles.add(f));
+
+    // Fetch all discovered JSON track files
+    const fetchPromises = Array.from(discoveredFiles).map(async (fileName) => {
+      const encodedFile = encodeURIComponent(fileName);
+      const candidates = [
+        `Default%20Tracks/${encodedFile}`,
+        `./Default%20Tracks/${encodedFile}`,
+        `Default Tracks/${encodedFile}`,
+        `./Default Tracks/${encodedFile}`,
+        `Default Tracks/${fileName}`
+      ];
+      let lastErr = null;
+      let lastStatus = 0;
+      for (const candidate of candidates) {
+        try {
+          const res = await fetch(candidate);
+          if (res.ok) {
+            try {
+              const json = await res.json();
+              this.removeLoadError(fileName);
+              return { fileName, json };
+            } catch (parseErr) {
+              lastErr = `Invalid JSON syntax: ${parseErr.message}`;
+              console.error(`[MapStorage] Failed to parse JSON from ${candidate}:`, parseErr);
+              this.recordLoadError(fileName, candidate, lastErr);
+              return null;
+            }
+          } else {
+            lastStatus = res.status;
+          }
+        } catch (fetchErr) {
+          lastErr = fetchErr.message || "Network / CORS / Protocol error";
+        }
+      }
+      // If we could not load this file, record error for diagnostic tracking
+      const errorDetail = lastErr || (lastStatus ? `HTTP ${lastStatus}` : "File not found or unreachable");
+      this.recordLoadError(fileName, `Default%20Tracks/${encodedFile}`, errorDetail);
+      console.warn(`[MapStorage] Could not load track file "${fileName}": ${errorDetail}`);
+      return null;
+    });
+
+    const results = await Promise.all(fetchPromises);
+    const validFilenames = [];
+    results.forEach((res) => {
+      if (res && res.json) {
+        rawItems.push(res.json);
+        validFilenames.push(res.fileName);
+      }
+    });
+
+    if (validFilenames.length > 0) {
+      this.saveCachedTrackFileNames(validFilenames);
+    }
+
+    if (rawItems.length > 0) {
+      const processed = this.processDefaultTrackItems(rawItems);
+      this.defaultTracks = processed;
+      this.saveDefaultTracksCache(processed);
+      this.notify();
+      return processed;
+    }
+
+    this.notify();
+    return this.defaultTracks;
+  }
+
+  /**
+   * Loads tracks dynamically from an array of File objects (e.g. from a folder picker or drag & drop).
+   * @param {FileList|File[]} files
+   * @returns {Promise<Array>} Loaded tracks
+   */
+  async loadTracksFromFiles(files) {
+    if (!files || !files.length) return [];
+    const rawItems = [];
+    for (const file of Array.from(files)) {
+      if (file.name && file.name.toLowerCase().endsWith(".json")) {
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          this.removeLoadError(file.name);
+          rawItems.push(parsed);
+        } catch (e) {
+          const errMsg = `Failed to read or parse file: ${e.message}`;
+          console.error(`[MapStorage] ${file.name}:`, e);
+          this.recordLoadError(file.name, file.name, errMsg);
+        }
+      }
+    }
+    if (rawItems.length > 0) {
+      const processed = this.processDefaultTrackItems(rawItems);
+      this.defaultTracks = processed;
+      this.saveDefaultTracksCache(processed);
+      this.notify();
+      return processed;
+    }
+    this.notify();
+    return [];
+  }
+
+  /**
    * Returns default maps loaded directly from the `Default Tracks` folder.
    * @returns {Array}
    */
   getDefaultMaps() {
-    return this.loadDefaultTracks();
+    if ((!this.defaultTracks || this.defaultTracks.length === 0) && typeof process !== "undefined" && typeof require === "function") {
+      this.syncDetectLocalTracks();
+    }
+    return this.defaultTracks || [];
+  }
+
+  /**
+   * Legacy alias for getDefaultMaps.
+   * @returns {Array}
+   */
+  loadDefaultTracks() {
+    return this.getDefaultMaps();
   }
 
   /**
