@@ -300,6 +300,12 @@ class GameView {
 
     this.drawTrackBackground(ctx, width, height, state.currentTime);
     this.drawNotes(ctx, width, height, state.notes, state.currentTime);
+
+    // If counting down before music start, render the first note preview
+    if (state.isCountingDown && state.firstNote) {
+      this.drawFirstNotePreview(ctx, width, height, state.firstNote);
+    }
+
     this.drawEffects(ctx, state.effects);
     this.drawPlayerOrb(ctx, state.playerOrb);
 
@@ -309,7 +315,8 @@ class GameView {
   }
 
   /**
-   * Draws a sleek countdown overlay before music starts (5s timer in play & test mode).
+   * Draws a sleek countdown overlay before music starts (3s timer in play & test mode),
+   * featuring a large, centered white countdown number with high-contrast backing.
    * @param {CanvasRenderingContext2D} ctx
    * @param {number} width
    * @param {number} height
@@ -320,30 +327,30 @@ class GameView {
     const cx = playArea.centerX;
     const cy = playArea.centerY;
     const remaining = Math.max(0, state.countdownRemaining || 0);
-    const duration = state.countdownDuration || 5.0;
+    const duration = state.countdownDuration || 3.0;
     const progress = Math.max(0, Math.min(1, remaining / duration));
     const seconds = Math.ceil(remaining);
 
     ctx.save();
 
-    // 1. Ambient radial backdrop
-    const ambientGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 180);
-    ambientGrad.addColorStop(0, "rgba(8, 14, 28, 0.75)");
-    ambientGrad.addColorStop(0.7, "rgba(8, 14, 28, 0.45)");
+    // 1. Ambient radial backdrop centered at (cx, cy)
+    const ambientGrad = ctx.createRadialGradient(cx, cy, 20, cx, cy, 210);
+    ambientGrad.addColorStop(0, "rgba(8, 14, 28, 0.82)");
+    ambientGrad.addColorStop(0.65, "rgba(8, 14, 28, 0.50)");
     ambientGrad.addColorStop(1, "rgba(8, 14, 28, 0)");
     ctx.fillStyle = ambientGrad;
     ctx.beginPath();
-    ctx.arc(cx, cy, 180, 0, Math.PI * 2);
+    ctx.arc(cx, cy, 210, 0, Math.PI * 2);
     ctx.fill();
 
     // 2. Countdown Circular Progress Ring
-    const ringRadius = 72;
-    const ringWidth = 8;
+    const ringRadius = 100;
+    const ringWidth = 6;
 
     // Background track ring
     ctx.beginPath();
     ctx.arc(cx, cy, ringRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.lineWidth = ringWidth;
     ctx.stroke();
 
@@ -353,19 +360,19 @@ class GameView {
       const endAngle = startAngle + (Math.PI * 2 * progress);
       ctx.beginPath();
       ctx.arc(cx, cy, ringRadius, startAngle, endAngle, false);
-      ctx.strokeStyle = "#00d4ff";
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = ringWidth;
       ctx.lineCap = "round";
       ctx.shadowColor = "#00d4ff";
-      ctx.shadowBlur = 18;
+      ctx.shadowBlur = 16;
       ctx.stroke();
     }
 
     // 3. Sub-second pulse calculation for the number
     const subSec = remaining % 1;
-    const pulseScale = 1.0 + Math.pow(subSec, 2) * 0.15;
+    const pulseScale = 1.0 + Math.pow(subSec, 2) * 0.18;
 
-    // 4. Center Number or "GO!"
+    // 4. Center Number (White and Big) or "GO!"
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -373,35 +380,190 @@ class GameView {
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(pulseScale, pulseScale);
-      ctx.font = "900 64px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font = "900 130px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+
+      // Dark contrast drop shadow for crisp visibility on bright/video backgrounds
+      ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 4;
       ctx.fillStyle = "#ffffff";
-      ctx.shadowColor = "#00d4ff";
-      ctx.shadowBlur = 20;
-      ctx.fillText(String(seconds), 0, 2);
+      ctx.fillText(String(seconds), 0, 0);
+
+      // Subtle cyan glow layer
+      ctx.shadowColor = "rgba(0, 212, 255, 0.5)";
+      ctx.shadowBlur = 16;
+      ctx.fillText(String(seconds), 0, 0);
       ctx.restore();
     } else {
       ctx.save();
       ctx.translate(cx, cy);
-      ctx.font = "900 52px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillStyle = "#00ffaa";
-      ctx.shadowColor = "#00ffaa";
+      ctx.font = "900 88px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
       ctx.shadowBlur = 24;
-      ctx.fillText("GO!", 0, 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("GO!", 0, 0);
+
+      ctx.shadowColor = "rgba(0, 255, 170, 0.6)";
+      ctx.shadowBlur = 20;
+      ctx.fillText("GO!", 0, 0);
       ctx.restore();
     }
 
     // 5. Header Label above ring
-    ctx.font = "700 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
-    ctx.shadowColor = "#000000";
-    ctx.shadowBlur = 6;
-    ctx.fillText("MUSIC STARTING IN", cx, cy - ringRadius - 28);
+    ctx.font = "800 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 8;
+    ctx.fillText("READY", cx, cy - ringRadius - 26);
 
     // 6. Controls hint below ring
     ctx.font = "500 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 6;
+    ctx.fillText("Press [Space] to skip", cx, cy + ringRadius + 28);
+
+    ctx.restore();
+  }
+
+  /**
+   * Helper to draw a rounded rectangle path on context.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @param {number} r
+   */
+  roundRect(ctx, x, y, w, h, r = 6) {
+    if (typeof ctx.roundRect === "function") {
+      ctx.beginPath();
+      ctx.roundRect(x, y, w, h, r);
+    } else {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+  }
+
+  /**
+   * Renders a clear visual preview of the track's first note during pre-game countdown,
+   * showing its exact position, note type, direction, and required color (red/blue).
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} width
+   * @param {number} height
+   * @param {Object} firstNote
+   */
+  drawFirstNotePreview(ctx, width, height, firstNote) {
+    if (!firstNote) return;
+
+    const playArea = PlayArea.getMetrics(width, height);
+    const noteX = playArea.toScreenX(firstNote.x);
+    const noteY = playArea.toScreenY(firstNote.y);
+    const baseRadius = playArea.noteRadius || playArea.bigRadius;
+    const isTriangle = firstNote.type === "triangle" || firstNote.type === "bomb";
+    const isDirectional = firstNote.type === "directional" || firstNote.type === "arrow";
+    const noteRadius = isTriangle ? (playArea.triangleRadius || (baseRadius * 1.05)) : baseRadius;
+    const colorHex = isTriangle ? "#ffd32a" : (firstNote.color === "red" ? "#ff4757" : "#00d4ff");
+
+    ctx.save();
+
+    // 1. Pulsing radar locator ring expanding outwards
+    const nowSec = typeof performance !== "undefined" ? performance.now() / 1000 : Date.now() / 1000;
+    const pulseCycle = (nowSec * 1.5) % 1; // 0 to 1 every ~0.67s
+    const radarRadius = noteRadius + pulseCycle * 32;
+
+    ctx.beginPath();
+    ctx.arc(noteX, noteY, radarRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 2.5 * (1 - pulseCycle);
+    ctx.globalAlpha = (1 - pulseCycle) * 0.75;
+    ctx.stroke();
+
+    // Secondary concentric subtle radar ring
+    const secondaryCycle = ((nowSec * 1.5) + 0.5) % 1;
+    const secondaryRadius = noteRadius + secondaryCycle * 32;
+    ctx.beginPath();
+    ctx.arc(noteX, noteY, secondaryRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 2 * (1 - secondaryCycle);
+    ctx.globalAlpha = (1 - secondaryCycle) * 0.45;
+    ctx.stroke();
+
+    ctx.globalAlpha = 1.0;
+
+    // 2. Render Note Body based on its exact type
+    if (isTriangle) {
+      this.drawTriangleNote(ctx, noteX, noteY, noteRadius, noteRadius, "full", 1.0, 1.0);
+    } else if (isDirectional) {
+      this.drawDirectionalNote(ctx, noteX, noteY, noteRadius, noteRadius, firstNote.color, firstNote.angle || 0, "full", 1.0, 1.0);
+    } else {
+      // Normal single note
+      ctx.beginPath();
+      ctx.arc(noteX, noteY, noteRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = colorHex;
+      ctx.lineWidth = 3.5;
+      ctx.shadowColor = colorHex;
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+
+      ctx.fillStyle = firstNote.color === "red" ? "rgba(255, 71, 87, 0.4)" : "rgba(0, 212, 255, 0.4)";
+      ctx.fill();
+
+      // Inner white guide ring
+      ctx.beginPath();
+      ctx.arc(noteX, noteY, noteRadius * 0.55, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.lineWidth = 1.5;
+      ctx.shadowBlur = 4;
+      ctx.stroke();
+    }
+
+    // 3. Locator Badge / Pill Tag ("★ START HERE" / "FIRST NOTE")
+    let badgeText = "★ START HERE";
+    if (isTriangle) {
+      badgeText = "⚠ FIRST NOTE (AVOID)";
+    } else if (firstNote.color) {
+      badgeText = `★ START HERE (${firstNote.color.toUpperCase()})`;
+    }
+
+    ctx.font = "800 11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    const textMetrics = ctx.measureText(badgeText);
+    const badgeW = textMetrics.width + 18;
+    const badgeH = 22;
+    const badgeX = noteX - badgeW / 2;
+
+    // Place badge above note if space allows, otherwise below
+    const badgePlacementY = (noteY - noteRadius - badgeH - 8 < playArea.offsetY + 8)
+      ? (noteY + noteRadius + 8)
+      : (noteY - noteRadius - badgeH - 8);
+
+    // Pill background
+    ctx.shadowColor = "rgba(0, 0, 0, 0.9)";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "rgba(10, 16, 30, 0.88)";
+    ctx.strokeStyle = colorHex;
+    ctx.lineWidth = 1.5;
+
+    this.roundRect(ctx, badgeX, badgePlacementY, badgeW, badgeH, 11);
+    ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.fillText("Press [Space] to skip", cx, cy + ringRadius + 30);
+    ctx.stroke();
+
+    // Pill text
+    ctx.fillStyle = "#ffffff";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(badgeText, noteX, badgePlacementY + badgeH / 2 + 1);
 
     ctx.restore();
   }

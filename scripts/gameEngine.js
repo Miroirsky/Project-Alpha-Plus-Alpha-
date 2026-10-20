@@ -38,6 +38,12 @@ class GameEngine {
       isExpired: false
     }));
 
+    // Sort chronologically by hit/spawn time
+    this.notes.sort((a, b) => (a.time || 0) - (b.time || 0));
+
+    // First note preview for pre-track countdown orientation
+    this.firstNote = this.notes.length > 0 ? { ...this.notes[0] } : null;
+
     this.totalNotes = this.notes.length;
 
     // Player Orb State
@@ -82,11 +88,11 @@ class GameEngine {
     this.lastNoteProcessedTime = null;
     this.lastNoteProcessedWallTime = null;
 
-    // 5-second countdown timer before music starts (in play and test mode)
-    this.countdownDuration = 5.0;
-    this.countdownRemaining = 5.0;
+    // 3-second countdown timer before music starts (in play and test mode)
+    this.countdownDuration = 3.0;
+    this.countdownRemaining = 3.0;
     this.isCountingDown = true;
-    this.countdownLastTickSec = 5;
+    this.countdownLastTickSec = 3;
 
     // Visual Effects Collection
     this.effects = [];
@@ -118,12 +124,12 @@ class GameEngine {
   }
 
   /**
-   * Starts the gameplay session with a 5-second countdown timer before music start.
+   * Starts the gameplay session with a 3-second countdown timer before music start.
    */
   start() {
     this.isRunning = true;
     this.isCountingDown = true;
-    this.countdownDuration = 5.0;
+    this.countdownDuration = 3.0;
     this.countdownRemaining = this.countdownDuration;
     this.countdownLastTickSec = Math.ceil(this.countdownRemaining);
     this.currentTime = 0;
@@ -351,12 +357,12 @@ class GameEngine {
       const dt = this.lastWallTime > 0 ? (now - this.lastWallTime) / 1000 : 0;
       this.lastWallTime = now;
 
-      // Handle 5-second countdown timer before music starts
+      // Handle 3-second countdown timer before music starts
       if (this.isCountingDown) {
         this.countdownRemaining -= dt;
 
         const currentSec = Math.ceil(this.countdownRemaining);
-        if (currentSec !== this.countdownLastTickSec && currentSec > 0 && currentSec <= 5) {
+        if (currentSec !== this.countdownLastTickSec && currentSec > 0 && currentSec <= 3) {
           this.countdownLastTickSec = currentSec;
           if (this.soundManager && typeof this.soundManager.playHover === "function") {
             this.soundManager.playHover();
@@ -372,6 +378,7 @@ class GameEngine {
               isCountingDown: true,
               countdownRemaining: Math.max(0, this.countdownRemaining),
               countdownDuration: this.countdownDuration,
+              firstNote: this.firstNote,
               currentTime: 0,
               duration: this.duration,
               progress: 0,

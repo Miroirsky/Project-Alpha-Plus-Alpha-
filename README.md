@@ -47,8 +47,9 @@ Project Alpha Plus/
 
 Project Alpha Plus features two distinct note types designed with a 3-phase timing-based model:
 
-### 0. 5-Second Pre-Track Countdown (Play & Test Mode)
-- **Ready Timer:** Before music playback begins, a 5-second countdown timer runs in both Play and Editor Test modes.
+### 0. 3-Second Pre-Track Countdown & First-Note Preview (Play & Test Mode)
+- **Ready Timer:** Before music playback begins, a 3-second countdown timer runs in both Play and Editor Test modes, displayed prominently at the center of the screen in large, high-contrast white numerals.
+- **First-Note Preview:** The position, type, and required color (red/blue) of the track's first note are clearly previewed with a pulsing locator ring and locator badge (`★ START HERE`) so players can align their orb and color before the beat drops.
 - **Player Preparation:** Players can move their orb, test mouse positioning, and switch colors (Left/Right-click) with full visual and sound feedback before the track starts.
 - **Skip Option:** Press **Space** at any point during the countdown to immediately start music playback and gameplay.
 
