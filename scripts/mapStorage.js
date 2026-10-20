@@ -45,9 +45,10 @@ class MapStorage {
       this.autoDetectDefaultTracks();
     }
 
-    // Ensure default tracks in memory have clean audio paths and apply saved overrides
+    // Ensure default tracks in memory have clean audio paths and apply saved overrides / migrate to custom copies
     if (this.defaultTracks && Array.isArray(this.defaultTracks)) {
       this.healDefaultTracksAudio(this.defaultTracks);
+      this.migrateMapOverridesToCustomCopies();
       this.applyMapOverrides();
     }
 
@@ -689,6 +690,47 @@ class MapStorage {
       console.warn("Unable to save map overrides to localStorage:", err);
     }
     this.notify();
+  }
+
+  /**
+   * Migrates any legacy default map overrides to independent local custom copies,
+   * restoring the original default tracks to their pristine state.
+   */
+  migrateMapOverridesToCustomCopies() {
+    if (!this.mapOverrides || typeof this.mapOverrides !== "object") return;
+    const entries = Object.entries(this.mapOverrides);
+    if (entries.length === 0) return;
+
+    let migratedAny = false;
+    for (const [id, override] of entries) {
+      if (!override) continue;
+      const defaultOriginal = (this.defaultTracks || []).find((m) => m.id === id);
+      const origName = (defaultOriginal ? defaultOriginal.name : "Song").trim();
+      const copyName = override.name && override.name !== origName
+        ? override.name
+        : `${origName} (Copy)`;
+      const copyId = `custom_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      const newCopy = {
+        ...override,
+        id: copyId,
+        name: copyName,
+        isCustom: true,
+        isDefault: false
+      };
+      this.customMaps.unshift(newCopy);
+      migratedAny = true;
+    }
+
+    if (migratedAny) {
+      this.saveCustomMapsToStorage();
+    }
+    this.mapOverrides = {};
+    if (typeof localStorage !== "undefined") {
+      try {
+        localStorage.removeItem(MAP_OVERRIDES_STORAGE_KEY);
+      } catch (e) {}
+    }
   }
 
   /**
@@ -1428,7 +1470,7 @@ class MapStorage {
 
   /**
    * Saves updates to a map:
-   * - When editing a default track, saves changes as a separate copy, leaving the original unchanged.
+   * - When editing a default track, saves changes as a separate local copy in customMaps, leaving the original default track unchanged.
    * - For custom tracks, saves changes directly to the existing track without creating duplicate saves or new tracks.
    * - Persists each difficulty track under the same song ID.
    * @param {Object} updatedMap
@@ -1442,9 +1484,17 @@ class MapStorage {
 
     const activeDiff = String(updatedMap.selectedDifficulty || updatedMap.difficulty || "Normal").trim() || "Normal";
 
-    if (!updatedMap.difficulties || typeof updatedMap.difficulties !== "object") {
-      updatedMap.difficulties = {};
+    // Clone difficulties dictionary to ensure caller's object and default tracks are never mutated in memory
+    const incomingDiffs = (updatedMap.difficulties && typeof updatedMap.difficulties === "object") ? updatedMap.difficulties : {};
+    const clonedIncomingDiffs = {};
+    for (const [dName, dData] of Object.entries(incomingDiffs)) {
+      if (!dData) continue;
+      clonedIncomingDiffs[dName] = {
+        ...dData,
+        notes: Array.isArray(dData.notes) ? this.cloneNotes(dData.notes) : []
+      };
     }
+    updatedMap.difficulties = clonedIncomingDiffs;
 
     // Always ensure active difficulty notes are updated from updatedMap.notes if provided
     if (Array.isArray(updatedMap.notes)) {
@@ -1453,7 +1503,8 @@ class MapStorage {
         updatedMap.difficulties[activeDiff] = {
           difficulty: activeDiff,
           notes: cloned,
-          nps: this.computeNps(cloned, durationSec)
+          nps: this.computeNps(cloned, durationSec),
+          color: updatedMap.color || "#00d4ff"
         };
       } else {
         updatedMap.difficulties[activeDiff].notes = cloned;
@@ -1473,7 +1524,8 @@ class MapStorage {
       sanitizedDifficulties[cleanName] = {
         difficulty: cleanName,
         notes,
-        nps: typeof diffData.nps === "number" && diffData.nps > 0 ? diffData.nps : this.computeNps(notes, durationSec)
+        nps: typeof diffData.nps === "number" && diffData.nps > 0 ? diffData.nps : this.computeNps(notes, durationSec),
+        color: diffData.color || updatedMap.color || "#00d4ff"
       };
     }
 
@@ -1481,7 +1533,8 @@ class MapStorage {
       sanitizedDifficulties[activeDiff] = {
         difficulty: activeDiff,
         notes: [],
-        nps: 0
+        nps: 0,
+        color: updatedMap.color || "#00d4ff"
       };
     }
 
@@ -1507,35 +1560,74 @@ class MapStorage {
         nps: computedNps,
         notes: notesClone,
         difficulty: primaryKey,
+        selectedDifficulty: activeDiff,
         difficulties: sanitizedDifficulties
       };
       this.saveCustomMapsToStorage();
       this.setSelectedSongId(this.customMaps[customIndex].id);
+      this.notify();
       return this.customMaps[customIndex];
     }
 
-    // 2. If this track is in defaultTracks, update it directly in-place and save the override!
-    // NEVER create an unwanted duplicate copy!
-    const defaultIndex = (this.defaultTracks || []).findIndex((m) => m.id === updatedMap.id);
-    if (defaultIndex !== -1) {
-      this.defaultTracks[defaultIndex] = {
-        ...this.defaultTracks[defaultIndex],
+    // 2. If this is a default track, save it locally as an independent custom copy!
+    // Leaves the original default track completely intact and unchanged.
+    if (this.isDefaultTrack(updatedMap) || (this.defaultTracks || []).some((m) => m.id === updatedMap.id)) {
+      const defaultOriginal = (this.defaultTracks || []).find((m) => m.id === updatedMap.id) ||
+        this.getDefaultMaps().find((m) => m.id === updatedMap.id);
+
+      const copyId = `custom_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      // Determine copy name: if not explicitly modified, append " (Copy)"
+      const origName = (defaultOriginal ? defaultOriginal.name : "").trim();
+      let copyName = (updatedMap.name || origName || "Song").trim();
+      if (!copyName || copyName === origName) {
+        copyName = `${origName || "Song"} (Copy)`;
+      } else if (!copyName.endsWith("(Copy)") && copyName === origName) {
+        copyName = `${copyName} (Copy)`;
+      }
+
+      // Preserve audio file reference and background from original if not defined
+      const audioFile = updatedMap.file || (defaultOriginal ? defaultOriginal.file : null);
+      const hasStoredAudio = Boolean(updatedMap.hasStoredAudio || (defaultOriginal && defaultOriginal.hasStoredAudio));
+      const bgConfig = updatedMap.background ? { ...updatedMap.background } : (defaultOriginal && defaultOriginal.background ? { ...defaultOriginal.background } : null);
+
+      const newCopy = {
         ...updatedMap,
-        id: updatedMap.id, // Strictly preserve existing ID
+        id: copyId,
+        name: copyName,
+        isCustom: true,
+        isDefault: false,
+        file: audioFile,
+        hasStoredAudio,
         cover: trackCover,
+        background: bgConfig,
         nps: computedNps,
         notes: notesClone,
         difficulty: primaryKey,
+        selectedDifficulty: activeDiff,
         difficulties: sanitizedDifficulties
       };
-      if (!this.mapOverrides) this.mapOverrides = {};
-      this.mapOverrides[updatedMap.id] = {
-        ...this.defaultTracks[defaultIndex]
-      };
-      this.saveOverridesToStorage();
-      this.setSelectedSongId(updatedMap.id);
+
+      // Prepend to customMaps and update order
+      this.customMaps.unshift(newCopy);
+      if (Array.isArray(this.songOrder)) {
+        this.songOrder.unshift(newCopy.id);
+        this.saveSongOrder(this.songOrder);
+      }
+      this.saveCustomMapsToStorage();
+      this.setSelectedSongId(newCopy.id);
+
+      // Duplicate audio in MediaStorage if available
+      if (typeof window !== "undefined" && window.MediaStorage && typeof window.MediaStorage.getAudio === "function") {
+        window.MediaStorage.getAudio(updatedMap.id).then((storedAudio) => {
+          if (storedAudio) {
+            window.MediaStorage.saveAudio(copyId, storedAudio);
+          }
+        }).catch(() => {});
+      }
+
       this.notify();
-      return this.defaultTracks[defaultIndex];
+      return newCopy;
     }
 
     // 3. Fallback: custom track not yet in customMaps (e.g. freshly created custom map)
@@ -1548,11 +1640,17 @@ class MapStorage {
       nps: computedNps,
       notes: notesClone,
       difficulty: primaryKey,
+      selectedDifficulty: activeDiff,
       difficulties: sanitizedDifficulties
     };
     this.customMaps.unshift(newCustomMap);
+    if (Array.isArray(this.songOrder)) {
+      this.songOrder.unshift(newCustomMap.id);
+      this.saveSongOrder(this.songOrder);
+    }
     this.saveCustomMapsToStorage();
     this.setSelectedSongId(newCustomMap.id);
+    this.notify();
     return newCustomMap;
   }
 

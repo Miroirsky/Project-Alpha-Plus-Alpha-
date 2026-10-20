@@ -1254,7 +1254,7 @@ class CreateMenu {
           const noteCount = (diffData.notes && diffData.notes.length) || 0;
           const nps = typeof diffData.nps === "number" ? diffData.nps : 0;
           const diffColor = diffData.color || map.color || "#00d4ff";
-          const canDelete = diffKeys.length > 1;
+          const canDelete = Boolean(map.isCustom) && diffKeys.length > 1;
 
           const diffRow = document.createElement("div");
           diffRow.className = "difficulty-tree-row";
@@ -1484,7 +1484,11 @@ class CreateMenu {
     }
 
     const song = this.activeAddDiffSong;
-    const diffs = this.mapStorage.getSongDifficulties(song) || song.difficulties || {};
+    const rawDiffs = this.mapStorage.getSongDifficulties(song) || song.difficulties || {};
+    const diffs = {};
+    for (const [k, v] of Object.entries(rawDiffs)) {
+      if (v) diffs[k] = { ...v, notes: this.mapStorage.cloneNotes(v.notes || []) };
+    }
 
     // Check for duplicate difficulty name (case-insensitive check)
     const exists = Object.keys(diffs).some((k) => k.toLowerCase() === rawName.toLowerCase());
@@ -1505,16 +1509,21 @@ class CreateMenu {
     const durationSec = Number(song.durationSeconds || song.duration) || 180;
     const nps = this.mapStorage.computeNps(initialNotes, durationSec);
 
-    // Save difficulty track under the same song ID
-    if (!song.difficulties) song.difficulties = {};
-    song.difficulties[rawName] = {
+    diffs[rawName] = {
       difficulty: rawName,
       notes: initialNotes,
       nps,
       color: song.color || "#00d4ff"
     };
 
-    const savedSong = this.mapStorage.saveMap(song);
+    const updatedSong = {
+      ...song,
+      difficulties: diffs,
+      selectedDifficulty: rawName,
+      difficulty: rawName
+    };
+
+    const savedSong = this.mapStorage.saveMap(updatedSong);
     this.expandedSongIds.add(savedSong.id);
     this.closeAddDiffModal();
     this.renderMapsList();
@@ -1608,7 +1617,11 @@ class CreateMenu {
     const newDiff = (this.diffParamNameInput ? this.diffParamNameInput.value.trim() : "") || oldDiff;
     const newColor = this.diffParamColorInput ? this.diffParamColorInput.value : "#00d4ff";
 
-    const diffs = this.mapStorage.getSongDifficulties(song) || song.difficulties || {};
+    const rawDiffs = this.mapStorage.getSongDifficulties(song) || song.difficulties || {};
+    const diffs = {};
+    for (const [k, v] of Object.entries(rawDiffs)) {
+      if (v) diffs[k] = { ...v, notes: this.mapStorage.cloneNotes(v.notes || []) };
+    }
 
     // If renaming difficulty, check collision with other difficulties in the same song
     if (newDiff !== oldDiff) {
@@ -1625,10 +1638,6 @@ class CreateMenu {
       diffs[newDiff] = existingData;
       delete diffs[oldDiff];
 
-      // Update active difficulty pointer if matching
-      if (song.difficulty === oldDiff) song.difficulty = newDiff;
-      if (song.selectedDifficulty === oldDiff) song.selectedDifficulty = newDiff;
-
       // Transfer high score key if present
       const oldScoreKey = `${song.id}#${oldDiff.toLowerCase()}`;
       const newScoreKey = `${song.id}#${newDiff.toLowerCase()}`;
@@ -1643,9 +1652,16 @@ class CreateMenu {
       }
     }
 
-    song.difficulties = diffs;
-    this.mapStorage.saveMap(song);
+    const updatedSong = {
+      ...song,
+      difficulties: diffs
+    };
+    if (song.difficulty === oldDiff) updatedSong.difficulty = newDiff;
+    if (song.selectedDifficulty === oldDiff) updatedSong.selectedDifficulty = newDiff;
+
+    const savedSong = this.mapStorage.saveMap(updatedSong);
     this.closeDiffParamsModal();
+    this.expandedSongIds.add(savedSong.id);
     this.renderMapsList();
 
     if (this.soundManager) this.soundManager.playClick();
@@ -1890,42 +1906,46 @@ class CreateMenu {
       return;
     }
 
-    song.name = name;
-    song.mapper = mapper || "Anonymous";
-    song.creator = creator || "Unknown Artist";
+    const updatedSong = {
+      ...song,
+      name,
+      mapper: mapper || "Anonymous",
+      creator: creator || "Unknown Artist"
+    };
+
     if (this.songParamColorInput) {
-      song.color = this.songParamColorInput.value || "#954132";
+      updatedSong.color = this.songParamColorInput.value || "#954132";
     }
     if (this.songParamBpmInput) {
       const bpmVal = Number(this.songParamBpmInput.value);
       if (bpmVal > 0) {
-        song.bpm = bpmVal;
+        updatedSong.bpm = bpmVal;
       }
     }
     if (this.selectedSongAudioUrl) {
-      song.file = this.selectedSongAudioUrl;
+      updatedSong.file = this.selectedSongAudioUrl;
     }
     if (this.selectedSongAudioFile && typeof window !== "undefined" && window.MediaStorage) {
       window.MediaStorage.saveAudio(song.id, this.selectedSongAudioFile);
-      song.hasStoredAudio = true;
+      updatedSong.hasStoredAudio = true;
     }
     this.selectedSongAudioFile = null;
     if (this.selectedSongDuration) {
-      song.durationSeconds = this.selectedSongDuration;
+      updatedSong.durationSeconds = this.selectedSongDuration;
       const m = Math.floor(this.selectedSongDuration / 60);
       const s = Math.floor(this.selectedSongDuration % 60);
-      song.duration = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+      updatedSong.duration = `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
     }
     if (this.selectedSongArtwork) {
-      song.cover = this.selectedSongArtwork;
+      updatedSong.cover = this.selectedSongArtwork;
     }
     if (this.songParamBgConfig) {
-      song.background = { ...this.songParamBgConfig };
+      updatedSong.background = { ...this.songParamBgConfig };
     } else {
-      song.background = null;
+      updatedSong.background = null;
     }
 
-    const savedSong = this.mapStorage.saveMap(song);
+    const savedSong = this.mapStorage.saveMap(updatedSong);
     this.closeSongParamsModal();
     this.expandedSongIds.add(savedSong.id);
     this.renderMapsList();

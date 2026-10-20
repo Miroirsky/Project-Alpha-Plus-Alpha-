@@ -256,7 +256,12 @@ class MapEditor {
 
     // Always fetch fresh map data from mapStorage to avoid stale object references
     const freshMap = (this.mapStorage && map.id && this.mapStorage.getMap(map.id)) || map;
-    this.activeMap = freshMap;
+    // If opening a default track, make a clone so in-editor edits don't mutate the in-memory default track
+    if (this.mapStorage && this.mapStorage.isDefaultTrack(freshMap)) {
+      this.activeMap = JSON.parse(JSON.stringify(freshMap));
+    } else {
+      this.activeMap = freshMap;
+    }
     this.isDirty = false;
     this.setTool("note");
 
@@ -1910,6 +1915,7 @@ class MapEditor {
       difficulties: { ...this.difficulties }
     };
 
+    const wasDefault = this.mapStorage ? this.mapStorage.isDefaultTrack(this.activeMap) : false;
     const savedMap = this.mapStorage.saveMap(updated);
     this.activeMap = savedMap;
     if (this.mapStorage) {
@@ -1924,7 +1930,7 @@ class MapEditor {
     this.renderDifficultyTabs();
 
     if (this.saveIndicatorEl) {
-      this.saveIndicatorEl.textContent = "✓ All changes saved";
+      this.saveIndicatorEl.textContent = wasDefault ? "✓ Saved as copy" : "✓ All changes saved";
       this.saveIndicatorEl.className = "editor-save-tag saved";
     }
 
@@ -3055,6 +3061,7 @@ class MapEditor {
       this.activeMap.selectedDifficulty = this.activeDifficulty;
       this.activeMap.notes = cloned;
 
+      const wasDefault = this.mapStorage.isDefaultTrack(this.activeMap);
       const saved = this.mapStorage.saveMap(this.activeMap);
       if (saved) {
         this.activeMap = saved;
@@ -3079,7 +3086,7 @@ class MapEditor {
       this.renderDifficultyTabs();
 
       if (this.saveIndicatorEl) {
-        this.saveIndicatorEl.textContent = "✓ All changes saved";
+        this.saveIndicatorEl.textContent = wasDefault ? "✓ Saved as copy" : "✓ All changes saved";
         this.saveIndicatorEl.className = "editor-save-tag saved";
       }
 

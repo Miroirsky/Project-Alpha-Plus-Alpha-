@@ -109,11 +109,10 @@ The results screen displays performance analytics both on normal completion and 
 
 ---
 
-## 💾 In-Place Map Saving
+## 💾 Map Saving & Default Song Copying
 
-When editing any map (custom or default):
-- Edits update the existing song directly under its original ID without generating duplicate saves or forked copies.
-- Default track modifications are preserved in persistent local storage and seamlessly merged upon launch.
+- **Custom Tracks:** Edits save directly in-place under the existing track ID without creating duplicate tracks.
+- **Default Songs:** Default tracks are protected presets. When editing a default song (notes, difficulty tracks, or parameters), changes are saved locally as an independent custom copy (`Song Name (Copy)`), keeping the original default song intact and unmodified.
 - Any notes created or modified in the Map Editor are instantly reflected in both the Song Selection menu and active gameplay.
 
 ---
