@@ -319,8 +319,25 @@ class PlayMenu {
       });
     }
 
-    // Import Song via file input in header
+    // Import Song via native dialog or file input
+    const nativeImportBtn = document.getElementById("btn-play-import-native");
     const importInput = document.getElementById("play-song-import-input");
+
+    if (nativeImportBtn) {
+      nativeImportBtn.addEventListener("click", async (e) => {
+        if (window.electronAPI && typeof window.electronAPI.importSongFile === "function") {
+          e.preventDefault();
+          if (this.soundManager) this.soundManager.playClick();
+          const res = await window.electronAPI.importSongFile();
+          if (res && res.success && res.content) {
+            await this.importSongContent(res.content);
+          }
+          return;
+        }
+        if (importInput) importInput.click();
+      });
+    }
+
     if (importInput) {
       importInput.addEventListener("change", async (e) => {
         const file = e.target.files && e.target.files[0];
@@ -336,11 +353,37 @@ class PlayMenu {
       });
     }
 
-    // Link Default Tracks Folder button in header
+    // Open Mod Downloader Modal
+    const openDownloaderBtn = document.getElementById("btn-open-downloader");
+    if (openDownloaderBtn) {
+      openDownloaderBtn.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (window.modDownloader && typeof window.modDownloader.open === "function") {
+          window.modDownloader.open();
+        }
+      });
+    }
+
+    // Open Custom Songs folder button
+    const openCustomSongsBtn = document.getElementById("btn-open-custom-songs");
+    if (openCustomSongsBtn) {
+      openCustomSongsBtn.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (window.electronAPI && typeof window.electronAPI.openFolder === "function") {
+          window.electronAPI.openFolder("songs");
+        }
+      });
+    }
+
+    // Link / Open Default Tracks Folder button in header
     const linkFolderBtn = document.getElementById("btn-link-default-tracks");
     if (linkFolderBtn) {
       linkFolderBtn.addEventListener("click", async () => {
         if (this.soundManager) this.soundManager.playClick();
+        if (window.electronAPI && typeof window.electronAPI.openFolder === "function") {
+          window.electronAPI.openFolder("default-tracks");
+          return;
+        }
         if (this.mapStorage && typeof this.mapStorage.linkDefaultTracksDirectory === "function") {
           try {
             const tracks = await this.mapStorage.linkDefaultTracksDirectory();

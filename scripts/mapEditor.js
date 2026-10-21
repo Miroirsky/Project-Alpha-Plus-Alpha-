@@ -1702,14 +1702,35 @@ class MapEditor {
   /**
    * Downloads the exported song as a .json file suitable for the Default Tracks folder.
    */
-  downloadExportFile() {
+  async downloadExportFile() {
     if (!this.lastExportData || !this.lastExportData.json) return;
+
+    const filename = this.lastExportData.filename || `${(this.activeMap.name || "song").replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || "song"}.json`;
+
+    // Use native Windows Save As dialog when running in Electron
+    if (window.electronAPI && typeof window.electronAPI.exportSongFile === "function") {
+      try {
+        const res = await window.electronAPI.exportSongFile(filename, this.lastExportData.json);
+        if (res && res.success) {
+          if (this.soundManager) this.soundManager.playClick();
+          if (this.exportFeedback) {
+            this.exportFeedback.textContent = "Saved to " + res.filePath + " ✓";
+            this.exportFeedback.style.display = "inline-block";
+            setTimeout(() => {
+              if (this.exportFeedback) this.exportFeedback.style.display = "none";
+            }, 3500);
+          }
+        }
+      } catch (err) {
+        console.warn("Electron export failed:", err);
+      }
+      return;
+    }
 
     try {
       const blob = new Blob([this.lastExportData.json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const filename = this.lastExportData.filename || `${(this.activeMap.name || "song").replace(/[^a-zA-Z0-9_\- ]/g, "").trim() || "song"}.json`;
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);

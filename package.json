@@ -1,0 +1,51 @@
+{
+  "name": "project-alpha-plus",
+  "productName": "Project Alpha Plus",
+  "version": "1.0.0",
+  "description": "Project Alpha Plus - Precision Rhythm Arcade Game",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:dir": "electron-builder --dir",
+    "build:exe": "electron-builder --win nsis",
+    "dist": "electron-builder --win nsis"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-.git"
+  },
+  "keywords": [
+    "rhythm-game",
+    "arcade",
+    "electron"
+  ],
+  "author": "Project Alpha Plus Team",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.projectalpha.plus",
+    "productName": "Project Alpha Plus",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "electron/**/*",
+      "scripts/**/*",
+      "styles/**/*",
+      "Assets/**/*",
+      "Default Tracks/**/*",
+      "config.json",
+      "Tutorial.mp4"
+    ],
+    "win": {
+      "target": [
+        "portable"
+      ]
+    }
+  }
+}

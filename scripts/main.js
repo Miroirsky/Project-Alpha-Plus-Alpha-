@@ -42,6 +42,35 @@ function initApp() {
   const soundManager = new SoundClass();
   const musicPlayer = new MusicClass({ soundManager });
   const mapStorage = new MapStorageClass();
+  window.mapStorage = mapStorage;
+  window.soundManager = soundManager;
+
+  // Initialize SaveSystem (Local File Saves & Profiles)
+  if (window.saveSystem) {
+    window.saveSystem.init().then(() => {
+      if (window.saveSystem.getHighscores) {
+        mapStorage.highscores = Object.assign({}, mapStorage.highscores, window.saveSystem.getHighscores());
+      }
+    });
+
+    window.saveSystem.addListener((event) => {
+      if (event === "slotSwitched" || event === "slotCreated" || event === "slotDeleted") {
+        if (mapStorage) {
+          mapStorage.highscores = window.saveSystem.getHighscores();
+          mapStorage.notify();
+        }
+        if (window.playMenu) {
+          window.playMenu.updateSongs(mapStorage.getAllMaps());
+        }
+      }
+    });
+  }
+
+  // Initialize Mod & Track Downloader
+  if (window.ModDownloader) {
+    window.modDownloader = new window.ModDownloader({ mapStorage, soundManager });
+    window.modDownloader.init();
+  }
 
   // 2. Initialize Modals
   const settingsModal = new SettingsClass({ soundManager, themeManager });
@@ -166,6 +195,9 @@ function initApp() {
       onSongEnd: (results) => {
         // Record high score (completed runs only) for the chosen difficulty and display comprehensive End Screen
         const scoreRecord = mapStorage.recordScore(results.songId, results.score, results.isCompleted, chosenDiff);
+        if (window.saveSystem && typeof window.saveSystem.recordRunResult === "function") {
+          window.saveSystem.recordRunResult(results, chosenDiff);
+        }
         gameView.showResults(results, scoreRecord);
       }
     });
@@ -210,6 +242,8 @@ function initApp() {
     }
   });
   playMenu.init();
+  window.playMenu = playMenu;
+  window.createMenu = createMenu;
 
   // Keep play menu and create menu updated whenever map storage changes
   mapStorage.onChange((updatedMaps) => {

@@ -723,3 +723,33 @@
   color: var(--palette-bg-primary, #FAE3E3);
   font-size: 0.95rem;
 }
+
+/* ==========================================================================
+   Save Slots & Downloader Styles (Electron Standalone)
+   ========================================================================== */
+.settings-section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  margin-top: 0.5rem;
+  border-top: 1px dashed rgba(var(--palette-bg-secondary-rgb), 0.3);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.downloader-alert-error {
+  background: rgba(255, 71, 87, 0.25);
+  border: 1px solid #ff4757;
+  color: #ff6b81;
+}
+
+.downloader-alert-success {
+  background: rgba(46, 213, 115, 0.25);
+  border: 1px solid #2ed573;
+  color: #2ed573;
+}
+

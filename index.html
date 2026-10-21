@@ -18,6 +18,7 @@
 
   <!-- Modular Scripts (compatible with file:// direct launch and http:// servers) -->
   <script defer src="scripts/config.js"></script>
+  <script defer src="scripts/saveSystem.js"></script>
   <script defer src="scripts/themeManager.js"></script>
   <script defer src="scripts/soundManager.js"></script>
   <script defer src="scripts/songsData.js"></script>
@@ -25,6 +26,7 @@
   <script defer src="scripts/mapData.js"></script>
   <script defer src="scripts/mediaStorage.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
+  <script defer src="scripts/modDownloader.js"></script>
   <script defer src="scripts/musicPlayer.js"></script>
   <script defer src="scripts/playMenu.js"></script>
   <script defer src="scripts/playArea.js"></script>
@@ -108,13 +110,19 @@
           <h2 class="play-screen-title">Select Track</h2>
           <p class="play-screen-subtitle">Select track to preview &bull; Click to prepare</p>
         </div>
-        <div class="play-header-actions" style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
-          <label class="btn-theme-action play-import-btn" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Import custom song (.json)">
+        <div class="play-header-actions" style="margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button id="btn-play-import-native" class="btn-theme-action play-import-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Import custom song (.json)">
             <span>📥 Import Song</span>
             <input type="file" id="play-song-import-input" accept=".json,application/json" style="display: none;">
-          </label>
-          <button id="btn-link-default-tracks" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Link Default Tracks folder on disk">
-            <span>📁 Default Tracks Folder</span>
+          </button>
+          <button id="btn-open-downloader" class="btn-theme-action play-downloader-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Download song or track package from URL">
+            <span>🌐 Download Track</span>
+          </button>
+          <button id="btn-link-default-tracks" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Reveal Default Tracks folder on disk">
+            <span>📁 Default Tracks</span>
+          </button>
+          <button id="btn-open-custom-songs" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Reveal Custom Songs folder on disk">
+            <span>📂 Custom Songs</span>
           </button>
         </div>
       </header>
@@ -738,6 +746,73 @@
               </button>
             </div>
           </div>
+
+          <!-- Display & Window Controls (Electron Standalone) -->
+          <div class="settings-item">
+            <div class="settings-label-row">
+              <label for="fullscreen-toggle" class="settings-label">Fullscreen Mode (F11)</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="fullscreen-toggle">
+                <span class="slider-track"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Save Slots & Player Profile Section -->
+          <div class="settings-section-divider">
+            <span>💾 Save Slots &amp; Local Progress</span>
+          </div>
+
+          <div class="save-slots-panel">
+            <div class="form-group" style="margin-bottom: 0.75rem;">
+              <label for="save-slot-select" class="form-label" style="font-size: 0.82rem;">Active Save Slot</label>
+              <select id="save-slot-select" class="form-select" style="width: 100%;">
+                <option value="slot_1">Slot 1: Player 1</option>
+              </select>
+            </div>
+
+            <!-- Profile Summary Stats -->
+            <div class="slot-stats-card" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; background: rgba(50,34,20,0.5); border-radius: 8px; border: 1px solid rgba(247,212,188,0.2); margin-bottom: 12px; text-align: center; font-size: 0.8rem;">
+              <div>
+                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">TOTAL SCORE</span>
+                <strong id="slot-stat-score" style="color: #fff; font-size: 0.95rem;">0</strong>
+              </div>
+              <div>
+                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">NOTES HIT</span>
+                <strong id="slot-stat-notes" style="color: #fff; font-size: 0.95rem;">0</strong>
+              </div>
+              <div>
+                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">COMPLETED</span>
+                <strong id="slot-stat-cleared" style="color: #fff; font-size: 0.95rem;">0</strong>
+              </div>
+            </div>
+
+            <!-- Save Slot Action Buttons -->
+            <div class="slot-actions-grid" style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button id="btn-slot-new" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Create new save slot profile">+ New Slot</button>
+              <button id="btn-slot-rename" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Rename active save slot">Rename</button>
+              <button id="btn-slot-export" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Export save slot file (.json)">Export</button>
+              <button id="btn-slot-import" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Import save slot file (.json)">Import</button>
+              <button id="btn-slot-delete" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem; color: #ff6b81;" title="Delete this save slot">Delete</button>
+            </div>
+          </div>
+
+          <!-- Local Folders on Disk Section -->
+          <div class="settings-section-divider">
+            <span>📁 Local Folders (Windows File Explorer)</span>
+          </div>
+
+          <div class="settings-folder-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button id="btn-open-saves-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
+              <span>📁 Open Saves Folder</span>
+            </button>
+            <button id="btn-open-songs-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
+              <span>📂 Open Custom Songs</span>
+            </button>
+            <button id="btn-open-default-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
+              <span>💿 Open Default Tracks</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1333,6 +1408,57 @@
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Mod & Song Downloader Modal (Direct Web Asset Downloader) -->
+    <div id="downloader-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="downloader-modal-title" aria-hidden="true">
+      <div class="modal-dialog downloader-modal-dialog" style="max-width: 540px;">
+        <header class="modal-header">
+          <div class="modal-header-title-group">
+            <h2 id="downloader-modal-title" class="modal-title">Track &amp; Mod Downloader</h2>
+            <span class="track-type-badge">Web / Mod Ingest</span>
+          </div>
+          <button id="btn-close-downloader" class="modal-close-btn" type="button" aria-label="Close Downloader Dialog">&times;</button>
+        </header>
+
+        <div class="modal-content-body" style="padding: 1.25rem 0;">
+          <p style="font-size: 0.85rem; color: var(--color-text-secondary, #F7D4BC); margin-bottom: 1rem; line-height: 1.5;">
+            Directly download custom rhythm songs, audio, videos, or mod packages from any URL into your local game library.
+          </p>
+
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label for="downloader-url-input" class="form-label">Download URL (Direct link to .json song or media) <span class="required-star">*</span></label>
+            <input type="url" id="downloader-url-input" class="form-input" placeholder="https://example.com/mods/my_awesome_song.json" autocomplete="off" spellcheck="false">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 1.25rem;">
+            <label for="downloader-name-input" class="form-label">Custom File Name (Optional)</label>
+            <input type="text" id="downloader-name-input" class="form-input" placeholder="e.g. MyCustomSong.json" autocomplete="off">
+          </div>
+
+          <!-- Progress Bar & Text -->
+          <div class="downloader-progress-container" style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; margin-bottom: 1rem; border: 1px solid rgba(247,212,188,0.2);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px; color: var(--color-text-secondary, #F7D4BC);">
+              <span>Download Progress</span>
+              <span id="downloader-progress-text">Ready</span>
+            </div>
+            <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
+              <div id="downloader-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff4757, #00d4ff); border-radius: 5px; transition: width 0.2s ease;"></div>
+            </div>
+          </div>
+
+          <div id="downloader-status-alert" class="downloader-alert" style="display: none; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+
+          <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 1rem;">
+            <button id="btn-downloader-open-folder" class="btn-editor-action" type="button" style="margin-right: auto;">
+              <span>📁 Open Songs Folder</span>
+            </button>
+            <button id="btn-start-download" class="menu-btn menu-btn-primary" type="button">
+              <span>Start Download</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </div>

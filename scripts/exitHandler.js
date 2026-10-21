@@ -55,6 +55,11 @@ class ExitHandler {
   handleExit() {
     if (this.soundManager) this.soundManager.playClick();
 
+    if (window.electronAPI && typeof window.electronAPI.exitApp === "function") {
+      window.electronAPI.exitApp();
+      return;
+    }
+
     // Attempt to close the window
     try {
       window.close();

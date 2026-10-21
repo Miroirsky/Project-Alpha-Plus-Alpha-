@@ -1212,6 +1212,45 @@ class MapStorage {
   }
 
   /**
+   * Scans local Default Tracks and custom_songs directories via Electron IPC.
+   * Discovers and parses every file directly from the local filesystem with no sandbox limits.
+   * @returns {Promise<Array>} Loaded default tracks
+   */
+  async loadFromElectronDisk() {
+    if (typeof window === "undefined" || !window.electronAPI || typeof window.electronAPI.scanFolders !== "function") {
+      return this.defaultTracks;
+    }
+    try {
+      const res = await window.electronAPI.scanFolders();
+      if (res && Array.isArray(res.songs) && res.songs.length > 0) {
+        const defaultTracksRaw = res.songs.filter(s => s._source === "default");
+        const customTracksRaw = res.songs.filter(s => s._source === "custom_disk");
+
+        if (defaultTracksRaw.length > 0) {
+          const processed = this.processDefaultTrackItems(defaultTracksRaw);
+          this.defaultTracks = processed;
+          this.saveDefaultTracksCache(processed);
+        }
+
+        if (customTracksRaw.length > 0) {
+          customTracksRaw.forEach((ct) => {
+            if (ct && ct.id && !this.customMaps.some(m => m.id === ct.id)) {
+              this.customMaps.push(ct);
+            }
+          });
+        }
+
+        this.applyMapOverrides();
+        this.notify();
+        return this.defaultTracks;
+      }
+    } catch (err) {
+      console.warn("[MapStorage] Electron disk scanning error:", err);
+    }
+    return this.defaultTracks;
+  }
+
+  /**
    * Prompts user to select the "Default Tracks" directory using the File System Access API.
    * Persists the directory handle in IndexedDB so all present and future songs in that folder
    * are automatically loaded on every application startup without manual lists!
@@ -1244,7 +1283,15 @@ class MapStorage {
    * @returns {Promise<Array>} Loaded default tracks
    */
   async autoDetectDefaultTracks() {
-    // 1. In Node.js / testing, run sync detection
+    // 1. In Electron standalone environment, directly scan folders via IPC
+    if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.scanFolders === "function") {
+      const electronTracks = await this.loadFromElectronDisk();
+      if (electronTracks && electronTracks.length > 0) {
+        return electronTracks;
+      }
+    }
+
+    // 2. In Node.js / testing, run sync detection
     if (typeof process !== "undefined" && typeof require === "function") {
       this.syncDetectLocalTracks();
       return this.defaultTracks;
