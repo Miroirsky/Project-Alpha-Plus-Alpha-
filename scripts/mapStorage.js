@@ -24,14 +24,14 @@ class MapStorage {
     this.highscores = this.loadHighscores();
     this.listeners = new Set();
     this.loadErrors = [];
-    this.defaultTracks = []; // No default tracks!
+    this.defaultTracks = [];
     this.selectedSongId = this.loadSelectedSongId();
     this.songOrder = this.loadSongOrder();
     this.difficultyOrders = this.loadDifficultyOrders();
 
     // In Electron standalone / browser environment, automatically detect custom song folders & default tracks
     if (typeof window !== "undefined") {
-      this.autoDetectSongs();
+      this.initializationPromise = this.autoDetectSongs();
       this.restoreCustomAudio();
     } else if (typeof process !== "undefined") {
       this.loadDefaultTracksSyncNode();

@@ -39,6 +39,7 @@
       "scripts/**/*",
       "styles/**/*",
       "Assets/**/*",
+      "Default Tracks/**/*",
       "config.json",
       "Tutorial.mp4"
     ],

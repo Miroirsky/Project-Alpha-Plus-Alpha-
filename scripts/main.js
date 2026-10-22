@@ -5,7 +5,7 @@
  * map creation, map editor, and rhythm track gameplay with high scores.
  */
 
-function initApp() {
+async function initApp() {
   const ThemeClass = window.ThemeManager;
   const SoundClass = window.SoundManager;
   const SettingsClass = window.SettingsModal;
@@ -42,6 +42,7 @@ function initApp() {
   const soundManager = new SoundClass();
   const musicPlayer = new MusicClass({ soundManager });
   const mapStorage = new MapStorageClass();
+  await mapStorage.initializationPromise;
   window.mapStorage = mapStorage;
   window.soundManager = soundManager;
 
