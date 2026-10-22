@@ -24,41 +24,17 @@ class MapStorage {
     this.highscores = this.loadHighscores();
     this.listeners = new Set();
     this.loadErrors = [];
-    this.defaultTracks = this.loadDefaultTracksCache();
+    this.defaultTracks = []; // No default tracks!
     this.selectedSongId = this.loadSelectedSongId();
     this.songOrder = this.loadSongOrder();
     this.difficultyOrders = this.loadDifficultyOrders();
 
-    // In browser environment running under file:/// protocol (or if cache is empty),
-    // immediately initialize with bundled fallback tracks so songs appear with zero delay
-    const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
-    if ((!this.defaultTracks || this.defaultTracks.length === 0 || isFileProtocol) && typeof window !== "undefined" && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
-      this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
-      this.saveDefaultTracksCache(this.defaultTracks);
-    }
-
-    // In Node.js / CLI / testing environment, immediately scan filesystem
-    if (typeof process !== "undefined" && typeof require === "function") {
-      this.syncDetectLocalTracks();
-    }
-
-    // In browser environment, automatically detect every track in Default Tracks folder
+    // In Electron standalone / browser environment, automatically detect custom song folders & default tracks
     if (typeof window !== "undefined") {
-      this.autoDetectDefaultTracks();
-    }
-
-    // Ensure default tracks in memory have clean audio paths and apply saved overrides / migrate to custom copies
-    if (this.defaultTracks && Array.isArray(this.defaultTracks)) {
-      this.healDefaultTracksAudio(this.defaultTracks);
-      this.migrateMapOverridesToCustomCopies();
-      this.applyMapOverrides();
-      this.unblacklistDefaultTracks();
-    }
-
-    // Asynchronously restore custom track audio from IndexedDB (MediaStorage) across reloads
-    if (typeof window !== "undefined") {
+      this.autoDetectSongs();
       this.restoreCustomAudio();
-      this.initDefaultTracksAudio();
+    } else if (typeof process !== "undefined") {
+      this.loadDefaultTracksSyncNode();
     }
   }
 
@@ -1212,42 +1188,273 @@ class MapStorage {
   }
 
   /**
-   * Scans local Default Tracks and custom_songs directories via Electron IPC.
-   * Discovers and parses every file directly from the local filesystem with no sandbox limits.
-   * @returns {Promise<Array>} Loaded default tracks
+   * Scans custom_songs directory and Default Tracks (via manifest.json) via Electron IPC.
+   * Loads strictly valid complete song folders.
+   * @returns {Promise<Array>} Loaded maps
    */
   async loadFromElectronDisk() {
     if (typeof window === "undefined" || !window.electronAPI || typeof window.electronAPI.scanFolders !== "function") {
-      return this.defaultTracks;
+      return this.getAllMaps();
     }
     try {
       const res = await window.electronAPI.scanFolders();
-      if (res && Array.isArray(res.songs) && res.songs.length > 0) {
-        const defaultTracksRaw = res.songs.filter(s => s._source === "default");
-        const customTracksRaw = res.songs.filter(s => s._source === "custom_disk");
-
-        if (defaultTracksRaw.length > 0) {
-          const processed = this.processDefaultTrackItems(defaultTracksRaw);
-          this.defaultTracks = processed;
-          this.saveDefaultTracksCache(processed);
-        }
-
-        if (customTracksRaw.length > 0) {
-          customTracksRaw.forEach((ct) => {
-            if (ct && ct.id && !this.customMaps.some(m => m.id === ct.id)) {
-              this.customMaps.push(ct);
-            }
+      if (res) {
+        if (Array.isArray(res.songs)) {
+          this.customMaps = res.songs.map(s => {
+            s.isCustom = true;
+            s.isDefault = false;
+            this.normalizeSongDifficulties(s);
+            return s;
           });
         }
-
-        this.applyMapOverrides();
+        if (Array.isArray(res.defaultTracks)) {
+          this.defaultTracks = res.defaultTracks.map(s => {
+            s.isCustom = false;
+            s.isDefault = true;
+            this.normalizeSongDifficulties(s);
+            return s;
+          });
+        }
         this.notify();
-        return this.defaultTracks;
+        return this.getAllMaps();
       }
     } catch (err) {
       console.warn("[MapStorage] Electron disk scanning error:", err);
     }
-    return this.defaultTracks;
+    return this.getAllMaps();
+  }
+
+  /**
+   * Node.js synchronous loader for Default Tracks using manifest.json (for CLI / tests).
+   * @returns {Array} Loaded default tracks
+   */
+  loadDefaultTracksSyncNode() {
+    if (typeof process === "undefined" || typeof require !== "function") return [];
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const defaultTracksDir = path.resolve(this.getDefaultTracksPath().replace(/[/\\]+/g, path.sep));
+      if (!fs.existsSync(defaultTracksDir)) return [];
+      const manifestPath = path.join(defaultTracksDir, "manifest.json");
+      let trackFolders = [];
+      if (fs.existsSync(manifestPath)) {
+        try {
+          const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+          if (Array.isArray(manifest.tracks)) trackFolders = manifest.tracks;
+        } catch (e) {}
+      }
+      if (trackFolders.length === 0) {
+        const items = fs.readdirSync(defaultTracksDir);
+        for (const item of items) {
+          const p = path.join(defaultTracksDir, item);
+          if (fs.statSync(p).isDirectory()) trackFolders.push(item);
+        }
+      }
+      const loaded = [];
+      for (const t of trackFolders) {
+        const tPath = path.join(defaultTracksDir, t);
+        if (!fs.existsSync(tPath) || !fs.statSync(tPath).isDirectory()) continue;
+        const notesFile = path.join(tPath, "notes.json");
+        if (!fs.existsSync(notesFile)) continue;
+        const parsed = JSON.parse(fs.readFileSync(notesFile, "utf8"));
+        parsed.isDefault = true;
+        parsed.isCustom = false;
+        parsed._folderPath = tPath;
+        parsed._folderName = t;
+        parsed._source = "default_disk";
+        this.normalizeSongDifficulties(parsed);
+        loaded.push(parsed);
+      }
+      this.defaultTracks = loaded;
+      return loaded;
+    } catch (err) {
+      return [];
+    }
+  }
+
+  /**
+   * Imports a full song folder (notes.json, track.ogg, background.mp4) via native Electron dialog or folder path.
+   * Copies the folder into custom_songs/ and registers the imported song.
+   * @param {string|null} folderPath
+   * @returns {Promise<{ success: boolean, song?: Object, error?: string, canceled?: boolean }>}
+   */
+  async importSongFolderAsync(folderPath = null) {
+    if (typeof window === "undefined" || !window.electronAPI) {
+      return { success: false, error: "Not in Electron environment" };
+    }
+
+    try {
+      let res;
+      if (folderPath && typeof window.electronAPI.importFolderFromPath === "function") {
+        res = await window.electronAPI.importFolderFromPath(folderPath);
+      } else if (typeof window.electronAPI.importSongFolder === "function") {
+        res = await window.electronAPI.importSongFolder();
+      } else {
+        return { success: false, error: "Song folder import API not available" };
+      }
+
+      if (!res) return { canceled: true };
+      if (res.canceled) return { canceled: true };
+
+      if (!res.success || !res.song) {
+        return { success: false, error: res.error || "Failed to import song folder" };
+      }
+
+      const song = res.song;
+      song.isCustom = true;
+      song.isDefault = false;
+      this.normalizeSongDifficulties(song);
+
+      const existingIdx = this.customMaps.findIndex(m => m.id === song.id || m._folderName === song._folderName);
+      if (existingIdx !== -1) {
+        this.customMaps[existingIdx] = song;
+      } else {
+        this.customMaps.unshift(song);
+      }
+
+      this.removeDeletedTrackId(song.id);
+      if (song.name) this.removeDeletedTrackId(song.name);
+
+      this.setSelectedSongId(song.id);
+      this.notify();
+
+      return { success: true, song, folderPath: res.folderPath, folderName: res.folderName };
+    } catch (err) {
+      console.error("[MapStorage] importSongFolderAsync error:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Automatically saves the song as a discrete folder under custom_songs/:
+   * custom_songs/<folder_name>/
+   *   ├── notes.json
+   *   ├── track.ogg (or .mp3 / .wav)
+   *   └── background.mp4 (or .webm / .png / .jpg)
+   * @param {Object} map
+   * @returns {Promise<{ success: boolean, folderPath: string, folderName: string }>}
+   */
+  async saveSongFolderOnDisk(map) {
+    if (typeof window === "undefined" || !window.electronAPI || typeof window.electronAPI.saveSongFolder !== "function") {
+      return { success: false, error: "Not in Electron environment" };
+    }
+    if (!map) return { success: false, error: "No map provided" };
+
+    try {
+      const folderName = map._folderName || (map.name || "song").replace(/[/\\?%*:|"<>]/g, "_").trim() || "pack_01";
+
+      // 1. Resolve Audio Data (Buffer / Data URL / File Path)
+      let audioData = null;
+      let audioExt = "ogg";
+
+      if (map._localAudioPath && typeof map._localAudioPath === "string") {
+        audioData = map._localAudioPath;
+        const extMatch = map._localAudioPath.match(/\.([a-z0-9]+)$/i);
+        if (extMatch) audioExt = extMatch[1].toLowerCase();
+      } else if (map.file && typeof map.file === "string") {
+        if (map.file.startsWith("file:///")) {
+          const rawPath = decodeURIComponent(map.file.replace(/^file:\/\/\/?/, ""));
+          audioData = rawPath;
+          const extMatch = rawPath.match(/\.([a-z0-9]+)$/i);
+          if (extMatch) audioExt = extMatch[1].toLowerCase();
+        } else if (map.file.startsWith("data:audio")) {
+          audioData = map.file;
+          if (map.file.includes("mpeg") || map.file.includes("mp3")) audioExt = "mp3";
+          else if (map.file.includes("wav")) audioExt = "wav";
+          else if (map.file.includes("ogg")) audioExt = "ogg";
+        } else if (map.file.startsWith("blob:") && window.MediaStorage) {
+          audioData = await window.MediaStorage.resolveBlobToDataUrl(map.file);
+          if (audioData && (audioData.includes("mpeg") || audioData.includes("mp3"))) audioExt = "mp3";
+        } else if (map.file.startsWith("Assets/")) {
+          audioData = map.file;
+          const extMatch = map.file.match(/\.([a-z0-9]+)$/i);
+          if (extMatch) audioExt = extMatch[1].toLowerCase();
+        }
+      }
+
+      if (!audioData && window.MediaStorage) {
+        audioData = await window.MediaStorage.getAudioAsDataUrl(map.id);
+        if (audioData && (audioData.includes("mpeg") || audioData.includes("mp3"))) audioExt = "mp3";
+      }
+
+      if (!audioData && window.DEFAULT_AUDIO_DATA) {
+        const bundled = window.DEFAULT_AUDIO_DATA[map.id] || window.DEFAULT_AUDIO_DATA[map.name];
+        if (bundled) {
+          audioData = bundled;
+          audioExt = "mp3";
+        }
+      }
+
+      // 2. Resolve Background Data (Video / Image)
+      let bgData = null;
+      let bgExt = "mp4";
+      const bgConfig = map.background || {};
+
+      if (map._localBgPath && typeof map._localBgPath === "string") {
+        bgData = map._localBgPath;
+        const extMatch = map._localBgPath.match(/\.([a-z0-9]+)$/i);
+        if (extMatch) bgExt = extMatch[1].toLowerCase();
+      } else if (bgConfig.url && typeof bgConfig.url === "string") {
+        if (bgConfig.url.startsWith("file:///")) {
+          const rawPath = decodeURIComponent(bgConfig.url.replace(/^file:\/\/\/?/, ""));
+          bgData = rawPath;
+          const extMatch = rawPath.match(/\.([a-z0-9]+)$/i);
+          if (extMatch) bgExt = extMatch[1].toLowerCase();
+        } else if (bgConfig.url.startsWith("data:")) {
+          bgData = bgConfig.url;
+          if (bgConfig.url.includes("mp4")) bgExt = "mp4";
+          else if (bgConfig.url.includes("webm")) bgExt = "webm";
+          else if (bgConfig.url.includes("png")) bgExt = "png";
+          else if (bgConfig.url.includes("jpeg") || bgConfig.url.includes("jpg")) bgExt = "jpg";
+        } else if (bgConfig.url.startsWith("blob:") && window.MediaStorage) {
+          bgData = await window.MediaStorage.resolveBlobToDataUrl(bgConfig.url);
+        }
+      }
+
+      if (!bgData && window.MediaStorage) {
+        const storedBg = await window.MediaStorage.getBackgroundMedia(map.id);
+        if (storedBg) {
+          bgData = await window.MediaStorage.blobToDataUrl(storedBg);
+        }
+      }
+
+      // 3. Resolve Cover Artwork
+      let coverData = null;
+      let coverExt = "png";
+      if (map.cover && typeof map.cover === "string") {
+        if (map.cover.startsWith("data:image")) {
+          coverData = map.cover;
+          if (map.cover.includes("jpeg") || map.cover.includes("jpg")) coverExt = "jpg";
+        } else if (map.cover.startsWith("blob:") && window.MediaStorage) {
+          coverData = await window.MediaStorage.resolveBlobToDataUrl(map.cover);
+        }
+      }
+
+      // 4. Send to Electron main process
+      const packagePayload = {
+        ...map,
+        audioData,
+        audioExt,
+        bgData,
+        bgExt,
+        bgConfig,
+        coverData,
+        coverExt
+      };
+
+      const result = await window.electronAPI.saveSongFolder(folderName, packagePayload);
+      if (result && result.success) {
+        map._folderName = result.folderName;
+        map._folderPath = result.folderPath;
+        map._source = "custom_disk";
+        map._filePath = result.notesFile;
+        return result;
+      }
+      return result;
+    } catch (err) {
+      console.error("[MapStorage] saveSongFolderOnDisk failed:", err);
+      return { success: false, error: err.message };
+    }
   }
 
   /**
@@ -1278,250 +1485,161 @@ class MapStorage {
   }
 
   /**
-   * Loads default track files specified in the configuration list on startup.
-   * Discovers and parses every file in APP_CONFIG.defaultTracks (or config.json).
-   * @returns {Promise<Array>} Loaded default tracks
+   * Automatically discovers and loads valid song folders from custom_songs on startup.
+   * @returns {Promise<Array>} Loaded custom maps
+   */
+  async autoDetectSongs() {
+    if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.scanFolders === "function") {
+      return await this.loadFromElectronDisk();
+    }
+    return this.customMaps;
+  }
+
+  /**
+   * Compatibility alias for autoDetectSongs.
+   * @returns {Promise<Array>}
    */
   async autoDetectDefaultTracks() {
-    // 1. In Electron standalone environment, directly scan folders via IPC
-    if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.scanFolders === "function") {
-      const electronTracks = await this.loadFromElectronDisk();
-      if (electronTracks && electronTracks.length > 0) {
-        return electronTracks;
-      }
-    }
-
-    // 2. In Node.js / testing, run sync detection
-    if (typeof process !== "undefined" && typeof require === "function") {
-      this.syncDetectLocalTracks();
-      return this.defaultTracks;
-    }
-
-    if (typeof window === "undefined") {
-      return this.defaultTracks;
-    }
-
-    // 2. Check if user previously linked the Default Tracks directory via File System Access API
-    if (window.MediaStorage && typeof window.MediaStorage.getFolderHandle === "function") {
-      try {
-        const savedHandle = await window.MediaStorage.getFolderHandle("default_tracks");
-        if (savedHandle && typeof savedHandle.queryPermission === "function") {
-          const perm = await savedHandle.queryPermission({ mode: "read" });
-          if (perm === "granted") {
-            const tracks = await this.loadTracksFromDirectoryHandle(savedHandle);
-            if (tracks && tracks.length > 0) {
-              return tracks;
-            }
-          }
-        }
-      } catch (handleErr) {
-        console.warn("[MapStorage] Could not query stored directory handle:", handleErr);
-      }
-    }
-
-    // 3. When running under file:/// protocol, direct fetch() of local filesystem files
-    // is blocked by browser CORS sandbox policies (origin: null).
-    // Ensure bundled fallback default tracks are active and skip failing fetch calls.
-    if (window.location && window.location.protocol === "file:") {
-      if ((!this.defaultTracks || this.defaultTracks.length === 0) && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
-        this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
-        this.saveDefaultTracksCache(this.defaultTracks);
-      }
-      this.applyMapOverrides();
-      await this.initDefaultTracksAudio();
-      this.notify();
-      return this.defaultTracks;
-    }
-
-    if (typeof fetch !== "function") {
-      return this.defaultTracks;
-    }
-
-    const rawItems = [];
-    const validTrackPaths = [];
-    const seenPaths = new Set();
-    const basePath = this.getDefaultTracksPath().replace(/\\/g, "/");
-
-    // 4. Try fetching manifest.json from Default Tracks folder
-    const manifestCandidates = [
-      `${basePath}/manifest.json`,
-      `./${basePath}/manifest.json`,
-      "Default Tracks/manifest.json",
-      "./Default Tracks/manifest.json",
-      "manifest.json"
-    ];
-
-    for (const mUrl of manifestCandidates) {
-      try {
-        const mRes = await fetch(mUrl);
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          if (mData && Array.isArray(mData.tracks)) {
-            for (const tName of mData.tracks) {
-              if (tName && tName.toLowerCase().endsWith(".json") && tName.toLowerCase() !== "manifest.json") {
-                const fullTPath = `${basePath}/${tName}`;
-                if (!seenPaths.has(fullTPath.toLowerCase())) {
-                  seenPaths.add(fullTPath.toLowerCase());
-                  try {
-                    const tRes = await fetch(encodeURI(fullTPath));
-                    if (tRes.ok) {
-                      const tJson = await tRes.json();
-                      rawItems.push(tJson);
-                      validTrackPaths.push(fullTPath);
-                      this.removeLoadError(tName);
-                    }
-                  } catch (e) {}
-                }
-              }
-            }
-            if (rawItems.length > 0) break;
-          }
-        }
-      } catch (e) {}
-    }
-
-    // 5. Also try configured default tracks list
-    const trackList = this.getDefaultTracksList();
-    const fetchPromises = trackList.map(async (trackPath) => {
-      if (!trackPath || typeof trackPath !== "string") return null;
-      const normalized = trackPath.replace(/\\/g, "/");
-      if (seenPaths.has(normalized.toLowerCase())) return null;
-
-      const parts = normalized.split("/");
-      const fileName = parts.pop();
-      const encFile = encodeURIComponent(fileName);
-      const encDir = parts.map(encodeURIComponent).join("/");
-
-      const candidates = [
-        normalized,
-        `./${normalized}`,
-        encDir ? `${encDir}/${encFile}` : encFile,
-        encDir ? `./${encDir}/${encFile}` : `./${encFile}`
-      ];
-
-      const uniqueCandidates = Array.from(new Set(candidates));
-
-      let lastErr = null;
-      let lastStatus = 0;
-      for (const candidate of uniqueCandidates) {
-        try {
-          const res = await fetch(candidate);
-          if (res.ok) {
-            try {
-              const json = await res.json();
-              this.removeLoadError(trackPath);
-              return { trackPath, json };
-            } catch (parseErr) {
-              lastErr = `Invalid JSON syntax: ${parseErr.message}`;
-              this.recordLoadError(trackPath, candidate, lastErr);
-              return null;
-            }
-          } else {
-            lastStatus = res.status;
-          }
-        } catch (fetchErr) {
-          lastErr = fetchErr.message || "Network / CORS / Protocol error";
-        }
-      }
-
-      const errorDetail = lastErr || (lastStatus ? `HTTP ${lastStatus}` : "File not found or unreachable");
-      this.recordLoadError(trackPath, normalized, errorDetail);
-      return null;
-    });
-
-    const results = await Promise.all(fetchPromises);
-    results.forEach((res) => {
-      if (res && res.json) {
-        rawItems.push(res.json);
-        validTrackPaths.push(res.trackPath);
-        seenPaths.add(res.trackPath.toLowerCase());
-      }
-    });
-
-    if (validTrackPaths.length > 0) {
-      this.saveCachedTrackFileNames(validTrackPaths);
-    }
-
-    if (rawItems.length > 0) {
-      const processed = this.processDefaultTrackItems(rawItems);
-      this.defaultTracks = processed;
-      this.saveDefaultTracksCache(processed);
-      this.applyMapOverrides();
-      await this.initDefaultTracksAudio();
-      this.notify();
-      return processed;
-    }
-
-    if ((!this.defaultTracks || this.defaultTracks.length === 0) && Array.isArray(window.DEFAULT_TRACKS_FALLBACK)) {
-      this.defaultTracks = this.processDefaultTrackItems(window.DEFAULT_TRACKS_FALLBACK);
-      this.saveDefaultTracksCache(this.defaultTracks);
-      this.applyMapOverrides();
-      await this.initDefaultTracksAudio();
-    }
-
-    this.notify();
-    return this.defaultTracks;
+    return await this.autoDetectSongs();
   }
 
   /**
    * Loads tracks dynamically from an array of File objects (e.g. from a folder picker or drag & drop).
+   * Strictly requires a complete song folder containing notes.json, track audio (track.ogg/mp3),
+   * and background video/media (background.mp4). Rejects loose .json files.
    * @param {FileList|File[]} files
    * @returns {Promise<Array>} Loaded tracks
    */
   async loadTracksFromFiles(files) {
     if (!files || !files.length) return [];
-    const rawItems = [];
-    for (const file of Array.from(files)) {
-      if (file.name && file.name.toLowerCase().endsWith(".json")) {
-        try {
-          const text = await file.text();
-          const parsed = JSON.parse(text);
-          this.removeLoadError(file.name);
-          rawItems.push(parsed);
-        } catch (e) {
-          const errMsg = `Failed to read or parse file: ${e.message}`;
-          console.error(`[MapStorage] ${file.name}:`, e);
-          this.recordLoadError(file.name, file.name, errMsg);
+    const fileList = Array.from(files);
+
+    // Group files by relative folder directory (e.g. "pack_01/notes.json")
+    const folders = new Map();
+    for (const f of fileList) {
+      const relPath = f.webkitRelativePath || f.name;
+      const parts = relPath.replace(/\\/g, "/").split("/");
+      const folderKey = parts.length > 1 ? parts[0] : "_root";
+      if (!folders.has(folderKey)) folders.set(folderKey, []);
+      folders.get(folderKey).push(f);
+    }
+
+    const loadedSongs = [];
+    for (const [folderName, folderFiles] of folders.entries()) {
+      const notesFile = folderFiles.find((f) => f.name.toLowerCase().endsWith(".json"));
+      const audioFile = folderFiles.find((f) => /\.(ogg|mp3|wav|m4a|flac)$/i.test(f.name));
+      const bgFile = folderFiles.find((f) => /\.(mp4|webm|mkv|mov|png|jpg|jpeg|gif)$/i.test(f.name));
+      const coverFile = folderFiles.find((f) => /^cover\.(png|jpg|jpeg|webp)$/i.test(f.name))
+        || folderFiles.find((f) => /\.(png|jpg|jpeg|webp)$/i.test(f.name) && f !== bgFile);
+
+      if (!notesFile) {
+        alert(`Song folder "${folderName}" is missing notes.json.`);
+        continue;
+      }
+      if (!audioFile) {
+        alert(`Song folder "${folderName}" is missing track audio (track.ogg/mp3). A song folder requires notes.json and an audio track.`);
+        continue;
+      }
+
+      try {
+        const text = await notesFile.text();
+        const parsed = JSON.parse(text);
+        parsed.isCustom = true;
+        parsed.isDefault = false;
+        parsed._folderName = folderName !== "_root" ? folderName : (parsed.name || "song").replace(/[/\\?%*:|"<>]/g, "_").trim();
+
+        // Create Object URLs for the browser/runtime
+        const audioUrl = URL.createObjectURL(audioFile);
+        parsed.file = audioUrl;
+
+        if (bgFile) {
+          const isVideo = /\.(mp4|webm|mkv|mov)$/i.test(bgFile.name);
+          const bgUrl = URL.createObjectURL(bgFile);
+          parsed.background = {
+            url: bgUrl,
+            mediaType: isVideo ? "video" : "image",
+            fit: (parsed.background && parsed.background.fit) || "cover",
+            opacity: (parsed.background && typeof parsed.background.opacity === "number") ? parsed.background.opacity : 0.7
+          };
+        } else if (!parsed.background || !parsed.background.url) {
+          parsed.background = null;
         }
+
+        if (coverFile) {
+          parsed.cover = URL.createObjectURL(coverFile);
+        }
+
+        this.normalizeSongDifficulties(parsed);
+        const existingIdx = this.customMaps.findIndex(m => m.id === parsed.id || m._folderName === parsed._folderName);
+        if (existingIdx !== -1) {
+          this.customMaps[existingIdx] = parsed;
+        } else {
+          this.customMaps.unshift(parsed);
+        }
+        this.removeDeletedTrackId(parsed.id);
+        if (parsed.name) this.removeDeletedTrackId(parsed.name);
+        loadedSongs.push(parsed);
+
+        // Auto-persist folder in Electron if available
+        if (typeof window !== "undefined" && window.electronAPI && typeof this.saveSongFolderOnDisk === "function") {
+          this.saveSongFolderOnDisk(parsed).catch(() => {});
+        }
+      } catch (err) {
+        console.error(`[MapStorage] Failed to parse song folder "${folderName}":`, err);
+        alert(`Failed to load song folder "${folderName}": ${err.message}`);
       }
     }
-    if (rawItems.length > 0) {
-      const processed = this.processDefaultTrackItems(rawItems);
-      this.defaultTracks = processed;
-      this.saveDefaultTracksCache(processed);
+
+    if (loadedSongs.length > 0) {
+      this.setSelectedSongId(loadedSongs[0].id);
       this.notify();
-      return processed;
+      return loadedSongs;
     }
-    this.notify();
     return [];
   }
 
   /**
-   * Returns default maps loaded directly from the `Default Tracks` folder.
+   * Returns default maps loaded from Default Tracks.
    * @returns {Array}
    */
   getDefaultMaps() {
-    if ((!this.defaultTracks || this.defaultTracks.length === 0) && typeof process !== "undefined" && typeof require === "function") {
-      this.syncDetectLocalTracks();
+    return this.defaultTracks || [];
+  }
+
+  /**
+   * Loads default tracks dynamically from Default Tracks on disk via manifest.json.
+   * Reloaded on start and never stored permanently in custom_songs.
+   * @returns {Promise<Array>}
+   */
+  async loadDefaultTracks() {
+    if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.loadDefaultTracks === "function") {
+      try {
+        const res = await window.electronAPI.loadDefaultTracks();
+        if (res && Array.isArray(res.songs)) {
+          this.defaultTracks = res.songs.map(s => {
+            s.isCustom = false;
+            s.isDefault = true;
+            this.normalizeSongDifficulties(s);
+            return s;
+          });
+          this.notify();
+          return this.defaultTracks;
+        }
+      } catch (e) {
+        console.warn("[MapStorage] Failed to load default tracks:", e);
+      }
+    } else if (typeof process !== "undefined" && typeof require === "function") {
+      return this.loadDefaultTracksSyncNode();
     }
     return this.defaultTracks || [];
   }
 
   /**
-   * Legacy alias for getDefaultMaps.
-   * @returns {Array}
-   */
-  loadDefaultTracks() {
-    return this.getDefaultMaps();
-  }
-
-  /**
-   * Returns all maps (both custom maps and default tracks from the Default Tracks folder).
+   * Returns all maps (both Default Tracks and custom maps).
    * @returns {Array}
    */
   getAllMaps() {
-    const defaults = this.getDefaultMaps();
-    const all = [...this.customMaps, ...defaults];
+    const all = [...(this.defaultTracks || []), ...this.customMaps];
     if (Array.isArray(this.songOrder) && this.songOrder.length > 0) {
       const orderMap = new Map();
       this.songOrder.forEach((id, index) => orderMap.set(id, index));
@@ -1540,10 +1658,11 @@ class MapStorage {
    * @returns {Object|null}
    */
   getMap(id) {
-    const custom = this.customMaps.find((m) => m.id === id);
-    if (custom) return custom;
-    const defaults = this.getDefaultMaps();
-    return defaults.find((m) => m.id === id) || null;
+    const fromCustom = this.customMaps.find((m) => m.id === id);
+    if (fromCustom) return fromCustom;
+    const fromDefault = (this.defaultTracks || []).find((m) => m.id === id);
+    if (fromDefault) return fromDefault;
+    return null;
   }
 
   /**
@@ -1591,25 +1710,17 @@ class MapStorage {
   }
 
   /**
-   * Checks whether a map is a default track (from Default Tracks folder / presets).
-   * Any map present in this.customMaps is strictly a custom track, never default.
+   * Checks whether a map is a default track.
    * @param {Object} track
    * @returns {boolean}
    */
   isDefaultTrack(track) {
-    if (!track || !track.id) return false;
-    // If it exists in customMaps, it is strictly a custom track!
-    if (this.customMaps && this.customMaps.some((m) => m.id === track.id)) {
-      return false;
-    }
-    const defaults = this.getDefaultMaps();
-    if (defaults.some((m) => m.id === track.id)) {
-      return true;
-    }
-    if (track.isDefault === true || String(track.id).startsWith("default_") || track.isCustom === false) {
-      return true;
-    }
-    return false;
+    if (!track) return false;
+    if (track.isDefault) return true;
+    if (track._source === "default_disk") return true;
+    return (this.defaultTracks || []).some(
+      (m) => m.id === track.id || (m._folderName && m._folderName === track._folderName)
+    );
   }
 
   /**
@@ -1713,67 +1824,29 @@ class MapStorage {
       return this.customMaps[customIndex];
     }
 
-    // 2. If this is a default track, save it locally as an independent custom copy!
-    // Leaves the original default track completely intact and unchanged.
-    if (this.isDefaultTrack(updatedMap) || (this.defaultTracks || []).some((m) => m.id === updatedMap.id)) {
-      const defaultOriginal = (this.defaultTracks || []).find((m) => m.id === updatedMap.id) ||
-        this.getDefaultMaps().find((m) => m.id === updatedMap.id);
-
-      const copyId = `custom_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-
-      // Determine copy name: if not explicitly modified, append " (Copy)"
-      const origName = (defaultOriginal ? defaultOriginal.name : "").trim();
-      let copyName = (updatedMap.name || origName || "Song").trim();
-      if (!copyName || copyName === origName) {
-        copyName = `${origName || "Song"} (Copy)`;
-      } else if (!copyName.endsWith("(Copy)") && copyName === origName) {
-        copyName = `${copyName} (Copy)`;
-      }
-
-      // Preserve audio file reference and background from original if not defined
-      const audioFile = updatedMap.file || (defaultOriginal ? defaultOriginal.file : null);
-      const hasStoredAudio = Boolean(updatedMap.hasStoredAudio || (defaultOriginal && defaultOriginal.hasStoredAudio));
-      const bgConfig = updatedMap.background ? { ...updatedMap.background } : (defaultOriginal && defaultOriginal.background ? { ...defaultOriginal.background } : null);
-
-      const newCopy = {
+    // 2. If this is a default track, update in-place in defaultTracks directly
+    // (stays in Default Tracks, never copied into custom_songs)
+    const defIndex = (this.defaultTracks || []).findIndex(
+      (m) => m.id === updatedMap.id || (m._folderName && m._folderName === updatedMap._folderName)
+    );
+    if (defIndex !== -1) {
+      this.defaultTracks[defIndex] = {
+        ...this.defaultTracks[defIndex],
         ...updatedMap,
-        id: copyId,
-        name: copyName,
-        isCustom: true,
-        isDefault: false,
-        file: audioFile,
-        hasStoredAudio,
+        id: updatedMap.id,
+        isCustom: false,
+        isDefault: true,
+        _source: "default_disk",
         cover: trackCover,
-        background: bgConfig,
         nps: computedNps,
         notes: notesClone,
         difficulty: primaryKey,
         selectedDifficulty: activeDiff,
         difficulties: sanitizedDifficulties
       };
-
-      // Prepend to customMaps and update order
-      this.customMaps.unshift(newCopy);
-      this.removeDeletedTrackId(copyId);
-      if (copyName) this.removeDeletedTrackId(copyName);
-      if (Array.isArray(this.songOrder)) {
-        this.songOrder.unshift(newCopy.id);
-        this.saveSongOrder(this.songOrder);
-      }
-      this.saveCustomMapsToStorage();
-      this.setSelectedSongId(newCopy.id);
-
-      // Duplicate audio in MediaStorage if available
-      if (typeof window !== "undefined" && window.MediaStorage && typeof window.MediaStorage.getAudio === "function") {
-        window.MediaStorage.getAudio(updatedMap.id).then((storedAudio) => {
-          if (storedAudio) {
-            window.MediaStorage.saveAudio(copyId, storedAudio);
-          }
-        }).catch(() => {});
-      }
-
+      this.setSelectedSongId(this.defaultTracks[defIndex].id);
       this.notify();
-      return newCopy;
+      return this.defaultTracks[defIndex];
     }
 
     // 3. Fallback: custom track not yet in customMaps (e.g. freshly created custom map)
@@ -1814,12 +1887,6 @@ class MapStorage {
     const targetMap = this.getMap(songId);
     if (!targetMap) return false;
 
-    // Strict guard: Default tracks can never have difficulties deleted directly!
-    if (this.isDefaultTrack(targetMap) || (this.defaultTracks && this.defaultTracks.some((m) => m.id === songId))) {
-      console.warn("Default tracks are protected presets and cannot have difficulties deleted:", songId);
-      return false;
-    }
-
     const map = this.customMaps.find((m) => m.id === songId);
     if (!map || !map.difficulties) return false;
     const keys = Object.keys(map.difficulties);
@@ -1840,7 +1907,6 @@ class MapStorage {
 
   /**
    * Deletes a custom map permanently, ensuring it stays deleted across reloads and storage refreshes.
-   * Default tracks are protected presets and cannot be deleted.
    * Cleans up from memory, localStorage, and IndexedDB (MediaStorage).
    * @param {string} id
    * @returns {boolean}
@@ -1850,12 +1916,6 @@ class MapStorage {
     const targetMap = this.getMap(id);
     if (!targetMap) return false;
 
-    // Strict guard: Default tracks can NEVER be deleted!
-    if (this.isDefaultTrack(targetMap) || (this.defaultTracks && this.defaultTracks.some((m) => m.id === id))) {
-      console.warn("Default tracks are protected presets and cannot be deleted:", id);
-      return false;
-    }
-
     const targetName = targetMap.name || "";
 
     // Record in persistent deleted tracks so it NEVER resurfaces across reloads/IndexedDB
@@ -1864,8 +1924,9 @@ class MapStorage {
       this.addDeletedTrackId(targetName);
     }
 
-    // Filter out from custom maps
+    // Filter out from custom maps and default tracks
     this.customMaps = this.customMaps.filter((m) => m.id !== id);
+    this.defaultTracks = (this.defaultTracks || []).filter((m) => m.id !== id);
 
     if (this.songOrder) {
       this.songOrder = this.songOrder.filter((songId) => songId !== id);

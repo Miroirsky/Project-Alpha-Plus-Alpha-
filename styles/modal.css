@@ -741,6 +741,60 @@
   color: var(--palette-bg-secondary, #F7D4BC);
 }
 
+/* Save Slot Action Button Strip */
+.slot-actions-grid {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.slot-action-btn {
+  flex: 1;
+  min-width: 82px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  border-radius: var(--btn-radius-sm, 0.55rem);
+}
+
+.slot-action-delete {
+  color: #ff6b81 !important;
+  border-color: rgba(255, 71, 87, 0.35) !important;
+}
+
+.slot-action-delete:hover {
+  background: linear-gradient(180deg, rgba(255, 71, 87, 0.3) 0%, rgba(var(--palette-secondary-rgb), 0.95) 100%) !important;
+  border-color: #ff4757 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(255, 71, 87, 0.45) !important;
+}
+
+/* Downloader Modal Folder & Action Buttons */
+#btn-downloader-open-folder {
+  border-color: var(--folder-border, rgba(245, 158, 11, 0.45)) !important;
+  color: var(--folder-accent-hover, #fbbf24) !important;
+  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb), 0.85) 0%, rgba(var(--palette-secondary-rgb), 0.98) 100%) !important;
+}
+
+#btn-downloader-open-folder:hover {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.22) 0%, rgba(var(--palette-secondary-rgb), 0.95) 100%) !important;
+  border-color: var(--folder-accent-hover, #fbbf24) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.35) !important;
+}
+
+#btn-start-download {
+  background: linear-gradient(168deg, #a84b3b 0%, var(--palette-primary, #954132) 55%, #88392d 100%) !important;
+  border-color: var(--palette-bg-secondary, #F7D4BC) !important;
+  color: #ffffff !important;
+}
+
+#btn-start-download:hover {
+  background: linear-gradient(168deg, #b85442 0%, var(--palette-primary-hover, #a84b3b) 55%, #954132 100%) !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 4px 18px rgba(var(--palette-primary-rgb), 0.5) !important;
+}
+
 .downloader-alert-error {
   background: rgba(255, 71, 87, 0.25);
   border: 1px solid #ff4757;

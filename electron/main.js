@@ -14,6 +14,19 @@ const DOWNLOADS_DIR = path.join(USER_DATA_PATH, 'downloads');
 const SETTINGS_FILE = path.join(SAVES_DIR, 'settings.json');
 const PROFILES_FILE = path.join(SAVES_DIR, 'profiles.json');
 
+function getDefaultTracksDir() {
+  const candidates = [
+    path.join(app.getAppPath(), 'Default Tracks'),
+    path.join(process.cwd(), 'Default Tracks'),
+    path.join(__dirname, '..', 'Default Tracks'),
+    path.join(process.resourcesPath || '', 'Default Tracks')
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(app.getAppPath(), 'Default Tracks');
+}
+
 // Ensure necessary directories exist
 [SAVES_DIR, SONGS_DIR, DOWNLOADS_DIR].forEach((dir) => {
   if (!fs.existsSync(dir)) {
@@ -49,6 +62,197 @@ const DEFAULT_PROFILES = {
     }
   ]
 };
+
+// Helper: Convert local file path to file:/// URL for safe Chromium loading
+function toFileUrl(filePath) {
+  if (!filePath || typeof filePath !== 'string') return filePath;
+  if (filePath.startsWith('http:') || filePath.startsWith('https:') || filePath.startsWith('data:') || filePath.startsWith('blob:')) {
+    return filePath;
+  }
+  const clean = filePath.replace(/\\/g, '/');
+  return clean.startsWith('file://') ? clean : 'file:///' + clean.replace(/^\/+/, '');
+}
+
+// --- Folder Validation & Ingest Helpers ---
+function parseSongFolderSync(folderPath) {
+  try {
+    if (!fs.existsSync(folderPath)) {
+      return { valid: false, error: 'Folder does not exist' };
+    }
+    const stat = fs.statSync(folderPath);
+    if (!stat.isDirectory()) {
+      return { valid: false, error: 'Path is not a folder' };
+    }
+
+    const innerFiles = fs.readdirSync(folderPath);
+
+    // 1. Must contain notes.json
+    let notesFile = null;
+    if (fs.existsSync(path.join(folderPath, 'notes.json'))) {
+      notesFile = path.join(folderPath, 'notes.json');
+    } else {
+      const match = innerFiles.find(f => f.toLowerCase().endsWith('.json'));
+      if (match) notesFile = path.join(folderPath, match);
+    }
+
+    if (!notesFile) {
+      return { valid: false, error: 'Missing notes.json' };
+    }
+
+    const raw = fs.readFileSync(notesFile, 'utf-8');
+    const parsed = JSON.parse(raw);
+    const folderName = path.basename(folderPath);
+
+    parsed._folderPath = folderPath;
+    parsed._folderName = folderName;
+    parsed._filePath = notesFile;
+    parsed._source = 'custom_disk';
+
+    // 2. Must contain Audio (track.ogg, track.mp3, track.wav, etc.)
+    let audioFound = false;
+    let localAudioPath = null;
+    if (parsed.file && typeof parsed.file === 'string' && !parsed.file.startsWith('data:') && !parsed.file.startsWith('http') && !parsed.file.startsWith('blob:')) {
+      const candidate = path.isAbsolute(parsed.file) ? parsed.file : path.join(folderPath, parsed.file);
+      if (fs.existsSync(candidate)) {
+        localAudioPath = candidate;
+        parsed.file = toFileUrl(candidate);
+        parsed._localAudioPath = candidate;
+        audioFound = true;
+      }
+    }
+    if (!audioFound) {
+      const autoAudio = innerFiles.find(f => /^(track|audio|song)\.(ogg|mp3|wav|m4a|flac)$/i.test(f))
+        || innerFiles.find(f => /\.(ogg|mp3|wav|m4a|flac)$/i.test(f));
+      if (autoAudio) {
+        localAudioPath = path.join(folderPath, autoAudio);
+        parsed.file = toFileUrl(localAudioPath);
+        parsed._localAudioPath = localAudioPath;
+        audioFound = true;
+      }
+    }
+
+    if (!audioFound) {
+      return { valid: false, error: 'Missing audio file (track.ogg, track.mp3, or track.wav)' };
+    }
+
+    // 3. Resolve Background Media (background.mp4, background.webm, image, etc.) - Optional
+    const bgObj = parsed.background || {};
+    let bgFound = false;
+    let localBgPath = null;
+    if (bgObj.url && typeof bgObj.url === 'string' && !bgObj.url.startsWith('data:') && !bgObj.url.startsWith('http') && !bgObj.url.startsWith('blob:')) {
+      const candidate = path.isAbsolute(bgObj.url) ? bgObj.url : path.join(folderPath, bgObj.url);
+      if (fs.existsSync(candidate)) {
+        localBgPath = candidate;
+        parsed.background = {
+          ...bgObj,
+          url: toFileUrl(candidate),
+          mediaType: /\.(mp4|webm|mkv|mov)$/i.test(candidate) ? 'video' : 'image'
+        };
+        parsed._localBgPath = candidate;
+        bgFound = true;
+      }
+    }
+    if (!bgFound) {
+      const autoBg = innerFiles.find(f => /^background\.(mp4|webm|mkv|mov|png|jpg|jpeg|gif)$/i.test(f))
+        || innerFiles.find(f => /\.(mp4|webm|mkv|mov)$/i.test(f));
+      if (autoBg) {
+        localBgPath = path.join(folderPath, autoBg);
+        const isVid = /\.(mp4|webm|mkv|mov)$/i.test(autoBg);
+        parsed.background = {
+          ...bgObj,
+          url: toFileUrl(localBgPath),
+          mediaType: isVid ? 'video' : 'image',
+          fit: bgObj.fit || 'cover',
+          opacity: typeof bgObj.opacity === 'number' ? bgObj.opacity : 0.7
+        };
+        parsed._localBgPath = localBgPath;
+        bgFound = true;
+      }
+    }
+
+    if (!bgFound && (!parsed.background || !parsed.background.url)) {
+      parsed.background = null;
+    }
+
+    // 4. Resolve Cover Artwork (cover.png / cover.jpg) if present
+    if (parsed.cover && typeof parsed.cover === 'string' && !parsed.cover.startsWith('data:') && !parsed.cover.startsWith('http') && !parsed.cover.startsWith('Assets/')) {
+      const candidate = path.isAbsolute(parsed.cover) ? parsed.cover : path.join(folderPath, parsed.cover);
+      if (fs.existsSync(candidate)) {
+        parsed.cover = toFileUrl(candidate);
+      }
+    } else if (!parsed.cover || parsed.cover.startsWith('Assets/')) {
+      const autoCover = innerFiles.find(f => /^cover\.(png|jpg|jpeg|webp)$/i.test(f));
+      if (autoCover) {
+        parsed.cover = toFileUrl(path.join(folderPath, autoCover));
+      }
+    }
+
+    return {
+      valid: true,
+      folderName,
+      folderPath,
+      song: parsed
+    };
+  } catch (err) {
+    return { valid: false, error: err.message };
+  }
+}
+
+// Copy source song folder into custom_songs/ and return parsed song
+function copyAndLoadSongFolder(sourceDir) {
+  try {
+    if (!sourceDir || !fs.existsSync(sourceDir)) {
+      return { success: false, error: 'Selected folder does not exist.' };
+    }
+    const stat = fs.statSync(sourceDir);
+    if (!stat.isDirectory()) {
+      return {
+        success: false,
+        error: 'You must select an entire song folder (e.g. pack_01/ containing notes.json and audio track).'
+      };
+    }
+
+    // Validate the folder before copying
+    const validation = parseSongFolderSync(sourceDir);
+    if (!validation.valid) {
+      return {
+        success: false,
+        error: `Invalid song folder: ${validation.error}. Entire folder with notes.json and track audio (track.ogg/mp3/wav) is required.`
+      };
+    }
+
+    const folderName = path.basename(sourceDir).replace(/[/\\?%*:|"<>]/g, '_').trim() || `song_${Date.now()}`;
+    const destPath = path.join(SONGS_DIR, folderName);
+
+    // If not already in custom_songs, copy recursively
+    if (path.resolve(sourceDir) !== path.resolve(destPath)) {
+      fs.cpSync(sourceDir, destPath, { recursive: true, force: true });
+    }
+
+    const loaded = parseSongFolderSync(destPath);
+    if (!loaded.valid) {
+      return { success: false, error: `Failed to load copied song folder: ${loaded.error}` };
+    }
+
+    return {
+      success: true,
+      folderName,
+      folderPath: destPath,
+      song: loaded.song
+    };
+  } catch (err) {
+    console.error('Error importing song folder:', err);
+    return { success: false, error: err.message };
+  }
+}
+function dataUrlToBuffer(dataUrl) {
+  if (!dataUrl || typeof dataUrl !== 'string') return null;
+  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+  if (match) {
+    return { mime: match[1], buffer: Buffer.from(match[2], 'base64') };
+  }
+  return null;
+}
 
 // Helper: Read JSON safely
 function readJsonFileSync(filePath, fallback) {
@@ -161,16 +365,30 @@ ipcMain.handle('app:get-paths', () => {
     savesPath: SAVES_DIR,
     songsPath: SONGS_DIR,
     downloadsPath: DOWNLOADS_DIR,
-    defaultTracksPath: path.join(app.getAppPath(), 'Default Tracks')
+    defaultTracksPath: getDefaultTracksDir()
   };
 });
 
-ipcMain.handle('app:open-folder', async (event, folderType) => {
+ipcMain.handle('app:open-folder', async (event, folderType, customPath) => {
   let targetDir = USER_DATA_PATH;
+  if (customPath && typeof customPath === 'string' && fs.existsSync(customPath)) {
+    try {
+      const stat = fs.statSync(customPath);
+      if (stat.isDirectory()) {
+        return shell.openPath(customPath);
+      } else {
+        shell.showItemInFolder(customPath);
+        return true;
+      }
+    } catch (e) {
+      return shell.openPath(path.dirname(customPath));
+    }
+  }
+
   if (folderType === 'saves') targetDir = SAVES_DIR;
   else if (folderType === 'songs') targetDir = SONGS_DIR;
   else if (folderType === 'downloads') targetDir = DOWNLOADS_DIR;
-  else if (folderType === 'default-tracks') targetDir = path.join(app.getAppPath(), 'Default Tracks');
+  else if (folderType === 'default-tracks') targetDir = getDefaultTracksDir();
   else if (typeof folderType === 'string' && fs.existsSync(folderType)) targetDir = folderType;
 
   return shell.openPath(targetDir);
@@ -341,51 +559,24 @@ ipcMain.handle('fs:write-text-file', async (event, filePath, content) => {
   }
 });
 
-ipcMain.handle('fs:export-song-file', async (event, defaultName, content) => {
-  if (!mainWindow) return { canceled: true };
-  const res = await dialog.showSaveDialog(mainWindow, {
-    title: 'Export Song Package',
-    defaultPath: defaultName || 'song.json',
-    filters: [
-      { name: 'JSON Song Package', extensions: ['json'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
-  });
-
-  if (res.canceled || !res.filePath) {
-    return { canceled: true };
-  }
-
-  try {
-    fs.writeFileSync(res.filePath, content, 'utf-8');
-    return { success: true, filePath: res.filePath };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('fs:import-song-file', async () => {
+// --- Song Folder Import Handlers ---
+ipcMain.handle('tracks:import-song-folder', async () => {
   if (!mainWindow) return { canceled: true };
   const res = await dialog.showOpenDialog(mainWindow, {
-    title: 'Import Song Package',
-    filters: [
-      { name: 'Song Files (*.json, *.track, *.alpha)', extensions: ['json', 'track', 'alpha', 'txt'] },
-      { name: 'All Files', extensions: ['*'] }
-    ],
-    properties: ['openFile']
+    title: 'Select Song Folder to Import (Must contain notes.json and audio track)',
+    properties: ['openDirectory']
   });
 
   if (res.canceled || !res.filePaths || res.filePaths.length === 0) {
     return { canceled: true };
   }
 
-  const selectedPath = res.filePaths[0];
-  try {
-    const content = fs.readFileSync(selectedPath, 'utf-8');
-    return { success: true, content, filePath: selectedPath, fileName: path.basename(selectedPath) };
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
+  const selectedDir = res.filePaths[0];
+  return copyAndLoadSongFolder(selectedDir);
+});
+
+ipcMain.handle('tracks:import-folder-from-path', async (event, folderPath) => {
+  return copyAndLoadSongFolder(folderPath);
 });
 
 // --- Direct Mod & Song Downloader ---
@@ -459,50 +650,30 @@ ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, prefer
   });
 });
 
-// --- Custom Songs & Default Tracks Disk Scanner ---
-ipcMain.handle('tracks:scan-folders', async () => {
+// --- Custom Songs & Default Tracks Disk Scanners ---
+function scanCustomSongsFromDisk() {
   const songs = [];
   const errors = [];
-
-  // 1. Scan app Default Tracks
-  const defaultTracksPath = path.join(app.getAppPath(), 'Default Tracks');
-  if (fs.existsSync(defaultTracksPath)) {
-    try {
-      const files = fs.readdirSync(defaultTracksPath);
-      for (const file of files) {
-        if (file.toLowerCase().endsWith('.json') && file.toLowerCase() !== 'manifest.json') {
-          const fullPath = path.join(defaultTracksPath, file);
-          try {
-            const raw = fs.readFileSync(fullPath, 'utf-8');
-            const parsed = JSON.parse(raw);
-            parsed._filePath = fullPath;
-            parsed._source = 'default';
-            songs.push(parsed);
-          } catch (e) {
-            errors.push({ file, error: e.message });
-          }
-        }
-      }
-    } catch (err) {
-      console.warn('Error reading Default Tracks dir:', err);
-    }
-  }
-
-  // 2. Scan custom_songs dir in userData
   if (fs.existsSync(SONGS_DIR)) {
     try {
-      const files = fs.readdirSync(SONGS_DIR);
-      for (const file of files) {
-        if (file.toLowerCase().endsWith('.json')) {
-          const fullPath = path.join(SONGS_DIR, file);
-          try {
-            const raw = fs.readFileSync(fullPath, 'utf-8');
-            const parsed = JSON.parse(raw);
-            parsed._filePath = fullPath;
-            parsed._source = 'custom_disk';
-            songs.push(parsed);
-          } catch (e) {
-            errors.push({ file, error: e.message });
+      const items = fs.readdirSync(SONGS_DIR);
+      for (const item of items) {
+        const itemPath = path.join(SONGS_DIR, item);
+        let stat;
+        try {
+          stat = fs.statSync(itemPath);
+        } catch (e) {
+          continue;
+        }
+        if (stat.isDirectory()) {
+          const parsedRes = parseSongFolderSync(itemPath);
+          if (parsedRes.valid) {
+            parsedRes.song.isCustom = true;
+            parsedRes.song.isDefault = false;
+            parsedRes.song._source = 'custom_disk';
+            songs.push(parsedRes.song);
+          } else {
+            errors.push({ folder: item, error: parsedRes.error });
           }
         }
       }
@@ -510,17 +681,277 @@ ipcMain.handle('tracks:scan-folders', async () => {
       console.warn('Error reading custom_songs dir:', err);
     }
   }
+  return { songs, errors };
+}
+
+function loadDefaultTracksFromDisk() {
+  const defaultTracksDir = getDefaultTracksDir();
+  const songs = [];
+  const errors = [];
+
+  if (!fs.existsSync(defaultTracksDir)) {
+    return { songs, errors };
+  }
+
+  const manifestPath = path.join(defaultTracksDir, 'manifest.json');
+  let trackFolders = [];
+
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      if (Array.isArray(manifest.tracks)) {
+        trackFolders = [...manifest.tracks];
+      }
+    } catch (e) {
+      console.warn('Error reading Default Tracks manifest.json:', e);
+    }
+  }
+
+  // Also discover any directories in Default Tracks not yet in manifest
+  try {
+    const items = fs.readdirSync(defaultTracksDir);
+    for (const item of items) {
+      if (trackFolders.includes(item)) continue;
+      const itemPath = path.join(defaultTracksDir, item);
+      try {
+        if (fs.statSync(itemPath).isDirectory()) {
+          trackFolders.push(item);
+        }
+      } catch (e) {}
+    }
+  } catch (e) {
+    console.warn('Error reading Default Tracks dir:', e);
+  }
+
+  const validFolders = [];
+  for (const folderName of trackFolders) {
+    const folderPath = path.join(defaultTracksDir, folderName);
+    if (!fs.existsSync(folderPath)) continue;
+    try {
+      if (!fs.statSync(folderPath).isDirectory()) continue;
+    } catch (e) {
+      continue;
+    }
+
+    const parsedRes = parseSongFolderSync(folderPath);
+    if (parsedRes.valid) {
+      const song = parsedRes.song;
+      song.isDefault = true;
+      song.isCustom = false;
+      song._source = 'default_disk';
+      songs.push(song);
+      validFolders.push(folderName);
+    } else {
+      errors.push({ folder: folderName, error: parsedRes.error });
+    }
+  }
+
+  // Keep manifest.json up-to-date with current valid track folders
+  try {
+    const manifestData = {
+      updatedAt: new Date().toISOString(),
+      tracks: validFolders
+    };
+    fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Could not write updated Default Tracks manifest.json:', err);
+  }
 
   return { songs, errors };
+}
+
+ipcMain.handle('tracks:scan-folders', async () => {
+  const custom = scanCustomSongsFromDisk();
+  const defaults = loadDefaultTracksFromDisk();
+  return {
+    songs: custom.songs,
+    defaultTracks: defaults.songs,
+    errors: [...custom.errors, ...defaults.errors]
+  };
 });
 
-ipcMain.handle('tracks:save-to-disk', async (event, fileName, songData) => {
+ipcMain.handle('tracks:load-default-tracks', async () => {
+  return loadDefaultTracksFromDisk();
+});
+
+// --- Auto-Save Song as Direct Folder: custom_songs/<folder>/notes.json, track.ogg, background.mp4 ---
+ipcMain.handle('tracks:save-song-folder', async (event, folderName, songPackage) => {
   try {
-    const safeName = (fileName || `${songData.name || 'custom_song'}.json`).replace(/[/\\?%*:|"<>]/g, '_');
-    const targetPath = path.join(SONGS_DIR, safeName.endsWith('.json') ? safeName : `${safeName}.json`);
-    fs.writeFileSync(targetPath, JSON.stringify(songData, null, 2), 'utf-8');
-    return { success: true, filePath: targetPath };
+    if (!songPackage) return { success: false, error: 'No song data provided' };
+
+    const isDefaultTrack = Boolean(songPackage.isDefault || songPackage._source === 'default_disk');
+    const targetBaseDir = isDefaultTrack ? getDefaultTracksDir() : SONGS_DIR;
+
+    // Choose clean, filesystem-safe folder name
+    const rawName = folderName || songPackage._folderName || songPackage.id || songPackage.name || 'pack_01';
+    const safeFolderName = rawName.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'pack_01';
+    const folderPath = path.join(targetBaseDir, safeFolderName);
+
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    // Structure metadata for notes.json
+    const notesJsonData = {
+      id: songPackage.id || `custom_${Date.now()}`,
+      name: songPackage.name || 'Untitled Song',
+      mapper: songPackage.mapper || 'Unknown',
+      creator: songPackage.creator || 'Unknown',
+      duration: songPackage.duration || '03:00',
+      bpm: songPackage.bpm || 120,
+      color: songPackage.color || '#954132',
+      difficulty: songPackage.difficulty || 'Normal',
+      difficulties: songPackage.difficulties || {},
+      notes: songPackage.notes || [],
+      metadata: songPackage.metadata || {},
+      _folderName: safeFolderName
+    };
+
+    // 1. Process and save Audio (e.g. track.ogg or track.mp3)
+    let audioFileName = 'track.ogg';
+    if (songPackage.audioExt) {
+      audioFileName = `track.${songPackage.audioExt.replace('.', '')}`;
+    }
+
+    if (songPackage.audioData) {
+      const decoded = dataUrlToBuffer(songPackage.audioData);
+      if (decoded) {
+        if (!songPackage.audioExt) {
+          if (decoded.mime.includes('mpeg') || decoded.mime.includes('mp3')) audioFileName = 'track.mp3';
+          else if (decoded.mime.includes('wav')) audioFileName = 'track.wav';
+          else if (decoded.mime.includes('ogg')) audioFileName = 'track.ogg';
+        }
+        const audioPath = path.join(folderPath, audioFileName);
+        fs.writeFileSync(audioPath, decoded.buffer);
+        notesJsonData.file = audioFileName;
+      } else if (typeof songPackage.audioData === 'string' && fs.existsSync(songPackage.audioData)) {
+        const ext = path.extname(songPackage.audioData) || '.mp3';
+        audioFileName = `track${ext}`;
+        const audioPath = path.join(folderPath, audioFileName);
+        if (path.resolve(songPackage.audioData) !== path.resolve(audioPath)) {
+          fs.copyFileSync(songPackage.audioData, audioPath);
+        }
+        notesJsonData.file = audioFileName;
+      }
+    } else {
+      // Check if audio file already exists in this folder
+      const existingAudio = fs.readdirSync(folderPath).find(f => /^(track|audio|song)\.(ogg|mp3|wav|m4a|flac)$/i.test(f));
+      if (existingAudio) {
+        notesJsonData.file = existingAudio;
+      } else if (songPackage.file && !songPackage.file.startsWith('data:') && !songPackage.file.startsWith('blob:')) {
+        notesJsonData.file = songPackage.file;
+      }
+    }
+
+    // 2. Process and save Background Media (e.g. background.mp4 or background.png)
+    let bgFileName = 'background.mp4';
+    const bgConfig = songPackage.background || songPackage.bgConfig || {};
+
+    if (songPackage.bgData) {
+      const decodedBg = dataUrlToBuffer(songPackage.bgData);
+      if (decodedBg) {
+        let isVideo = decodedBg.mime.startsWith('video');
+        if (decodedBg.mime.includes('mp4')) bgFileName = 'background.mp4';
+        else if (decodedBg.mime.includes('webm')) bgFileName = 'background.webm';
+        else if (decodedBg.mime.includes('png')) { bgFileName = 'background.png'; isVideo = false; }
+        else if (decodedBg.mime.includes('jpeg') || decodedBg.mime.includes('jpg')) { bgFileName = 'background.jpg'; isVideo = false; }
+
+        const bgPath = path.join(folderPath, bgFileName);
+        fs.writeFileSync(bgPath, decodedBg.buffer);
+        notesJsonData.background = {
+          ...bgConfig,
+          url: bgFileName,
+          mediaType: isVideo ? 'video' : 'image',
+          fit: bgConfig.fit || 'cover',
+          opacity: typeof bgConfig.opacity === 'number' ? bgConfig.opacity : 0.7
+        };
+      } else if (typeof songPackage.bgData === 'string' && fs.existsSync(songPackage.bgData)) {
+        const ext = path.extname(songPackage.bgData) || '.mp4';
+        bgFileName = `background${ext}`;
+        const bgPath = path.join(folderPath, bgFileName);
+        if (path.resolve(songPackage.bgData) !== path.resolve(bgPath)) {
+          fs.copyFileSync(songPackage.bgData, bgPath);
+        }
+        const isVideo = /\.(mp4|webm|mkv|mov)$/i.test(bgFileName);
+        notesJsonData.background = {
+          ...bgConfig,
+          url: bgFileName,
+          mediaType: isVideo ? 'video' : 'image',
+          fit: bgConfig.fit || 'cover',
+          opacity: typeof bgConfig.opacity === 'number' ? bgConfig.opacity : 0.7
+        };
+      }
+    } else {
+      const existingBg = fs.readdirSync(folderPath).find(f => /^background\.(mp4|webm|mkv|mov|png|jpg|jpeg|gif)$/i.test(f));
+      if (existingBg) {
+        const isVideo = /\.(mp4|webm|mkv|mov)$/i.test(existingBg);
+        notesJsonData.background = {
+          ...bgConfig,
+          url: existingBg,
+          mediaType: isVideo ? 'video' : 'image',
+          fit: bgConfig.fit || 'cover',
+          opacity: typeof bgConfig.opacity === 'number' ? bgConfig.opacity : 0.7
+        };
+      } else if (bgConfig.url && !bgConfig.url.startsWith('data:') && !bgConfig.url.startsWith('blob:')) {
+        notesJsonData.background = { ...bgConfig };
+      }
+    }
+
+    // 3. Process and save Cover Artwork (e.g. cover.png)
+    if (songPackage.coverData) {
+      const decodedCover = dataUrlToBuffer(songPackage.coverData);
+      if (decodedCover) {
+        const coverExt = decodedCover.mime.includes('jpeg') || decodedCover.mime.includes('jpg') ? 'jpg' : 'png';
+        const coverFileName = `cover.${coverExt}`;
+        fs.writeFileSync(path.join(folderPath, coverFileName), decodedCover.buffer);
+        notesJsonData.cover = coverFileName;
+      } else if (typeof songPackage.coverData === 'string' && fs.existsSync(songPackage.coverData)) {
+        const coverExt = path.extname(songPackage.coverData) || '.png';
+        const coverFileName = `cover${coverExt}`;
+        fs.copyFileSync(songPackage.coverData, path.join(folderPath, coverFileName));
+        notesJsonData.cover = coverFileName;
+      }
+    } else if (songPackage.cover && !songPackage.cover.startsWith('data:') && !songPackage.cover.startsWith('blob:')) {
+      notesJsonData.cover = songPackage.cover;
+    }
+
+    // 4. Save notes.json inside the folder
+    const notesFilePath = path.join(folderPath, 'notes.json');
+    fs.writeFileSync(notesFilePath, JSON.stringify(notesJsonData, null, 2), 'utf-8');
+
+    // If saving in Default Tracks, ensure it is recorded in manifest.json
+    if (isDefaultTrack) {
+      try {
+        const manifestPath = path.join(targetBaseDir, 'manifest.json');
+        let currentTracks = [];
+        if (fs.existsSync(manifestPath)) {
+          const m = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          if (Array.isArray(m.tracks)) currentTracks = m.tracks;
+        }
+        if (!currentTracks.includes(safeFolderName)) {
+          currentTracks.push(safeFolderName);
+        }
+        fs.writeFileSync(manifestPath, JSON.stringify({
+          updatedAt: new Date().toISOString(),
+          tracks: currentTracks
+        }, null, 2), 'utf8');
+      } catch (err) {
+        console.warn('Could not update manifest.json for default track:', err);
+      }
+    }
+
+    return {
+      success: true,
+      folderPath,
+      folderName: safeFolderName,
+      notesFile: notesFilePath,
+      songData: notesJsonData,
+      source: isDefaultTrack ? 'default_disk' : 'custom_disk'
+    };
   } catch (err) {
+    console.error('Error saving song folder:', err);
     return { success: false, error: err.message };
   }
 });
+
+

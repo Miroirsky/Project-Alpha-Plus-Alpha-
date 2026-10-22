@@ -132,6 +132,9 @@ class MapEditor {
     this.exportTrackDuration = document.getElementById("export-track-duration");
     this.exportTrackNps = document.getElementById("export-track-nps");
     this.exportFeedback = document.getElementById("export-copy-feedback");
+    this.openExportFolderBtn = document.getElementById("btn-open-export-folder");
+    this.saveBtn = document.getElementById("btn-editor-save");
+    this.openFolderBtn = document.getElementById("btn-editor-open-folder");
     this.lastExportData = null;
 
     // Track Parameters Modal DOM Elements
@@ -256,12 +259,7 @@ class MapEditor {
 
     // Always fetch fresh map data from mapStorage to avoid stale object references
     const freshMap = (this.mapStorage && map.id && this.mapStorage.getMap(map.id)) || map;
-    // If opening a default track, make a clone so in-editor edits don't mutate the in-memory default track
-    if (this.mapStorage && this.mapStorage.isDefaultTrack(freshMap)) {
-      this.activeMap = JSON.parse(JSON.stringify(freshMap));
-    } else {
-      this.activeMap = freshMap;
-    }
+    this.activeMap = freshMap;
     this.isDirty = false;
     this.setTool("note");
 
@@ -1339,6 +1337,25 @@ class MapEditor {
       });
     }
 
+    // Direct Song Folder and Save Buttons
+    if (this.saveBtn) {
+      this.saveBtn.addEventListener("click", () => {
+        this.saveMapState(true);
+      });
+    }
+
+    if (this.openFolderBtn) {
+      this.openFolderBtn.addEventListener("click", () => {
+        this.openCurrentSongFolder();
+      });
+    }
+
+    if (this.openExportFolderBtn) {
+      this.openExportFolderBtn.addEventListener("click", () => {
+        this.openCurrentSongFolder();
+      });
+    }
+
     // Track Parameters Modal Controls
     if (this.paramsBtn) {
       this.paramsBtn.addEventListener("click", () => {
@@ -1793,21 +1810,12 @@ class MapEditor {
     }
 
     if (this.paramsTypeBadge) {
-      const isDefault = Boolean(this.activeMap.isDefault);
-      this.paramsTypeBadge.textContent = isDefault ? "Default Track" : "Custom Track";
-      if (isDefault) {
-        this.paramsTypeBadge.classList.add("is-default");
-      } else {
-        this.paramsTypeBadge.classList.remove("is-default");
-      }
+      this.paramsTypeBadge.textContent = "Song Package";
+      this.paramsTypeBadge.classList.remove("is-default");
     }
 
     if (this.paramsNoteInfo) {
-      if (this.activeMap.isDefault) {
-        this.paramsNoteInfo.textContent = "This is a default track. Saving changes here will save as an independent custom copy so the original stays unchanged.";
-      } else {
-        this.paramsNoteInfo.textContent = "Modify track parameters. Changes save directly to this custom track and update in song select and exports.";
-      }
+      this.paramsNoteInfo.textContent = "Modify track parameters. Changes save directly to this song package and update in song select and exports.";
     }
 
     // Refresh Background configuration preview and controls
@@ -1936,7 +1944,6 @@ class MapEditor {
       difficulties: { ...this.difficulties }
     };
 
-    const wasDefault = this.mapStorage ? this.mapStorage.isDefaultTrack(this.activeMap) : false;
     const savedMap = this.mapStorage.saveMap(updated);
     this.activeMap = savedMap;
     if (this.mapStorage) {
@@ -1951,18 +1958,13 @@ class MapEditor {
     this.renderDifficultyTabs();
 
     if (this.saveIndicatorEl) {
-      this.saveIndicatorEl.textContent = wasDefault ? "✓ Saved as copy" : "✓ All changes saved";
+      this.saveIndicatorEl.textContent = "✓ All changes saved";
       this.saveIndicatorEl.className = "editor-save-tag saved";
     }
 
-    if (this.paramsTypeBadge && this.mapStorage) {
-      const isDef = this.mapStorage.isDefaultTrack(this.activeMap);
-      this.paramsTypeBadge.textContent = isDef ? "Default Track" : "Custom Track";
-      if (isDef) {
-        this.paramsTypeBadge.classList.add("is-default");
-      } else {
-        this.paramsTypeBadge.classList.remove("is-default");
-      }
+    if (this.paramsTypeBadge) {
+      this.paramsTypeBadge.textContent = "Song Package";
+      this.paramsTypeBadge.classList.remove("is-default");
     }
 
     if (this.titleEl) {
@@ -2042,6 +2044,13 @@ class MapEditor {
           document.activeElement.blur();
         }
       }
+      return;
+    }
+
+    // Ctrl+S or Cmd+S: Save song package folder immediately
+    if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "S")) {
+      e.preventDefault();
+      this.saveMapState(true);
       return;
     }
 
@@ -3055,15 +3064,25 @@ class MapEditor {
   }
 
   /**
-   * Saves updated notes array to MapStorage.
+   * Opens the current song package folder in Windows File Explorer.
    */
-  saveMapState() {
-    if (this.activeMap && this.mapStorage) {
-      // If this is an unmodified default track, never create a copy or save!
-      if (!this.isDirty && this.mapStorage.isDefaultTrack(this.activeMap)) {
-        return this.activeMap;
-      }
+  openCurrentSongFolder() {
+    if (this.soundManager) this.soundManager.playClick();
+    if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.openSongFolder === "function") {
+      const target = (this.activeMap && this.activeMap._folderPath)
+        || (this.activeMap && this.activeMap._filePath)
+        || "songs";
+      window.electronAPI.openSongFolder(target);
+    }
+  }
 
+  /**
+   * Saves updated notes array to MapStorage and auto-saves discrete song folder on disk:
+   * custom_songs/<folder_name>/notes.json, track.ogg, background.mp4
+   * @param {boolean} isManual
+   */
+  saveMapState(isManual = false) {
+    if (this.activeMap && this.mapStorage) {
       if (this.activeBgConfig) {
         this.activeMap.background = { ...this.activeBgConfig };
       } else {
@@ -3082,7 +3101,6 @@ class MapEditor {
       this.activeMap.selectedDifficulty = this.activeDifficulty;
       this.activeMap.notes = cloned;
 
-      const wasDefault = this.mapStorage.isDefaultTrack(this.activeMap);
       const saved = this.mapStorage.saveMap(this.activeMap);
       if (saved) {
         this.activeMap = saved;
@@ -3093,13 +3111,8 @@ class MapEditor {
           this.titleEl.textContent = `${saved.name} - by ${saved.mapper}`;
         }
         if (this.paramsTypeBadge) {
-          const isDef = this.mapStorage.isDefaultTrack(saved);
-          this.paramsTypeBadge.textContent = isDef ? "Default Track" : "Custom Track";
-          if (isDef) {
-            this.paramsTypeBadge.classList.add("is-default");
-          } else {
-            this.paramsTypeBadge.classList.remove("is-default");
-          }
+          this.paramsTypeBadge.textContent = "Song Package";
+          this.paramsTypeBadge.classList.remove("is-default");
         }
       }
 
@@ -3107,8 +3120,27 @@ class MapEditor {
       this.renderDifficultyTabs();
 
       if (this.saveIndicatorEl) {
-        this.saveIndicatorEl.textContent = wasDefault ? "✓ Saved as copy" : "✓ All changes saved";
+        this.saveIndicatorEl.textContent = "✓ All changes saved";
         this.saveIndicatorEl.className = "editor-save-tag saved";
+      }
+
+      // Auto-save discrete song folder on disk: custom_songs/<folder_name>/notes.json, track.ogg, background.mp4
+      if (typeof window !== "undefined" && window.electronAPI && typeof this.mapStorage.saveSongFolderOnDisk === "function") {
+        this.mapStorage.saveSongFolderOnDisk(this.activeMap).then((res) => {
+          if (res && res.success) {
+            if (this.saveIndicatorEl) {
+              this.saveIndicatorEl.textContent = `✓ Saved: custom_songs/${res.folderName}`;
+              this.saveIndicatorEl.className = "editor-save-tag saved";
+            }
+            if (isManual && this.soundManager) {
+              this.soundManager.playClick();
+            }
+          }
+        }).catch((err) => {
+          console.warn("[MapEditor] Auto-save folder error:", err);
+        });
+      } else if (isManual && this.soundManager) {
+        this.soundManager.playClick();
       }
 
       return saved || this.activeMap;

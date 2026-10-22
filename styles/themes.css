@@ -72,6 +72,44 @@
   --menu-secondary: var(--palette-secondary);
   --menu-bg-primary: var(--palette-bg-primary);
   --menu-bg-secondary: var(--palette-bg-secondary);
+
+  /* Universal Button & Folder Component Tokens */
+  --btn-radius-sm: 0.55rem;
+  --btn-radius-md: 0.75rem;
+  --btn-radius-lg: 0.95rem;
+  --btn-radius-pill: 999px;
+
+  --folder-accent: #f59e0b;
+  --folder-accent-hover: #fbbf24;
+  --folder-bg: rgba(245, 158, 11, 0.12);
+  --folder-bg-hover: rgba(245, 158, 11, 0.22);
+  --folder-border: rgba(245, 158, 11, 0.4);
+  --folder-border-hover: rgba(251, 191, 36, 0.8);
+  --folder-glow: rgba(245, 158, 11, 0.35);
+
+  --download-accent: #00d4ff;
+  --download-accent-hover: #38e1ff;
+  --download-bg: rgba(0, 212, 255, 0.12);
+  --download-border: rgba(0, 212, 255, 0.4);
+  --download-glow: rgba(0, 212, 255, 0.35);
+
+  --import-accent: #2ed573;
+  --import-accent-hover: #48e288;
+  --import-bg: rgba(46, 213, 115, 0.12);
+  --import-border: rgba(46, 213, 115, 0.42);
+  --import-glow: rgba(46, 213, 115, 0.35);
+
+  --save-accent: #2ed573;
+  --save-accent-hover: #48e288;
+  --save-bg: rgba(46, 213, 115, 0.16);
+  --save-border: rgba(46, 213, 115, 0.48);
+  --save-glow: rgba(46, 213, 115, 0.35);
+
+  --danger-accent: #ff4757;
+  --danger-accent-hover: #ff6b81;
+  --danger-bg: rgba(255, 71, 87, 0.12);
+  --danger-border: rgba(255, 71, 87, 0.35);
+  --danger-glow: rgba(255, 71, 87, 0.35);
 }
 
 /* --------------------------------------------------------------------------

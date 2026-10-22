@@ -6,6 +6,7 @@
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
+    "test": "node tests/test_folder_import_system.js",
     "build:dir": "electron-builder --dir",
     "build:exe": "electron-builder --win nsis",
     "dist": "electron-builder --win nsis"
@@ -38,7 +39,6 @@
       "scripts/**/*",
       "styles/**/*",
       "Assets/**/*",
-      "Default Tracks/**/*",
       "config.json",
       "Tutorial.mp4"
     ],

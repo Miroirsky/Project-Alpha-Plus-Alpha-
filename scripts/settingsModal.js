@@ -38,7 +38,6 @@ class SettingsModal {
     // Local Folder Buttons
     this.btnOpenSaves = document.getElementById("btn-open-saves-dir");
     this.btnOpenSongs = document.getElementById("btn-open-songs-dir");
-    this.btnOpenDefault = document.getElementById("btn-open-default-dir");
   }
 
   /**
@@ -391,15 +390,6 @@ class SettingsModal {
         if (this.soundManager) this.soundManager.playClick();
         if (this.isElectron && window.electronAPI) {
           window.electronAPI.openFolder("songs");
-        }
-      });
-    }
-
-    if (this.btnOpenDefault) {
-      this.btnOpenDefault.addEventListener("click", () => {
-        if (this.soundManager) this.soundManager.playClick();
-        if (this.isElectron && window.electronAPI) {
-          window.electronAPI.openFolder("default-tracks");
         }
       });
     }

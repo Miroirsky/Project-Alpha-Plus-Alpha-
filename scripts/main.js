@@ -301,23 +301,23 @@ function initApp() {
     });
   }
 
-  // 8. Attach subtle hover audio feedback to interactive buttons
-  const attachHoverSounds = () => {
-    const interactiveButtons = document.querySelectorAll(
-      "button, .menu-btn, .theme-btn, .play-back-btn, .btn-start-action, .btn-game-exit, .btn-editor-action, .btn-editor-test, .btn-map-edit-play, .btn-results-primary, .btn-results-secondary"
-    );
-    interactiveButtons.forEach((btn) => {
-      btn.addEventListener("mouseenter", () => {
+  // 8. Attach subtle hover audio feedback to all interactive buttons (delegated)
+  document.addEventListener(
+    "mouseenter",
+    (e) => {
+      const target = e.target;
+      if (
+        target &&
+        typeof target.closest === "function" &&
+        target.closest("button, .btn-theme-action, .btn-folder-tile, .menu-btn, .theme-btn, .chip-btn, .filter-pill, .btn-editor-action, .btn-song-export")
+      ) {
         try {
           soundManager.playHover();
-        } catch (e) {
-          // Ignore audio restrictions
-        }
-      });
-    });
-  };
-
-  attachHoverSounds();
+        } catch (err) {}
+      }
+    },
+    true
+  );
 }
 
 // Ensure execution runs whether loaded before or after DOMContentLoaded

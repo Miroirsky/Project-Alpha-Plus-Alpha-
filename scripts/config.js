@@ -10,30 +10,16 @@
 
 const APP_CONFIG = {
   /**
-   * List of default track files to load on application startup.
-   * Supports both backslashes ("\") and forward slashes ("/").
+   * Default track folder paths loaded dynamically via manifest.json.
    * @type {Array<string>}
    */
   defaultTracks: [
-    "Default Tracks\\MoodMode.json",
-    "Default Tracks\\Beating Like Hearth.json",
-    "Default Tracks\\Chance.json"
+    "Default Tracks\\IDK",
+    "Default Tracks\\MoodMode",
+    "Default Tracks\\Why Are You Running"
   ],
-
-  /**
-   * Path to the folder containing default track .json files.
-   * Can be relative to the application root (e.g., "Default Tracks", "Tracks", or "Assets/Tracks").
-   * @type {string}
-   */
   defaultTracksPath: "Default Tracks",
-
-  /**
-   * Alternate directory paths to search if the primary folder is moved or not found.
-   * @type {Array<string>}
-   */
-  alternateTracksPaths: [
-    "Assets/Default Tracks"
-  ],
+  alternateTracksPaths: [],
 
   /**
    * Supported file extensions for track files.
@@ -51,8 +37,6 @@ const APP_CONFIG = {
     mapOverrides: "project_alpha_map_overrides",
     deletedTracks: "project_alpha_deleted_tracks",
     highscores: "project_alpha_highscores",
-    defaultTracksCache: "project_alpha_default_tracks_cache",
-    defaultTracksFilenames: "project_alpha_default_tracks_filenames",
     selectedSongId: "project_alpha_selected_song_id",
     songOrder: "project_alpha_song_order",
     difficultyOrders: "project_alpha_difficulty_orders"

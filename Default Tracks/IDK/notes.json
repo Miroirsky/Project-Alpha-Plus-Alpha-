@@ -1,0 +1,136 @@
+{
+  "id": "custom_1792575111719_6316",
+  "name": "IDK",
+  "mapper": "Miroirsky",
+  "creator": "Unknown Artist",
+  "duration": "02:13",
+  "bpm": 120,
+  "color": "#00d4ff",
+  "difficulty": "Normal",
+  "difficulties": {
+    "Normal": {
+      "difficulty": "Normal",
+      "notes": [
+        {
+          "time": 0,
+          "color": "red",
+          "type": "normal",
+          "x": 0.639,
+          "y": 0.657
+        },
+        {
+          "time": 0.15,
+          "color": "red",
+          "type": "normal",
+          "x": 0.701,
+          "y": 0.482
+        },
+        {
+          "time": 0.31,
+          "color": "red",
+          "type": "normal",
+          "x": 0.689,
+          "y": 0.296
+        },
+        {
+          "time": 0.67,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.446,
+          "y": 0.121
+        },
+        {
+          "time": 1.11,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.438,
+          "y": 0.27
+        },
+        {
+          "time": 1.69,
+          "color": "red",
+          "type": "normal",
+          "x": 0.111,
+          "y": 0.525
+        },
+        {
+          "time": 1.91,
+          "color": "red",
+          "type": "normal",
+          "x": 0.27,
+          "y": 0.567
+        },
+        {
+          "time": 2.15,
+          "color": "red",
+          "type": "normal",
+          "x": 0.427,
+          "y": 0.619
+        }
+      ],
+      "nps": 0.1
+    }
+  },
+  "notes": [
+    {
+      "time": 0,
+      "color": "red",
+      "type": "normal",
+      "x": 0.639,
+      "y": 0.657
+    },
+    {
+      "time": 0.15,
+      "color": "red",
+      "type": "normal",
+      "x": 0.701,
+      "y": 0.482
+    },
+    {
+      "time": 0.31,
+      "color": "red",
+      "type": "normal",
+      "x": 0.689,
+      "y": 0.296
+    },
+    {
+      "time": 0.67,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.446,
+      "y": 0.121
+    },
+    {
+      "time": 1.11,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.438,
+      "y": 0.27
+    },
+    {
+      "time": 1.69,
+      "color": "red",
+      "type": "normal",
+      "x": 0.111,
+      "y": 0.525
+    },
+    {
+      "time": 1.91,
+      "color": "red",
+      "type": "normal",
+      "x": 0.27,
+      "y": 0.567
+    },
+    {
+      "time": 2.15,
+      "color": "red",
+      "type": "normal",
+      "x": 0.427,
+      "y": 0.619
+    }
+  ],
+  "metadata": {},
+  "_folderName": "IDK",
+  "file": "track.mp3",
+  "cover": "Assets/Tracks Placeholders/Default-0.png"
+}

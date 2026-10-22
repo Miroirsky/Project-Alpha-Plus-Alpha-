@@ -36,8 +36,12 @@ class CreateMenu {
     this.difficultyInput = document.getElementById("new-map-difficulty");
     this.initialDiffChips = document.getElementById("create-initial-diff-chips");
     this.fileInput = document.getElementById("new-map-file");
-    this.presetSelect = document.getElementById("new-map-preset-audio");
     this.fileStatusEl = document.getElementById("new-map-file-status");
+    this.bgFileInput = document.getElementById("new-map-bg-file");
+    this.bgStatusEl = document.getElementById("new-map-bg-status");
+    this.importedBgUrl = null;
+    this.importedBgFile = null;
+    this.importedBgIsVideo = false;
 
     // Catalog Filter & Stats Elements
     this.statsBadge = document.getElementById("create-stats-badge");
@@ -246,15 +250,19 @@ class CreateMenu {
       });
     }
 
-    // Preset audio dropdown
-    if (this.presetSelect) {
-      this.presetSelect.addEventListener("change", (e) => {
-        if (e.target.value) {
-          if (this.fileInput) this.fileInput.value = "";
-          this.importedFileUrl = null;
-          this.importedAudioFile = null;
-          if (this.fileStatusEl) {
-            this.fileStatusEl.textContent = `Using preset: ${e.target.selectedOptions[0].text}`;
+    // Background video/image file input listener
+    if (this.bgFileInput) {
+      this.bgFileInput.addEventListener("change", (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          if (this.importedBgUrl) {
+            URL.revokeObjectURL(this.importedBgUrl);
+          }
+          this.importedBgUrl = URL.createObjectURL(file);
+          this.importedBgFile = file;
+          this.importedBgIsVideo = /\.(mp4|webm|mkv|mov)$/i.test(file.name);
+          if (this.bgStatusEl) {
+            this.bgStatusEl.textContent = `Selected: ${file.name} (${this.importedBgIsVideo ? "Video" : "Image"})`;
           }
         }
       });
@@ -310,46 +318,25 @@ class CreateMenu {
       });
     }
 
-    // Import Modal listeners
+    // Import Song Folder listener
     if (this.importBtn) {
-      this.importBtn.addEventListener("click", () => {
-        this.openImportModal();
-      });
-    }
-
-    if (this.closeImportBtn) {
-      this.closeImportBtn.addEventListener("click", () => {
-        this.closeImportModal();
-      });
-    }
-
-    if (this.cancelImportBtn) {
-      this.cancelImportBtn.addEventListener("click", () => {
-        this.closeImportModal();
-      });
-    }
-
-    if (this.confirmImportBtn) {
-      this.confirmImportBtn.addEventListener("click", () => {
-        this.confirmImport();
-      });
-    }
-
-    // File upload in import modal
-    if (this.importFileInput) {
-      this.importFileInput.addEventListener("change", (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            if (this.importCodeArea) {
-              this.importCodeArea.value = evt.target.result;
+      this.importBtn.addEventListener("click", async () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (this.mapStorage && typeof this.mapStorage.importSongFolderAsync === "function") {
+          const res = await this.mapStorage.importSongFolderAsync();
+          if (res && res.canceled) return;
+          if (res && res.success && res.song) {
+            this.expandedSongIds.add(res.song.id);
+            this.renderMapsList();
+            this.mapStorage.setSelectedSongId(res.song.id);
+            if (this.soundManager) this.soundManager.playTestTone();
+            if (typeof this.onEditMap === "function") {
+              this.hide();
+              this.onEditMap(res.song);
             }
-            if (this.importFileStatusEl) {
-              this.importFileStatusEl.textContent = `Loaded file: ${file.name}`;
-            }
-          };
-          reader.readAsText(file);
+          } else if (res && !res.success) {
+            alert(res.error || "Failed to import song folder.");
+          }
         }
       });
     }
@@ -396,6 +383,19 @@ class CreateMenu {
     if (this.downloadExportBtn) {
       this.downloadExportBtn.addEventListener("click", () => {
         this.downloadExportFile();
+      });
+    }
+
+    const openExportFolderBtn = document.getElementById("btn-open-export-folder");
+    if (openExportFolderBtn) {
+      openExportFolderBtn.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        if (window.electronAPI && typeof window.electronAPI.openSongFolder === "function") {
+          const songId = this.lastExportData && this.lastExportData.songId;
+          const map = (this.mapStorage && songId && this.mapStorage.getMap(songId)) || null;
+          const target = (map && map._folderPath) || (map && map._filePath) || "songs";
+          window.electronAPI.openSongFolder(target);
+        }
       });
     }
 
@@ -906,18 +906,9 @@ class CreateMenu {
     let audioSource = this.importedFileUrl;
     let durationSeconds = this.importedDuration || 180;
 
-    // If no custom file was uploaded, check preset dropdown
-    if (!audioSource && this.presetSelect && this.presetSelect.value) {
-      audioSource = this.presetSelect.value;
-      const option = this.presetSelect.selectedOptions[0];
-      const dur = option.getAttribute("data-duration");
-      if (dur) durationSeconds = parseInt(dur, 10);
-    }
-
-    // Fallback to default project track if nothing selected
     if (!audioSource) {
-      audioSource = "Assets/Songs/IMG_2449.mp3";
-      durationSeconds = 229;
+      alert("Please upload an audio file (MP3, WAV, OGG) for your song or import a complete song folder.");
+      return;
     }
 
     const m = Math.floor(durationSeconds / 60);
@@ -936,11 +927,24 @@ class CreateMenu {
         difficulty
       });
 
+      if (this.importedBgUrl) {
+        newMap.background = {
+          url: this.importedBgUrl,
+          mediaType: this.importedBgIsVideo ? "video" : "image",
+          fit: "cover",
+          opacity: 0.7
+        };
+      }
+
       if (this.importedAudioFile && typeof window !== "undefined" && window.MediaStorage) {
         window.MediaStorage.saveAudio(newMap.id, this.importedAudioFile);
         newMap.hasStoredAudio = true;
       }
       this.importedAudioFile = null;
+
+      if (typeof window !== "undefined" && window.electronAPI && typeof this.mapStorage.saveSongFolderOnDisk === "function") {
+        this.mapStorage.saveSongFolderOnDisk(newMap).catch(() => {});
+      }
 
       if (this.soundManager) this.soundManager.playClick();
 
@@ -954,6 +958,10 @@ class CreateMenu {
       if (this.difficultyInput) this.difficultyInput.value = "Normal";
       if (this.fileInput) this.fileInput.value = "";
       if (this.fileStatusEl) this.fileStatusEl.textContent = "";
+      if (this.bgFileInput) this.bgFileInput.value = "";
+      if (this.bgStatusEl) this.bgStatusEl.textContent = "Default Arena Grid";
+      this.importedBgFile = null;
+      this.importedBgUrl = null;
 
       // Open new map in MapEditor
       if (typeof this.onEditMap === "function") {
@@ -1003,30 +1011,41 @@ class CreateMenu {
         `
         : "";
 
-      const tracksFolder = (this.mapStorage && this.mapStorage.getDefaultTracksPath()) || "Default Tracks";
-      const isFileProtocol = typeof window !== "undefined" && window.location && window.location.protocol === "file:";
-      const fileProtocolHint = isFileProtocol
-        ? `
-          <p style="font-size: 0.8rem; opacity: 0.85; margin-top: 8px;">
-            Note: Browsers block direct file access on <code>file:///</code>. Run a web server (e.g. <code>npx serve</code>, Live Server) or select the folder below:
-          </p>
-        `
-        : "";
-
       this.mapsListContainer.innerHTML = `
-        <div class="empty-maps-notice" style="text-align: center; padding: 24px 16px;">
-          <p style="margin: 0 0 8px 0; font-weight: 600;">No maps found. Create a new map to start mapping notes!</p>
-          <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">Or load existing songs from the <code>${tracksFolder}</code> folder.</p>
-          ${fileProtocolHint}
+        <div class="empty-maps-notice" style="text-align: center; padding: 28px 16px;">
+          <p style="margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;">No Songs in Library</p>
+          <p style="margin: 0; font-size: 0.85rem; opacity: 0.85; max-width: 380px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+            Import a complete song folder (containing <code>notes.json</code>, track audio, and background video) or configure and create a new song on the left!
+          </p>
           ${errorHtml}
-          <div style="margin-top: 16px;">
-            <label class="btn-theme-action" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-primary, #954132); color: #fff;">
-              <span>📁 Load ${tracksFolder} Folder</span>
+          <div style="margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+            <button type="button" class="btn-theme-action play-import-btn btn-empty-maps-import" title="Import complete song folder">
+              <span class="btn-icon">📥</span>
+              <span>Import Song Folder</span>
+            </button>
+            <label class="btn-theme-action btn-folder-action empty-maps-folder-btn" title="Select song folder from disk">
+              <span class="btn-icon">📁</span>
+              <span>Browse Folder</span>
               <input type="file" class="empty-maps-folder-input" webkitdirectory directory multiple style="display: none;">
             </label>
           </div>
         </div>
       `;
+
+      const emptyImportBtn = this.mapsListContainer.querySelector(".btn-empty-maps-import");
+      if (emptyImportBtn) {
+        emptyImportBtn.addEventListener("click", async () => {
+          if (this.mapStorage && typeof this.mapStorage.importSongFolderAsync === "function") {
+            const res = await this.mapStorage.importSongFolderAsync();
+            if (res && res.success && res.song) {
+              this.renderMapsList();
+              if (this.soundManager) this.soundManager.playTestTone();
+            } else if (res && !res.canceled && !res.success) {
+              alert(res.error || "Failed to import song folder.");
+            }
+          }
+        });
+      }
 
       const folderInput = this.mapsListContainer.querySelector(".empty-maps-folder-input");
       if (folderInput) {
@@ -1041,12 +1060,14 @@ class CreateMenu {
       return;
     }
 
-    // Filter maps by type and search query
+    // Filter maps by search query
     let filteredMaps = allMaps;
+
+    // Filter maps by filter pills (All / Default / Custom)
     if (this.filterType === "default") {
-      filteredMaps = filteredMaps.filter((m) => !m.isCustom);
+      filteredMaps = filteredMaps.filter((m) => this.mapStorage && this.mapStorage.isDefaultTrack(m));
     } else if (this.filterType === "custom") {
-      filteredMaps = filteredMaps.filter((m) => m.isCustom);
+      filteredMaps = filteredMaps.filter((m) => !this.mapStorage || !this.mapStorage.isDefaultTrack(m));
     }
 
     if (this.searchQuery) {
@@ -1128,7 +1149,7 @@ class CreateMenu {
         <div class="song-parent-info">
           <div class="song-parent-header">
             <span class="song-name">${map.name}</span>
-            ${map.isCustom ? '<span class="map-tag-custom">Custom</span>' : '<span class="map-tag-default">Default</span>'}
+            <span class="map-tag-custom">Track Package</span>
           </div>
           <div class="song-parent-meta">
             <span>Mapper: <strong>${map.mapper || "Anonymous"}</strong></span>
@@ -1141,19 +1162,15 @@ class CreateMenu {
           </div>
         </div>
         <div class="song-parent-actions">
-          <button class="btn-song-export" type="button" aria-label="Export ${map.name}" title="Export entire song and all difficulty tracks">
-            <span class="export-icon">📤</span>
-            <span>Export</span>
+          <button class="btn-song-export btn-song-folder" type="button" aria-label="Open folder for ${map.name}" title="Reveal song folder (track.ogg, background.mp4, notes.json) in Windows Explorer">
+            <span class="export-icon">📁</span>
+            <span>Folder</span>
           </button>
           <button class="btn-song-params" type="button" aria-label="Song Parameters" title="Song metadata and global arena background">
             <span class="param-icon">⚙</span>
             <span>Parameters</span>
           </button>
-          ${
-            map.isCustom
-              ? `<button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete custom song ${map.name}" title="Delete custom song">&times;</button>`
-              : ""
-          }
+          <button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete song ${map.name}" title="Delete song">&times;</button>
         </div>
       `;
 
@@ -1234,12 +1251,15 @@ class CreateMenu {
         toggleBtn.addEventListener("click", toggleAction);
       }
 
-      // Song Export button listener
+      // Song Folder button listener (Direct folder export / inspection)
       const exportSongBtn = parentRow.querySelector(".btn-song-export");
       if (exportSongBtn) {
         exportSongBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          this.openExportSong(map);
+          const target = map._folderPath || map._filePath || "songs";
+          if (window.electronAPI && typeof window.electronAPI.openSongFolder === "function") {
+            window.electronAPI.openSongFolder(target);
+          }
         });
       }
 
@@ -1257,11 +1277,7 @@ class CreateMenu {
       if (songDelBtn) {
         songDelBtn.addEventListener("click", (e) => {
           e.stopPropagation();
-          if (this.mapStorage && this.mapStorage.isDefaultTrack(map)) {
-            alert("Default tracks cannot be deleted.");
-            return;
-          }
-          if (confirm(`Delete custom song "${map.name}" and all its difficulty tracks?`)) {
+          if (confirm(`Delete song "${map.name}" and all its difficulty tracks?`)) {
             if (this.soundManager) this.soundManager.playClick();
             this.mapStorage.deleteMap(map.id);
           }
@@ -1280,7 +1296,7 @@ class CreateMenu {
           const noteCount = (diffData.notes && diffData.notes.length) || 0;
           const nps = typeof diffData.nps === "number" ? diffData.nps : 0;
           const diffColor = diffData.color || map.color || "#00d4ff";
-          const canDelete = Boolean(map.isCustom) && diffKeys.length > 1;
+          const canDelete = diffKeys.length > 1;
 
           const diffRow = document.createElement("div");
           diffRow.className = "difficulty-tree-row";
@@ -1401,10 +1417,6 @@ class CreateMenu {
           const delDiffBtn = diffRow.querySelector(".btn-diff-delete");
           if (delDiffBtn) {
             delDiffBtn.addEventListener("click", () => {
-              if (this.mapStorage && this.mapStorage.isDefaultTrack(map)) {
-                alert("Default tracks cannot have difficulty tracks deleted.");
-                return;
-              }
               if (confirm(`Delete difficulty track "${diffName}" from "${map.name}"?`)) {
                 if (this.soundManager) this.soundManager.playClick();
                 this.mapStorage.deleteDifficulty(map.id, diffName);
@@ -1710,8 +1722,9 @@ class CreateMenu {
     this.activeSongParam = song;
 
     if (this.songParamBadge) {
-      this.songParamBadge.textContent = song.isCustom ? "Custom Song" : "Default Track";
-      this.songParamBadge.className = `track-type-badge ${song.isCustom ? "" : "is-default"}`;
+      const isDef = Boolean(song.isDefault || (this.mapStorage && this.mapStorage.isDefaultTrack(song)));
+      this.songParamBadge.textContent = isDef ? "Default Track" : "Custom Song";
+      this.songParamBadge.className = `track-type-badge ${isDef ? "is-default" : ""}`;
     }
     if (this.songParamNameInput) {
       this.songParamNameInput.value = song.name || "";

@@ -1,0 +1,1321 @@
+{
+  "id": "custom_1792673284154_4614",
+  "name": "MoodMode",
+  "mapper": "Miroirsky",
+  "creator": "MoodMode",
+  "duration": "02:16",
+  "bpm": 120,
+  "color": "#00d4ff",
+  "difficulty": "Normal",
+  "difficulties": {
+    "Normal": {
+      "difficulty": "Normal",
+      "notes": [
+        {
+          "time": 0.47,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.73,
+          "y": 0.085
+        },
+        {
+          "time": 1.27,
+          "color": "red",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.06
+        },
+        {
+          "time": 1.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.291
+        },
+        {
+          "time": 2.01,
+          "color": "red",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.501
+        },
+        {
+          "time": 2.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.73,
+          "y": 0.303
+        },
+        {
+          "time": 3.31,
+          "color": "red",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.061
+        },
+        {
+          "time": 3.75,
+          "color": "red",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.27
+        },
+        {
+          "time": 4.05,
+          "color": "red",
+          "type": "normal",
+          "x": 0.499,
+          "y": 0.502
+        },
+        {
+          "time": 4.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.749,
+          "y": 0.5
+        },
+        {
+          "time": 5.31,
+          "color": "red",
+          "type": "normal",
+          "x": 0.698,
+          "y": 0.5
+        },
+        {
+          "time": 6.05,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.647,
+          "y": 0.502
+        },
+        {
+          "time": 6.77,
+          "color": "red",
+          "type": "normal",
+          "x": 0.595,
+          "y": 0.503
+        },
+        {
+          "time": 7.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.174,
+          "y": 0.497
+        },
+        {
+          "time": 7.71,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.244,
+          "y": 0.282
+        },
+        {
+          "time": 8.01,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.401,
+          "y": 0.159
+        },
+        {
+          "time": 8.49,
+          "color": "red",
+          "type": "normal",
+          "x": 0.562,
+          "y": 0.108
+        },
+        {
+          "time": 9.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.94,
+          "y": 0.503
+        },
+        {
+          "time": 9.69,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.737,
+          "y": 0.501
+        },
+        {
+          "time": 10.07,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.501,
+          "y": 0.498
+        },
+        {
+          "time": 10.07,
+          "color": "yellow",
+          "type": "triangle",
+          "x": 0.336,
+          "y": 0.498
+        },
+        {
+          "time": 10.51,
+          "color": "red",
+          "type": "normal",
+          "x": 0.17,
+          "y": 0.501
+        },
+        {
+          "time": 11.31,
+          "color": "red",
+          "type": "normal",
+          "x": 0.45,
+          "y": 0.552
+        },
+        {
+          "time": 11.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.551,
+          "y": 0.548
+        },
+        {
+          "time": 11.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.499,
+          "y": 0.463
+        },
+        {
+          "time": 12.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.521
+        },
+        {
+          "time": 13.25,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.496,
+          "y": 0.73
+        },
+        {
+          "time": 14.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.499,
+          "y": 0.258
+        },
+        {
+          "time": 14.78,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.498,
+          "y": 0.502
+        },
+        {
+          "time": 15.28,
+          "color": "red",
+          "type": "normal",
+          "x": 0.745,
+          "y": 0.569
+        },
+        {
+          "time": 15.67,
+          "color": "red",
+          "type": "normal",
+          "x": 0.686,
+          "y": 0.328
+        },
+        {
+          "time": 16,
+          "color": "red",
+          "type": "normal",
+          "x": 0.49,
+          "y": 0.205
+        },
+        {
+          "time": 16.48,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.741,
+          "y": 0.568
+        },
+        {
+          "time": 17.27,
+          "color": "red",
+          "type": "normal",
+          "x": 0.356,
+          "y": 0.378
+        },
+        {
+          "time": 17.69,
+          "color": "red",
+          "type": "normal",
+          "x": 0.644,
+          "y": 0.376
+        },
+        {
+          "time": 18.01,
+          "color": "red",
+          "type": "normal",
+          "x": 0.351,
+          "y": 0.641
+        },
+        {
+          "time": 18.49,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.646,
+          "y": 0.633
+        },
+        {
+          "time": 19.28,
+          "color": "red",
+          "type": "normal",
+          "x": 0.498,
+          "y": 0.367
+        },
+        {
+          "time": 19.67,
+          "color": "red",
+          "type": "normal",
+          "x": 0.664,
+          "y": 0.37
+        },
+        {
+          "time": 20.02,
+          "color": "red",
+          "type": "normal",
+          "x": 0.659,
+          "y": 0.534
+        },
+        {
+          "time": 20.52,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.498,
+          "y": 0.538
+        },
+        {
+          "time": 21.25,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.332,
+          "y": 0.538
+        },
+        {
+          "time": 22.01,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.33,
+          "y": 0.699
+        },
+        {
+          "time": 22.74,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.506,
+          "y": 0.706
+        },
+        {
+          "time": 23.27,
+          "color": "red",
+          "type": "normal",
+          "x": 0.668,
+          "y": 0.621
+        },
+        {
+          "time": 23.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.755,
+          "y": 0.421
+        },
+        {
+          "time": 23.99,
+          "color": "red",
+          "type": "normal",
+          "x": 0.718,
+          "y": 0.206
+        },
+        {
+          "time": 24.52,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.532,
+          "y": 0.434
+        },
+        {
+          "time": 25.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.457,
+          "y": 0.564
+        },
+        {
+          "time": 25.64,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.426,
+          "y": 0.705
+        },
+        {
+          "time": 25.98,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.413,
+          "y": 0.856
+        },
+        {
+          "time": 26.51,
+          "color": "red",
+          "type": "normal",
+          "x": 0.579,
+          "y": 0.876
+        },
+        {
+          "time": 27.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.296,
+          "y": 0.508
+        },
+        {
+          "time": 27.66,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.454,
+          "y": 0.502
+        },
+        {
+          "time": 28.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.455,
+          "y": 0.34
+        },
+        {
+          "time": 28.5,
+          "color": "red",
+          "type": "normal",
+          "x": 0.606,
+          "y": 0.339
+        },
+        {
+          "time": 29.3,
+          "color": "red",
+          "type": "normal",
+          "x": 0.61,
+          "y": 0.502
+        },
+        {
+          "time": 29.99,
+          "color": "red",
+          "type": "normal",
+          "x": 0.483,
+          "y": 0.506
+        },
+        {
+          "time": 30.77,
+          "color": "red",
+          "type": "normal",
+          "x": 0.297,
+          "y": 0.502
+        },
+        {
+          "time": 31.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.537,
+          "y": 0.139
+        },
+        {
+          "time": 31.65,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.65,
+          "y": 0.344
+        },
+        {
+          "time": 32.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.624,
+          "y": 0.572
+        },
+        {
+          "time": 32.49,
+          "color": "red",
+          "type": "normal",
+          "x": 0.454,
+          "y": 0.698
+        },
+        {
+          "time": 33.25,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.455,
+          "y": 0.698
+        },
+        {
+          "time": 33.66,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.599,
+          "y": 0.548
+        },
+        {
+          "time": 34.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.641,
+          "y": 0.307
+        },
+        {
+          "time": 34.52,
+          "color": "red",
+          "type": "normal",
+          "x": 0.571,
+          "y": 0.128
+        },
+        {
+          "time": 35.26,
+          "color": "red",
+          "type": "normal",
+          "x": 0.375,
+          "y": 0.243
+        },
+        {
+          "time": 35.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.291,
+          "y": 0.491
+        },
+        {
+          "time": 36.01,
+          "color": "red",
+          "type": "normal",
+          "x": 0.26,
+          "y": 0.792
+        },
+        {
+          "time": 36.49,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.719,
+          "y": 0.635
+        },
+        {
+          "time": 37.22,
+          "color": "red",
+          "type": "normal",
+          "x": 0.553,
+          "y": 0.639
+        },
+        {
+          "time": 38.02,
+          "color": "red",
+          "type": "normal",
+          "x": 0.71,
+          "y": 0.65
+        },
+        {
+          "time": 38.73,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.539,
+          "y": 0.656
+        },
+        {
+          "time": 39.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.247,
+          "y": 0.214
+        },
+        {
+          "time": 39.68,
+          "color": "red",
+          "type": "normal",
+          "x": 0.582,
+          "y": 0.228
+        },
+        {
+          "time": 39.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.374,
+          "y": 0.486
+        },
+        {
+          "time": 40.53,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.396,
+          "y": 0.322
+        },
+        {
+          "time": 41.25,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.616,
+          "y": 0.663
+        },
+        {
+          "time": 41.6,
+          "color": "red",
+          "type": "normal",
+          "x": 0.616,
+          "y": 0.662
+        },
+        {
+          "time": 42.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.617,
+          "y": 0.662
+        },
+        {
+          "time": 42.51,
+          "color": "red",
+          "type": "normal",
+          "x": 0.452,
+          "y": 0.357
+        },
+        {
+          "time": 43.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.415,
+          "y": 0.491
+        },
+        {
+          "time": 43.65,
+          "color": "red",
+          "type": "normal",
+          "x": 0.398,
+          "y": 0.615
+        },
+        {
+          "time": 44.01,
+          "color": "red",
+          "type": "normal",
+          "x": 0.438,
+          "y": 0.356
+        },
+        {
+          "time": 44.49,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.414,
+          "y": 0.491
+        },
+        {
+          "time": 45.27,
+          "color": "red",
+          "type": "normal",
+          "x": 0.713,
+          "y": 0.483
+        },
+        {
+          "time": 46.01,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.562,
+          "y": 0.207
+        },
+        {
+          "time": 46.7,
+          "color": "red",
+          "type": "normal",
+          "x": 0.556,
+          "y": 0.658
+        },
+        {
+          "time": 47.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.363,
+          "y": 0.436
+        },
+        {
+          "time": 47.67,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.552,
+          "y": 0.222
+        },
+        {
+          "time": 48.02,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.699,
+          "y": 0.442
+        },
+        {
+          "time": 48.47,
+          "color": "red",
+          "type": "normal",
+          "x": 0.531,
+          "y": 0.635
+        }
+      ],
+      "nps": 0.7
+    }
+  },
+  "notes": [
+    {
+      "time": 0.47,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.73,
+      "y": 0.085
+    },
+    {
+      "time": 1.27,
+      "color": "red",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.06
+    },
+    {
+      "time": 1.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.291
+    },
+    {
+      "time": 2.01,
+      "color": "red",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.501
+    },
+    {
+      "time": 2.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.73,
+      "y": 0.303
+    },
+    {
+      "time": 3.31,
+      "color": "red",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.061
+    },
+    {
+      "time": 3.75,
+      "color": "red",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.27
+    },
+    {
+      "time": 4.05,
+      "color": "red",
+      "type": "normal",
+      "x": 0.499,
+      "y": 0.502
+    },
+    {
+      "time": 4.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.749,
+      "y": 0.5
+    },
+    {
+      "time": 5.31,
+      "color": "red",
+      "type": "normal",
+      "x": 0.698,
+      "y": 0.5
+    },
+    {
+      "time": 6.05,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.647,
+      "y": 0.502
+    },
+    {
+      "time": 6.77,
+      "color": "red",
+      "type": "normal",
+      "x": 0.595,
+      "y": 0.503
+    },
+    {
+      "time": 7.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.174,
+      "y": 0.497
+    },
+    {
+      "time": 7.71,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.244,
+      "y": 0.282
+    },
+    {
+      "time": 8.01,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.401,
+      "y": 0.159
+    },
+    {
+      "time": 8.49,
+      "color": "red",
+      "type": "normal",
+      "x": 0.562,
+      "y": 0.108
+    },
+    {
+      "time": 9.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.94,
+      "y": 0.503
+    },
+    {
+      "time": 9.69,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.737,
+      "y": 0.501
+    },
+    {
+      "time": 10.07,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.501,
+      "y": 0.498
+    },
+    {
+      "time": 10.07,
+      "color": "yellow",
+      "type": "triangle",
+      "x": 0.336,
+      "y": 0.498
+    },
+    {
+      "time": 10.51,
+      "color": "red",
+      "type": "normal",
+      "x": 0.17,
+      "y": 0.501
+    },
+    {
+      "time": 11.31,
+      "color": "red",
+      "type": "normal",
+      "x": 0.45,
+      "y": 0.552
+    },
+    {
+      "time": 11.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.551,
+      "y": 0.548
+    },
+    {
+      "time": 11.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.499,
+      "y": 0.463
+    },
+    {
+      "time": 12.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.521
+    },
+    {
+      "time": 13.25,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.496,
+      "y": 0.73
+    },
+    {
+      "time": 14.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.499,
+      "y": 0.258
+    },
+    {
+      "time": 14.78,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.498,
+      "y": 0.502
+    },
+    {
+      "time": 15.28,
+      "color": "red",
+      "type": "normal",
+      "x": 0.745,
+      "y": 0.569
+    },
+    {
+      "time": 15.67,
+      "color": "red",
+      "type": "normal",
+      "x": 0.686,
+      "y": 0.328
+    },
+    {
+      "time": 16,
+      "color": "red",
+      "type": "normal",
+      "x": 0.49,
+      "y": 0.205
+    },
+    {
+      "time": 16.48,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.741,
+      "y": 0.568
+    },
+    {
+      "time": 17.27,
+      "color": "red",
+      "type": "normal",
+      "x": 0.356,
+      "y": 0.378
+    },
+    {
+      "time": 17.69,
+      "color": "red",
+      "type": "normal",
+      "x": 0.644,
+      "y": 0.376
+    },
+    {
+      "time": 18.01,
+      "color": "red",
+      "type": "normal",
+      "x": 0.351,
+      "y": 0.641
+    },
+    {
+      "time": 18.49,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.646,
+      "y": 0.633
+    },
+    {
+      "time": 19.28,
+      "color": "red",
+      "type": "normal",
+      "x": 0.498,
+      "y": 0.367
+    },
+    {
+      "time": 19.67,
+      "color": "red",
+      "type": "normal",
+      "x": 0.664,
+      "y": 0.37
+    },
+    {
+      "time": 20.02,
+      "color": "red",
+      "type": "normal",
+      "x": 0.659,
+      "y": 0.534
+    },
+    {
+      "time": 20.52,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.498,
+      "y": 0.538
+    },
+    {
+      "time": 21.25,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.332,
+      "y": 0.538
+    },
+    {
+      "time": 22.01,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.33,
+      "y": 0.699
+    },
+    {
+      "time": 22.74,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.506,
+      "y": 0.706
+    },
+    {
+      "time": 23.27,
+      "color": "red",
+      "type": "normal",
+      "x": 0.668,
+      "y": 0.621
+    },
+    {
+      "time": 23.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.755,
+      "y": 0.421
+    },
+    {
+      "time": 23.99,
+      "color": "red",
+      "type": "normal",
+      "x": 0.718,
+      "y": 0.206
+    },
+    {
+      "time": 24.52,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.532,
+      "y": 0.434
+    },
+    {
+      "time": 25.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.457,
+      "y": 0.564
+    },
+    {
+      "time": 25.64,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.426,
+      "y": 0.705
+    },
+    {
+      "time": 25.98,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.413,
+      "y": 0.856
+    },
+    {
+      "time": 26.51,
+      "color": "red",
+      "type": "normal",
+      "x": 0.579,
+      "y": 0.876
+    },
+    {
+      "time": 27.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.296,
+      "y": 0.508
+    },
+    {
+      "time": 27.66,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.454,
+      "y": 0.502
+    },
+    {
+      "time": 28.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.455,
+      "y": 0.34
+    },
+    {
+      "time": 28.5,
+      "color": "red",
+      "type": "normal",
+      "x": 0.606,
+      "y": 0.339
+    },
+    {
+      "time": 29.3,
+      "color": "red",
+      "type": "normal",
+      "x": 0.61,
+      "y": 0.502
+    },
+    {
+      "time": 29.99,
+      "color": "red",
+      "type": "normal",
+      "x": 0.483,
+      "y": 0.506
+    },
+    {
+      "time": 30.77,
+      "color": "red",
+      "type": "normal",
+      "x": 0.297,
+      "y": 0.502
+    },
+    {
+      "time": 31.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.537,
+      "y": 0.139
+    },
+    {
+      "time": 31.65,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.65,
+      "y": 0.344
+    },
+    {
+      "time": 32.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.624,
+      "y": 0.572
+    },
+    {
+      "time": 32.49,
+      "color": "red",
+      "type": "normal",
+      "x": 0.454,
+      "y": 0.698
+    },
+    {
+      "time": 33.25,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.455,
+      "y": 0.698
+    },
+    {
+      "time": 33.66,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.599,
+      "y": 0.548
+    },
+    {
+      "time": 34.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.641,
+      "y": 0.307
+    },
+    {
+      "time": 34.52,
+      "color": "red",
+      "type": "normal",
+      "x": 0.571,
+      "y": 0.128
+    },
+    {
+      "time": 35.26,
+      "color": "red",
+      "type": "normal",
+      "x": 0.375,
+      "y": 0.243
+    },
+    {
+      "time": 35.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.291,
+      "y": 0.491
+    },
+    {
+      "time": 36.01,
+      "color": "red",
+      "type": "normal",
+      "x": 0.26,
+      "y": 0.792
+    },
+    {
+      "time": 36.49,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.719,
+      "y": 0.635
+    },
+    {
+      "time": 37.22,
+      "color": "red",
+      "type": "normal",
+      "x": 0.553,
+      "y": 0.639
+    },
+    {
+      "time": 38.02,
+      "color": "red",
+      "type": "normal",
+      "x": 0.71,
+      "y": 0.65
+    },
+    {
+      "time": 38.73,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.539,
+      "y": 0.656
+    },
+    {
+      "time": 39.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.247,
+      "y": 0.214
+    },
+    {
+      "time": 39.68,
+      "color": "red",
+      "type": "normal",
+      "x": 0.582,
+      "y": 0.228
+    },
+    {
+      "time": 39.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.374,
+      "y": 0.486
+    },
+    {
+      "time": 40.53,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.396,
+      "y": 0.322
+    },
+    {
+      "time": 41.25,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.616,
+      "y": 0.663
+    },
+    {
+      "time": 41.6,
+      "color": "red",
+      "type": "normal",
+      "x": 0.616,
+      "y": 0.662
+    },
+    {
+      "time": 42.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.617,
+      "y": 0.662
+    },
+    {
+      "time": 42.51,
+      "color": "red",
+      "type": "normal",
+      "x": 0.452,
+      "y": 0.357
+    },
+    {
+      "time": 43.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.415,
+      "y": 0.491
+    },
+    {
+      "time": 43.65,
+      "color": "red",
+      "type": "normal",
+      "x": 0.398,
+      "y": 0.615
+    },
+    {
+      "time": 44.01,
+      "color": "red",
+      "type": "normal",
+      "x": 0.438,
+      "y": 0.356
+    },
+    {
+      "time": 44.49,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.414,
+      "y": 0.491
+    },
+    {
+      "time": 45.27,
+      "color": "red",
+      "type": "normal",
+      "x": 0.713,
+      "y": 0.483
+    },
+    {
+      "time": 46.01,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.562,
+      "y": 0.207
+    },
+    {
+      "time": 46.7,
+      "color": "red",
+      "type": "normal",
+      "x": 0.556,
+      "y": 0.658
+    },
+    {
+      "time": 47.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.363,
+      "y": 0.436
+    },
+    {
+      "time": 47.67,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.552,
+      "y": 0.222
+    },
+    {
+      "time": 48.02,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.699,
+      "y": 0.442
+    },
+    {
+      "time": 48.47,
+      "color": "red",
+      "type": "normal",
+      "x": 0.531,
+      "y": 0.635
+    }
+  ],
+  "metadata": {},
+  "_folderName": "MoodMode",
+  "file": "track.mp3",
+  "background": {
+    "type": "image",
+    "fit": "cover",
+    "opacity": 0.2,
+    "name": "background.png",
+    "url": "background.jpg",
+    "mediaId": null,
+    "mediaType": "image"
+  },
+  "cover": "cover.jpg"
+}

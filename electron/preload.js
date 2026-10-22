@@ -27,8 +27,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showOpenDialog: (options) => ipcRenderer.invoke('dialog:show-open', options),
   readTextFile: (filePath) => ipcRenderer.invoke('fs:read-text-file', filePath),
   writeTextFile: (filePath, content) => ipcRenderer.invoke('fs:write-text-file', filePath, content),
-  exportSongFile: (defaultName, content) => ipcRenderer.invoke('fs:export-song-file', defaultName, content),
-  importSongFile: () => ipcRenderer.invoke('fs:import-song-file'),
 
   // Downloader
   downloadFile: (url, subfolder, preferredName) =>
@@ -39,7 +37,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('download:progress', listener);
   },
 
-  // Songs & Tracks on Disk
+  // Songs & Tracks on Disk (Folders & Packages)
   scanFolders: () => ipcRenderer.invoke('tracks:scan-folders'),
-  saveTrackToDisk: (fileName, songData) => ipcRenderer.invoke('tracks:save-to-disk', fileName, songData)
+  loadDefaultTracks: () => ipcRenderer.invoke('tracks:load-default-tracks'),
+  saveSongFolder: (folderName, songPackage) => ipcRenderer.invoke('tracks:save-song-folder', folderName, songPackage),
+  importSongFolder: () => ipcRenderer.invoke('tracks:import-song-folder'),
+  importFolderFromPath: (folderPath) => ipcRenderer.invoke('tracks:import-folder-from-path', folderPath),
+  openSongFolder: (folderPath) => ipcRenderer.invoke('app:open-folder', 'song-folder', folderPath)
 });

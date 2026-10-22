@@ -21,8 +21,6 @@
   <script defer src="scripts/saveSystem.js"></script>
   <script defer src="scripts/themeManager.js"></script>
   <script defer src="scripts/soundManager.js"></script>
-  <script defer src="scripts/songsData.js"></script>
-  <script defer src="scripts/defaultAudioData.js"></script>
   <script defer src="scripts/mapData.js"></script>
   <script defer src="scripts/mediaStorage.js"></script>
   <script defer src="scripts/mapStorage.js"></script>
@@ -30,7 +28,6 @@
   <script defer src="scripts/musicPlayer.js"></script>
   <script defer src="scripts/playMenu.js"></script>
   <script defer src="scripts/playArea.js"></script>
-  <script defer src="scripts/bundledWaveforms.js"></script>
   <script defer src="scripts/mapEditor.js"></script>
   <script defer src="scripts/createMenu.js"></script>
   <script defer src="scripts/gameEngine.js"></script>
@@ -110,19 +107,18 @@
           <h2 class="play-screen-title">Select Track</h2>
           <p class="play-screen-subtitle">Select track to preview &bull; Click to prepare</p>
         </div>
-        <div class="play-header-actions" style="margin-left: auto; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-          <button id="btn-play-import-native" class="btn-theme-action play-import-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Import custom song (.json)">
-            <span>📥 Import Song</span>
-            <input type="file" id="play-song-import-input" accept=".json,application/json" style="display: none;">
+        <div class="play-header-actions">
+          <button id="btn-play-import-native" class="btn-theme-action play-header-btn play-import-btn" type="button" title="Import complete song folder (must contain notes.json, track.ogg/mp3, background.mp4)">
+            <span class="btn-icon">📥</span>
+            <span>Import Song Folder</span>
           </button>
-          <button id="btn-open-downloader" class="btn-theme-action play-downloader-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Download song or track package from URL">
-            <span>🌐 Download Track</span>
+          <button id="btn-open-downloader" class="btn-theme-action play-header-btn play-downloader-btn" type="button" title="Download song package from URL">
+            <span class="btn-icon">🌐</span>
+            <span>Download Track</span>
           </button>
-          <button id="btn-link-default-tracks" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Reveal Default Tracks folder on disk">
-            <span>📁 Default Tracks</span>
-          </button>
-          <button id="btn-open-custom-songs" class="btn-theme-action play-folder-btn" type="button" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; background: var(--color-surface, rgba(255,255,255,0.08)); border: 1px solid var(--color-border, rgba(255,255,255,0.15)); color: var(--color-text, #fff);" title="Reveal Custom Songs folder on disk">
-            <span>📂 Custom Songs</span>
+          <button id="btn-open-custom-songs" class="btn-theme-action play-header-btn play-folder-btn" type="button" title="Reveal Custom Songs folder on disk">
+            <span class="btn-icon">📂</span>
+            <span>Custom Songs</span>
           </button>
         </div>
       </header>
@@ -159,9 +155,9 @@
 
         <div class="create-header-right">
           <span id="create-stats-badge" class="create-stats-pill" title="Total songs in catalog">0 Songs</span>
-          <button id="btn-create-import" class="btn-create-import" type="button" aria-label="Import Song Package">
+          <button id="btn-create-import" class="btn-create-import" type="button" aria-label="Import Song Folder" title="Import complete song folder (pack_01) containing notes.json, track.ogg, and background.mp4">
             <span class="btn-icon">📥</span>
-            <span>Import Song</span>
+            <span>Import Song Folder</span>
           </button>
         </div>
       </header>
@@ -207,48 +203,52 @@
               </div>
             </fieldset>
 
-            <!-- Section 2: Audio Configuration -->
+            <!-- Section 2: Audio Source -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
                 <span class="legend-number">2</span>
-                <span>Audio Source</span>
+                <span>Audio Track</span>
               </legend>
 
               <div class="form-group">
-                <label class="form-label">Upload Custom Audio File</label>
+                <label class="form-label">Upload Song Audio File <span class="required-star">*</span></label>
                 <div class="file-upload-dropzone">
                   <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
                   <label for="new-map-file" class="dropzone-label">
                     <span class="dropzone-icon">🎧</span>
                     <span class="dropzone-main-text">Choose Audio File...</span>
-                    <span class="dropzone-hint">Supports MP3, WAV, OGG, M4A</span>
+                    <span class="dropzone-hint">Supports MP3, WAV, OGG, M4A, FLAC</span>
                   </label>
-                  <span id="new-map-file-status" class="file-status-text">No custom file selected</span>
-                </div>
-              </div>
-
-              <div class="form-divider-or">
-                <span>OR PRESET TRACK</span>
-              </div>
-
-              <div class="form-group">
-                <label for="new-map-preset-audio" class="form-label">Select Bundled Music</label>
-                <div class="select-wrapper">
-                  <select id="new-map-preset-audio" class="form-select">
-                    <option value="">-- Choose bundled song --</option>
-                    <option value="Assets/Songs/IMG_2449.mp3" data-duration="229">IMG_2449.mp3 (Chance) - 03:49</option>
-                    <option value="Assets/Songs/Sanstitre9juin20251019.mp3" data-duration="153">Sanstitre9juin20251019.mp3 - 02:33</option>
-                    <option value="Assets/Songs/Sanstitre10juin20251715.mp3" data-duration="217">Sanstitre10juin20251715.mp3 (Beating) - 03:37</option>
-                    <option value="Assets/Songs/Sanstitre10juin20251744.mp3" data-duration="282">Sanstitre10juin20251744.mp3 - 04:42</option>
-                  </select>
+                  <span id="new-map-file-status" class="file-status-text">No audio file selected</span>
                 </div>
               </div>
             </fieldset>
 
-            <!-- Section 3: Starting Difficulty Track -->
+            <!-- Section 3: Arena Background (Video or Image) -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
                 <span class="legend-number">3</span>
+                <span>Arena Background (Video or Image)</span>
+              </legend>
+
+              <div class="form-group">
+                <label class="form-label">Upload Background Video or Image</label>
+                <div class="file-upload-dropzone">
+                  <input type="file" id="new-map-bg-file" accept="video/*,image/*" style="display: none;">
+                  <label for="new-map-bg-file" class="dropzone-label">
+                    <span class="dropzone-icon">🎬</span>
+                    <span class="dropzone-main-text">Choose Background Video / Image...</span>
+                    <span class="dropzone-hint">Supports MP4, WebM, PNG, JPG</span>
+                  </label>
+                  <span id="new-map-bg-status" class="file-status-text">Default Arena Grid</span>
+                </div>
+              </div>
+            </fieldset>
+
+            <!-- Section 4: Starting Difficulty Track -->
+            <fieldset class="form-section-card">
+              <legend class="section-legend">
+                <span class="legend-number">4</span>
                 <span>Initial Difficulty Track</span>
               </legend>
 
@@ -265,10 +265,10 @@
               </div>
             </fieldset>
 
-            <!-- Section 4: Cover Artwork -->
+            <!-- Section 5: Cover Artwork -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">4</span>
+                <span class="legend-number">5</span>
                 <span>Track Artwork / Cover</span>
               </legend>
 
@@ -334,9 +334,7 @@
                 <input type="text" id="create-search-input" class="catalog-search-input" placeholder="Search songs or mappers..." autocomplete="off">
               </div>
               <div class="catalog-filter-pills" id="create-filter-pills" role="tablist" aria-label="Filter Songs">
-                <button type="button" class="filter-pill is-active" data-filter="all">All</button>
-                <button type="button" class="filter-pill" data-filter="default">Default</button>
-                <button type="button" class="filter-pill" data-filter="custom">Custom</button>
+                <button type="button" class="filter-pill is-active" data-filter="all">All Songs</button>
               </div>
             </div>
           </header>
@@ -399,6 +397,14 @@
         </div>
 
         <div class="editor-bar-right">
+          <button id="btn-editor-save" class="btn-editor-action btn-editor-save" type="button" title="Save song directly to folder (Ctrl+S)">
+            <span class="btn-icon">💾</span>
+            <span>Save</span>
+          </button>
+          <button id="btn-editor-open-folder" class="btn-editor-action btn-editor-folder" type="button" title="Open this song folder in Windows Explorer">
+            <span class="btn-icon">📁</span>
+            <span>Folder</span>
+          </button>
           <button id="btn-editor-bg" class="btn-editor-action btn-editor-bg" type="button" title="Configure playfield background image/video">
             <span class="btn-icon">&#128444;</span>
             <span>Background</span>
@@ -406,10 +412,6 @@
           <button id="btn-editor-params" class="btn-editor-action btn-editor-params" type="button" title="Edit track parameters & metadata">
             <span class="btn-icon">&#9881;</span>
             <span>Track Parameters</span>
-          </button>
-          <button id="btn-editor-export" class="btn-editor-action btn-editor-export" type="button" title="Export track code to share">
-            <span class="btn-icon">&uarr;</span>
-            <span>Export Track</span>
           </button>
           <button id="btn-editor-clear" class="btn-editor-action btn-editor-clear" type="button" title="Clear all notes">
             <span class="btn-icon">&times;</span>
@@ -788,12 +790,12 @@
             </div>
 
             <!-- Save Slot Action Buttons -->
-            <div class="slot-actions-grid" style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button id="btn-slot-new" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Create new save slot profile">+ New Slot</button>
-              <button id="btn-slot-rename" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Rename active save slot">Rename</button>
-              <button id="btn-slot-export" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Export save slot file (.json)">Export</button>
-              <button id="btn-slot-import" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem;" title="Import save slot file (.json)">Import</button>
-              <button id="btn-slot-delete" type="button" class="btn-theme-action" style="flex: 1; min-width: 90px; padding: 6px 10px; font-size: 0.78rem; color: #ff6b81;" title="Delete this save slot">Delete</button>
+            <div class="slot-actions-grid">
+              <button id="btn-slot-new" type="button" class="btn-theme-action slot-action-btn" title="Create new save slot profile">+ New Slot</button>
+              <button id="btn-slot-rename" type="button" class="btn-theme-action slot-action-btn" title="Rename active save slot">Rename</button>
+              <button id="btn-slot-export" type="button" class="btn-theme-action slot-action-btn" title="Export save slot file (.json)">Export</button>
+              <button id="btn-slot-import" type="button" class="btn-theme-action slot-action-btn" title="Import save slot file (.json)">Import</button>
+              <button id="btn-slot-delete" type="button" class="btn-theme-action slot-action-btn slot-action-delete" title="Delete this save slot">Delete</button>
             </div>
           </div>
 
@@ -802,15 +804,20 @@
             <span>📁 Local Folders (Windows File Explorer)</span>
           </div>
 
-          <div class="settings-folder-actions" style="display: flex; gap: 8px; flex-wrap: wrap;">
-            <button id="btn-open-saves-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
-              <span>📁 Open Saves Folder</span>
+          <div class="settings-folder-actions">
+            <button id="btn-open-saves-dir" type="button" class="btn-folder-tile" title="Open player save profiles folder in Windows Explorer">
+              <span class="folder-tile-icon">📁</span>
+              <div class="folder-tile-content">
+                <span class="folder-tile-title">Saves Folder</span>
+                <span class="folder-tile-sub">Profiles &amp; Records</span>
+              </div>
             </button>
-            <button id="btn-open-songs-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
-              <span>📂 Open Custom Songs</span>
-            </button>
-            <button id="btn-open-default-dir" type="button" class="btn-theme-action" style="flex: 1; min-width: 120px; padding: 8px 12px; font-size: 0.8rem; border-radius: 6px;">
-              <span>💿 Open Default Tracks</span>
+            <button id="btn-open-songs-dir" type="button" class="btn-folder-tile" title="Open custom songs packages directory in Windows Explorer">
+              <span class="folder-tile-icon">📂</span>
+              <div class="folder-tile-content">
+                <span class="folder-tile-title">Custom Songs</span>
+                <span class="folder-tile-sub">Song Folders &amp; Media</span>
+              </div>
             </button>
           </div>
         </div>
@@ -842,94 +849,7 @@
       </div>
     </div>
 
-    <!-- Export Song Modal -->
-    <div id="export-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="export-modal-title" aria-hidden="true">
-      <div class="modal-dialog export-modal-dialog">
-        <header class="modal-header">
-          <h2 id="export-modal-title" class="modal-title">Export Song Package</h2>
-          <button id="btn-close-export" class="modal-close-btn" type="button" aria-label="Close Export Dialog">&times;</button>
-        </header>
 
-        <div class="export-modal-content">
-          <div class="export-track-summary">
-            <div class="export-summary-badge">
-              <span class="summary-label">Song</span>
-              <strong id="export-track-name" class="summary-val">Song Name</strong>
-            </div>
-            <div class="export-summary-badge">
-              <span class="summary-label">Difficulties</span>
-              <strong id="export-track-nps" class="summary-val">1 Track</strong>
-            </div>
-            <div class="export-summary-badge">
-              <span class="summary-label">Total Notes</span>
-              <strong id="export-track-notes" class="summary-val">0 notes</strong>
-            </div>
-            <div class="export-summary-badge">
-              <span class="summary-label">Duration</span>
-              <strong id="export-track-duration" class="summary-val">00:00</strong>
-            </div>
-          </div>
-
-          <p class="export-desc">
-            Exports the complete song, including all difficulty tracks, mapped notes, song metadata, and arena background parameters. Copy the code or download the JSON file to share or drop directly into the <code>Default Tracks</code> folder.
-          </p>
-
-          <div class="code-container">
-            <textarea id="export-code-area" class="export-textarea" readonly spellcheck="false" placeholder="Generating export code..."></textarea>
-          </div>
-
-          <div class="export-actions-row">
-            <div class="export-actions-left">
-              <button id="btn-copy-export-code" class="menu-btn menu-btn-primary btn-copy-export" type="button">
-                <span id="copy-btn-icon"></span>
-                <span id="copy-btn-text">Copy Code</span>
-              </button>
-              <button id="btn-download-export-json" class="btn-editor-action btn-download-export" type="button">
-                <span>Download Song JSON</span>
-              </button>
-            </div>
-            <span id="export-copy-feedback" class="export-feedback-toast" style="display: none;">Copied to clipboard! ✓</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Import Song Modal -->
-    <div id="import-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="import-modal-title" aria-hidden="true">
-      <div class="modal-dialog import-modal-dialog">
-        <header class="modal-header">
-          <h2 id="import-modal-title" class="modal-title">Import Song</h2>
-          <button id="btn-close-import" class="modal-close-btn" type="button" aria-label="Close Import Dialog">&times;</button>
-        </header>
-
-        <div class="import-modal-content">
-          <p class="import-desc">
-            Upload an exported song file (<code>.json</code>) or paste an exported code (starting with <code>ALPHA_SONG_V1:</code>, <code>ALPHA_TRACK_V1:</code>, or JSON) to import the complete song with all its difficulty tracks:
-          </p>
-
-          <div class="import-file-upload-row" style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
-            <input type="file" id="import-file-input" accept=".json,.track,.alpha,.txt" style="display: none;">
-            <label for="import-file-input" class="custom-file-btn" style="cursor: pointer;">
-              <span>Choose Song File (.json)...</span>
-            </label>
-            <span id="import-file-status" class="file-status-text" style="font-size: 0.82rem; color: var(--color-text-secondary);">No file chosen</span>
-          </div>
-
-          <div class="code-container">
-            <textarea id="import-code-area" class="import-textarea" spellcheck="false" placeholder="Paste ALPHA_SONG_V1:... code or JSON here"></textarea>
-          </div>
-
-          <div id="import-error-banner" class="import-error-alert" style="display: none;"></div>
-
-          <div class="modal-footer import-actions-footer">
-            <button id="btn-cancel-import" class="btn-editor-action" type="button">Cancel</button>
-            <button id="btn-confirm-import" class="menu-btn menu-btn-primary btn-confirm-import" type="button">
-              <span>Validate &amp; Import</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
 
     <!-- Track Parameters Modal -->
     <div id="params-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="params-modal-title" aria-hidden="true">

@@ -38,6 +38,33 @@ npm run build:exe
 
 ---
 
+## 🎵 Direct Song Folder Saving (Editor Auto-Save)
+
+Instead of relying on monolithic JSON files that omit audio and video media, Project Alpha Plus saves tracks directly as self-contained song folders inside `%APPDATA%/project-alpha-plus/custom_songs/`:
+
+```text
+%APPDATA%/project-alpha-plus/custom_songs/
+└── pack_01/                    # Folder name (or sanitized song title)
+    ├── notes.json              # Track metadata, BPM, difficulty charts, and mapped notes
+    ├── track.ogg               # Audio track (supports .ogg, .mp3, .wav)
+    ├── background.mp4          # Arena video or image background (supports .mp4, .webm, .png, .jpg)
+    └── cover.png               # Custom cover artwork
+```
+
+### How Saving & Exporting Works:
+1. **Editor Auto-Save & Manual Save:**
+   * Click the **💾 Save** button in the editor top bar or press **Ctrl + S**.
+   * The editor automatically writes `notes.json`, extracts and saves the real audio file (`track.ogg` / `track.mp3`), and writes the background video (`background.mp4`) directly into `custom_songs/<folder_name>/`.
+2. **Instant Exporting via File Explorer:**
+   * In the Map Editor top bar, click the **📁 Folder** button (or click **"📁 Open Song Folder"** in the Export dialog).
+   * In the Song Select (Play) menu, select any song and click **📁 Folder**.
+   * Windows File Explorer immediately opens that song's folder on disk, allowing you to easily copy, zip, or share the entire package with others.
+3. **Automatic Discovery & Loading:**
+   * On game launch or folder refresh, all song folders inside `custom_songs/` are automatically scanned.
+   * Audio and video files are loaded directly from disk via custom file protocols with zero CORS restrictions and zero performance lag.
+
+---
+
 ## 💾 Local Save System & Folder Architecture
 
 When running as an Electron desktop application, the game stores all user progress, settings, save profiles, high scores, and downloaded content in the Windows standard AppData directory:
@@ -49,7 +76,7 @@ When running as an Electron desktop application, the game stores all user progre
 │   ├── slot_1.json             # Save Slot 1 data (scores, stats, custom maps)
 │   ├── slot_2.json             # Additional custom player slots
 │   └── settings.json           # Sound volume, theme, and fullscreen settings
-├── custom_songs/               # Imported and downloaded .json rhythm tracks
+├── custom_songs/               # Song package folders (e.g. pack_01/)
 └── downloads/                  # Download cache and temporary mod assets
 ```
 

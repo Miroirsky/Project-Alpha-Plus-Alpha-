@@ -1,13 +1,11 @@
 {
   "defaultTracks": [
-    "Default Tracks\\MoodMode.json",
-    "Default Tracks\\Beating Like Hearth.json",
-    "Default Tracks\\Chance.json"
+    "Default Tracks\\IDK",
+    "Default Tracks\\MoodMode",
+    "Default Tracks\\Why Are You Running"
   ],
   "defaultTracksPath": "Default Tracks",
-  "alternateTracksPaths": [
-    "Assets/Default Tracks"
-  ],
+  "alternateTracksPaths": [],
   "supportedTrackExtensions": [
     ".json"
   ]

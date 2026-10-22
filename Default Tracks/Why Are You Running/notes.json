@@ -1,0 +1,313 @@
+{
+  "id": "custom_1792674724366_2151",
+  "name": "Why Are You Running",
+  "mapper": "Miroirsky",
+  "creator": "YouTube",
+  "duration": "00:07",
+  "bpm": 120,
+  "color": "#00d4ff",
+  "difficulty": "Easy",
+  "difficulties": {
+    "Easy": {
+      "difficulty": "Easy",
+      "notes": [
+        {
+          "time": 0,
+          "color": "red",
+          "type": "normal",
+          "x": 0.303,
+          "y": 0.359
+        },
+        {
+          "time": 0.16,
+          "color": "red",
+          "type": "normal",
+          "x": 0.53,
+          "y": 0.371
+        },
+        {
+          "time": 0.52,
+          "color": "red",
+          "type": "normal",
+          "x": 0.523,
+          "y": 0.556
+        },
+        {
+          "time": 0.99,
+          "color": "red",
+          "type": "normal",
+          "x": 0.305,
+          "y": 0.557
+        },
+        {
+          "time": 1.47,
+          "color": "red",
+          "type": "normal",
+          "x": 0.735,
+          "y": 0.398
+        },
+        {
+          "time": 1.64,
+          "color": "red",
+          "type": "normal",
+          "x": 0.641,
+          "y": 0.282
+        },
+        {
+          "time": 1.81,
+          "color": "red",
+          "type": "normal",
+          "x": 0.477,
+          "y": 0.193
+        },
+        {
+          "time": 2.02,
+          "color": "red",
+          "type": "normal",
+          "x": 0.265,
+          "y": 0.202
+        },
+        {
+          "time": 2.2,
+          "color": "red",
+          "type": "normal",
+          "x": 0.142,
+          "y": 0.354
+        },
+        {
+          "time": 2.419,
+          "color": "red",
+          "type": "normal",
+          "x": 0.105,
+          "y": 0.563
+        },
+        {
+          "time": 2.62,
+          "color": "red",
+          "type": "normal",
+          "x": 0.189,
+          "y": 0.742
+        },
+        {
+          "time": 3,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.371,
+          "y": 0.326
+        },
+        {
+          "time": 4.13,
+          "color": "red",
+          "type": "normal",
+          "x": 0.253,
+          "y": 0.726
+        },
+        {
+          "time": 4.41,
+          "color": "red",
+          "type": "normal",
+          "x": 0.328,
+          "y": 0.597
+        },
+        {
+          "time": 4.6,
+          "color": "red",
+          "type": "normal",
+          "x": 0.424,
+          "y": 0.476
+        },
+        {
+          "time": 4.76,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.548,
+          "y": 0.367
+        },
+        {
+          "time": 5.84,
+          "color": "red",
+          "type": "normal",
+          "x": 0.721,
+          "y": 0.358
+        },
+        {
+          "time": 6.04,
+          "color": "red",
+          "type": "normal",
+          "x": 0.737,
+          "y": 0.476
+        },
+        {
+          "time": 6.18,
+          "color": "red",
+          "type": "normal",
+          "x": 0.731,
+          "y": 0.597
+        },
+        {
+          "time": 6.32,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.666,
+          "y": 0.714
+        }
+      ],
+      "nps": 2.9
+    }
+  },
+  "notes": [
+    {
+      "time": 0,
+      "color": "red",
+      "type": "normal",
+      "x": 0.303,
+      "y": 0.359
+    },
+    {
+      "time": 0.16,
+      "color": "red",
+      "type": "normal",
+      "x": 0.53,
+      "y": 0.371
+    },
+    {
+      "time": 0.52,
+      "color": "red",
+      "type": "normal",
+      "x": 0.523,
+      "y": 0.556
+    },
+    {
+      "time": 0.99,
+      "color": "red",
+      "type": "normal",
+      "x": 0.305,
+      "y": 0.557
+    },
+    {
+      "time": 1.47,
+      "color": "red",
+      "type": "normal",
+      "x": 0.735,
+      "y": 0.398
+    },
+    {
+      "time": 1.64,
+      "color": "red",
+      "type": "normal",
+      "x": 0.641,
+      "y": 0.282
+    },
+    {
+      "time": 1.81,
+      "color": "red",
+      "type": "normal",
+      "x": 0.477,
+      "y": 0.193
+    },
+    {
+      "time": 2.02,
+      "color": "red",
+      "type": "normal",
+      "x": 0.265,
+      "y": 0.202
+    },
+    {
+      "time": 2.2,
+      "color": "red",
+      "type": "normal",
+      "x": 0.142,
+      "y": 0.354
+    },
+    {
+      "time": 2.419,
+      "color": "red",
+      "type": "normal",
+      "x": 0.105,
+      "y": 0.563
+    },
+    {
+      "time": 2.62,
+      "color": "red",
+      "type": "normal",
+      "x": 0.189,
+      "y": 0.742
+    },
+    {
+      "time": 3,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.371,
+      "y": 0.326
+    },
+    {
+      "time": 4.13,
+      "color": "red",
+      "type": "normal",
+      "x": 0.253,
+      "y": 0.726
+    },
+    {
+      "time": 4.41,
+      "color": "red",
+      "type": "normal",
+      "x": 0.328,
+      "y": 0.597
+    },
+    {
+      "time": 4.6,
+      "color": "red",
+      "type": "normal",
+      "x": 0.424,
+      "y": 0.476
+    },
+    {
+      "time": 4.76,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.548,
+      "y": 0.367
+    },
+    {
+      "time": 5.84,
+      "color": "red",
+      "type": "normal",
+      "x": 0.721,
+      "y": 0.358
+    },
+    {
+      "time": 6.04,
+      "color": "red",
+      "type": "normal",
+      "x": 0.737,
+      "y": 0.476
+    },
+    {
+      "time": 6.18,
+      "color": "red",
+      "type": "normal",
+      "x": 0.731,
+      "y": 0.597
+    },
+    {
+      "time": 6.32,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.666,
+      "y": 0.714
+    }
+  ],
+  "metadata": {},
+  "_folderName": "Why Are You Running",
+  "file": "track.mp3",
+  "background": {
+    "type": "video",
+    "fit": "cover",
+    "opacity": 0.7,
+    "name": "Why are You Running_.mp4",
+    "url": "background.mp4",
+    "mediaId": "bg_custom_1792674724366_2151_1792674734375",
+    "mediaType": "video"
+  },
+  "cover": "cover.png"
+}
