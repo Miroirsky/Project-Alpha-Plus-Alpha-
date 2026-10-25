@@ -654,9 +654,688 @@
           "type": "normal",
           "x": 0.531,
           "y": 0.635
+        },
+        {
+          "time": 49.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.454,
+          "y": 0.11
+        },
+        {
+          "time": 49.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.294,
+          "y": 0.295
+        },
+        {
+          "time": 49.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.256,
+          "y": 0.531
+        },
+        {
+          "time": 50.49,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.299,
+          "y": 0.785
+        },
+        {
+          "time": 51.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.766,
+          "y": 0.251
+        },
+        {
+          "time": 51.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.29,
+          "y": 0.255
+        },
+        {
+          "time": 51.96,
+          "color": "red",
+          "type": "normal",
+          "x": 0.525,
+          "y": 0.628
+        },
+        {
+          "time": 52.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.528,
+          "y": 0.388
+        },
+        {
+          "time": 53.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.377,
+          "y": 0.463
+        },
+        {
+          "time": 54,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.273,
+          "y": 0.621
+        },
+        {
+          "time": 54.76,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.218,
+          "y": 0.843
+        },
+        {
+          "time": 55.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.406,
+          "y": 0.776
+        },
+        {
+          "time": 55.67,
+          "color": "red",
+          "type": "normal",
+          "x": 0.546,
+          "y": 0.602
+        },
+        {
+          "time": 56,
+          "color": "red",
+          "type": "normal",
+          "x": 0.57,
+          "y": 0.38
+        },
+        {
+          "time": 56.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.332,
+          "y": 0.531
+        },
+        {
+          "time": 57.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.344,
+          "y": 0.148
+        },
+        {
+          "time": 57.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.43,
+          "y": 0.663
+        },
+        {
+          "time": 58.02,
+          "color": "red",
+          "type": "normal",
+          "x": 0.363,
+          "y": 0.391
+        },
+        {
+          "time": 58.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.405,
+          "y": 0.518
+        },
+        {
+          "time": 59.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.861,
+          "y": 0.548
+        },
+        {
+          "time": 59.64,
+          "color": "red",
+          "type": "normal",
+          "x": 0.157,
+          "y": 0.552
+        },
+        {
+          "time": 60,
+          "color": "red",
+          "type": "normal",
+          "x": 0.513,
+          "y": 0.299
+        },
+        {
+          "time": 60.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.501,
+          "y": 0.498
+        },
+        {
+          "time": 61.26,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.134,
+          "y": 0.525
+        },
+        {
+          "time": 62,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.433,
+          "y": 0.767
+        },
+        {
+          "time": 62.73,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.36,
+          "y": 0.304
+        },
+        {
+          "time": 63.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.387,
+          "y": 0.44
+        },
+        {
+          "time": 63.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.414,
+          "y": 0.548
+        },
+        {
+          "time": 64,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.456,
+          "y": 0.663
+        },
+        {
+          "time": 64.5,
+          "color": "red",
+          "type": "normal",
+          "x": 0.519,
+          "y": 0.775
+        },
+        {
+          "time": 65.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.765,
+          "y": 0.258
+        },
+        {
+          "time": 65.61,
+          "color": "red",
+          "type": "normal",
+          "x": 0.563,
+          "y": 0.268
+        },
+        {
+          "time": 65.9,
+          "color": "red",
+          "type": "normal",
+          "x": 0.387,
+          "y": 0.374
+        },
+        {
+          "time": 66.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.398,
+          "y": 0.159
+        },
+        {
+          "time": 67.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.627,
+          "y": 0.483
+        },
+        {
+          "time": 67.74,
+          "color": "red",
+          "type": "normal",
+          "x": 0.224,
+          "y": 0.629
+        },
+        {
+          "time": 68,
+          "color": "red",
+          "type": "normal",
+          "x": 0.496,
+          "y": 0.677
+        },
+        {
+          "time": 68.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.482,
+          "y": 0.161
+        },
+        {
+          "time": 69.26,
+          "color": "red",
+          "type": "normal",
+          "x": 0.702,
+          "y": 0.352
+        },
+        {
+          "time": 70,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.681,
+          "y": 0.601
+        },
+        {
+          "time": 70.74,
+          "color": "red",
+          "type": "normal",
+          "x": 0.719,
+          "y": 0.322
+        },
+        {
+          "time": 71.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.562,
+          "y": 0.43
+        },
+        {
+          "time": 71.65,
+          "color": "red",
+          "type": "normal",
+          "x": 0.441,
+          "y": 0.582
+        },
+        {
+          "time": 71.99,
+          "color": "red",
+          "type": "normal",
+          "x": 0.383,
+          "y": 0.776
+        },
+        {
+          "time": 72.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.452,
+          "y": 0.93
+        },
+        {
+          "time": 73.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.556,
+          "y": 0.779
+        },
+        {
+          "time": 73.63,
+          "color": "red",
+          "type": "normal",
+          "x": 0.616,
+          "y": 0.564
+        },
+        {
+          "time": 73.97,
+          "color": "red",
+          "type": "normal",
+          "x": 0.618,
+          "y": 0.354
+        },
+        {
+          "time": 74.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.522,
+          "y": 0.185
+        },
+        {
+          "time": 75.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.384,
+          "y": 0.313
+        },
+        {
+          "time": 75.62,
+          "color": "red",
+          "type": "normal",
+          "x": 0.462,
+          "y": 0.463
+        },
+        {
+          "time": 75.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.622,
+          "y": 0.511
+        },
+        {
+          "time": 76.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.866,
+          "y": 0.486
+        },
+        {
+          "time": 77.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.778,
+          "y": 0.258
+        },
+        {
+          "time": 77.99,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.609,
+          "y": 0.122
+        },
+        {
+          "time": 78.75,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.402,
+          "y": 0.153
+        },
+        {
+          "time": 79.25,
+          "color": "red",
+          "type": "normal",
+          "x": 0.416,
+          "y": 0.359
+        },
+        {
+          "time": 79.66,
+          "color": "red",
+          "type": "normal",
+          "x": 0.443,
+          "y": 0.5
+        },
+        {
+          "time": 80,
+          "color": "red",
+          "type": "normal",
+          "x": 0.485,
+          "y": 0.644
+        },
+        {
+          "time": 80.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.57,
+          "y": 0.778
+        },
+        {
+          "time": 81.24,
+          "color": "red",
+          "type": "normal",
+          "x": 0.722,
+          "y": 0.214
+        },
+        {
+          "time": 81.66,
+          "color": "red",
+          "type": "normal",
+          "x": 0.445,
+          "y": 0.265
+        },
+        {
+          "time": 82.01,
+          "color": "red",
+          "type": "normal",
+          "x": 0.261,
+          "y": 0.444
+        },
+        {
+          "time": 82.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.263,
+          "y": 0.696
+        },
+        {
+          "time": 83.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.699,
+          "y": 0.485
+        },
+        {
+          "time": 83.62,
+          "color": "red",
+          "type": "normal",
+          "x": 0.479,
+          "y": 0.261
+        },
+        {
+          "time": 83.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.163,
+          "y": 0.184
+        },
+        {
+          "time": 84.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.27,
+          "y": 0.225
+        },
+        {
+          "time": 85,
+          "color": "red",
+          "type": "normal",
+          "x": 0.509,
+          "y": 0.54
+        },
+        {
+          "time": 85.36,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.641,
+          "y": 0.322
+        },
+        {
+          "time": 85.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.641,
+          "y": 0.321
+        },
+        {
+          "time": 85.7,
+          "color": "red",
+          "type": "normal",
+          "x": 0.825,
+          "y": 0.442
+        },
+        {
+          "time": 86,
+          "color": "red",
+          "type": "normal",
+          "x": 0.824,
+          "y": 0.442
+        },
+        {
+          "time": 86.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.762,
+          "y": 0.563
+        },
+        {
+          "time": 87.24,
+          "color": "red",
+          "type": "normal",
+          "x": 0.267,
+          "y": 0.337
+        },
+        {
+          "time": 87.65,
+          "color": "red",
+          "type": "normal",
+          "x": 0.427,
+          "y": 0.25
+        },
+        {
+          "time": 88,
+          "color": "red",
+          "type": "normal",
+          "x": 0.597,
+          "y": 0.194
+        },
+        {
+          "time": 88.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.498,
+          "y": 0.422
+        },
+        {
+          "time": 89.24,
+          "color": "red",
+          "type": "normal",
+          "x": 0.782,
+          "y": 0.243
+        },
+        {
+          "time": 89.62,
+          "color": "red",
+          "type": "normal",
+          "x": 0.76,
+          "y": 0.403
+        },
+        {
+          "time": 89.98,
+          "color": "red",
+          "type": "normal",
+          "x": 0.73,
+          "y": 0.557
+        },
+        {
+          "time": 90.5,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.54,
+          "y": 0.205
+        },
+        {
+          "time": 91.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.795,
+          "y": 0.236
+        },
+        {
+          "time": 91.64,
+          "color": "red",
+          "type": "normal",
+          "x": 0.764,
+          "y": 0.382
+        },
+        {
+          "time": 91.97,
+          "color": "red",
+          "type": "normal",
+          "x": 0.734,
+          "y": 0.529
+        },
+        {
+          "time": 92.51,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.535,
+          "y": 0.469
+        },
+        {
+          "time": 93.24,
+          "color": "red",
+          "type": "normal",
+          "x": 0.405,
+          "y": 0.384
+        },
+        {
+          "time": 94,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.324,
+          "y": 0.569
+        },
+        {
+          "time": 94.74,
+          "color": "red",
+          "type": "normal",
+          "x": 0.456,
+          "y": 0.429
+        },
+        {
+          "time": 95.25,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.901,
+          "y": 0.589
+        },
+        {
+          "time": 95.69,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.699,
+          "y": 0.708
+        },
+        {
+          "time": 96,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.463,
+          "y": 0.739
+        },
+        {
+          "time": 96.5,
+          "color": "red",
+          "type": "normal",
+          "x": 0.222,
+          "y": 0.597
+        },
+        {
+          "time": 97.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.558,
+          "y": 0.17
+        },
+        {
+          "time": 97.61,
+          "color": "red",
+          "type": "normal",
+          "x": 0.568,
+          "y": 0.304
+        },
+        {
+          "time": 97.97,
+          "color": "red",
+          "type": "normal",
+          "x": 0.564,
+          "y": 0.434
+        },
+        {
+          "time": 98.48,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.563,
+          "y": 0.583
         }
       ],
-      "nps": 0.7
+      "nps": 1.1
     }
   },
   "notes": [
@@ -1303,6 +1982,685 @@
       "type": "normal",
       "x": 0.531,
       "y": 0.635
+    },
+    {
+      "time": 49.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.454,
+      "y": 0.11
+    },
+    {
+      "time": 49.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.294,
+      "y": 0.295
+    },
+    {
+      "time": 49.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.256,
+      "y": 0.531
+    },
+    {
+      "time": 50.49,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.299,
+      "y": 0.785
+    },
+    {
+      "time": 51.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.766,
+      "y": 0.251
+    },
+    {
+      "time": 51.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.29,
+      "y": 0.255
+    },
+    {
+      "time": 51.96,
+      "color": "red",
+      "type": "normal",
+      "x": 0.525,
+      "y": 0.628
+    },
+    {
+      "time": 52.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.528,
+      "y": 0.388
+    },
+    {
+      "time": 53.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.377,
+      "y": 0.463
+    },
+    {
+      "time": 54,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.273,
+      "y": 0.621
+    },
+    {
+      "time": 54.76,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.218,
+      "y": 0.843
+    },
+    {
+      "time": 55.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.406,
+      "y": 0.776
+    },
+    {
+      "time": 55.67,
+      "color": "red",
+      "type": "normal",
+      "x": 0.546,
+      "y": 0.602
+    },
+    {
+      "time": 56,
+      "color": "red",
+      "type": "normal",
+      "x": 0.57,
+      "y": 0.38
+    },
+    {
+      "time": 56.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.332,
+      "y": 0.531
+    },
+    {
+      "time": 57.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.344,
+      "y": 0.148
+    },
+    {
+      "time": 57.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.43,
+      "y": 0.663
+    },
+    {
+      "time": 58.02,
+      "color": "red",
+      "type": "normal",
+      "x": 0.363,
+      "y": 0.391
+    },
+    {
+      "time": 58.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.405,
+      "y": 0.518
+    },
+    {
+      "time": 59.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.861,
+      "y": 0.548
+    },
+    {
+      "time": 59.64,
+      "color": "red",
+      "type": "normal",
+      "x": 0.157,
+      "y": 0.552
+    },
+    {
+      "time": 60,
+      "color": "red",
+      "type": "normal",
+      "x": 0.513,
+      "y": 0.299
+    },
+    {
+      "time": 60.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.501,
+      "y": 0.498
+    },
+    {
+      "time": 61.26,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.134,
+      "y": 0.525
+    },
+    {
+      "time": 62,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.433,
+      "y": 0.767
+    },
+    {
+      "time": 62.73,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.36,
+      "y": 0.304
+    },
+    {
+      "time": 63.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.387,
+      "y": 0.44
+    },
+    {
+      "time": 63.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.414,
+      "y": 0.548
+    },
+    {
+      "time": 64,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.456,
+      "y": 0.663
+    },
+    {
+      "time": 64.5,
+      "color": "red",
+      "type": "normal",
+      "x": 0.519,
+      "y": 0.775
+    },
+    {
+      "time": 65.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.765,
+      "y": 0.258
+    },
+    {
+      "time": 65.61,
+      "color": "red",
+      "type": "normal",
+      "x": 0.563,
+      "y": 0.268
+    },
+    {
+      "time": 65.9,
+      "color": "red",
+      "type": "normal",
+      "x": 0.387,
+      "y": 0.374
+    },
+    {
+      "time": 66.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.398,
+      "y": 0.159
+    },
+    {
+      "time": 67.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.627,
+      "y": 0.483
+    },
+    {
+      "time": 67.74,
+      "color": "red",
+      "type": "normal",
+      "x": 0.224,
+      "y": 0.629
+    },
+    {
+      "time": 68,
+      "color": "red",
+      "type": "normal",
+      "x": 0.496,
+      "y": 0.677
+    },
+    {
+      "time": 68.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.482,
+      "y": 0.161
+    },
+    {
+      "time": 69.26,
+      "color": "red",
+      "type": "normal",
+      "x": 0.702,
+      "y": 0.352
+    },
+    {
+      "time": 70,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.681,
+      "y": 0.601
+    },
+    {
+      "time": 70.74,
+      "color": "red",
+      "type": "normal",
+      "x": 0.719,
+      "y": 0.322
+    },
+    {
+      "time": 71.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.562,
+      "y": 0.43
+    },
+    {
+      "time": 71.65,
+      "color": "red",
+      "type": "normal",
+      "x": 0.441,
+      "y": 0.582
+    },
+    {
+      "time": 71.99,
+      "color": "red",
+      "type": "normal",
+      "x": 0.383,
+      "y": 0.776
+    },
+    {
+      "time": 72.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.452,
+      "y": 0.93
+    },
+    {
+      "time": 73.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.556,
+      "y": 0.779
+    },
+    {
+      "time": 73.63,
+      "color": "red",
+      "type": "normal",
+      "x": 0.616,
+      "y": 0.564
+    },
+    {
+      "time": 73.97,
+      "color": "red",
+      "type": "normal",
+      "x": 0.618,
+      "y": 0.354
+    },
+    {
+      "time": 74.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.522,
+      "y": 0.185
+    },
+    {
+      "time": 75.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.384,
+      "y": 0.313
+    },
+    {
+      "time": 75.62,
+      "color": "red",
+      "type": "normal",
+      "x": 0.462,
+      "y": 0.463
+    },
+    {
+      "time": 75.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.622,
+      "y": 0.511
+    },
+    {
+      "time": 76.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.866,
+      "y": 0.486
+    },
+    {
+      "time": 77.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.778,
+      "y": 0.258
+    },
+    {
+      "time": 77.99,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.609,
+      "y": 0.122
+    },
+    {
+      "time": 78.75,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.402,
+      "y": 0.153
+    },
+    {
+      "time": 79.25,
+      "color": "red",
+      "type": "normal",
+      "x": 0.416,
+      "y": 0.359
+    },
+    {
+      "time": 79.66,
+      "color": "red",
+      "type": "normal",
+      "x": 0.443,
+      "y": 0.5
+    },
+    {
+      "time": 80,
+      "color": "red",
+      "type": "normal",
+      "x": 0.485,
+      "y": 0.644
+    },
+    {
+      "time": 80.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.57,
+      "y": 0.778
+    },
+    {
+      "time": 81.24,
+      "color": "red",
+      "type": "normal",
+      "x": 0.722,
+      "y": 0.214
+    },
+    {
+      "time": 81.66,
+      "color": "red",
+      "type": "normal",
+      "x": 0.445,
+      "y": 0.265
+    },
+    {
+      "time": 82.01,
+      "color": "red",
+      "type": "normal",
+      "x": 0.261,
+      "y": 0.444
+    },
+    {
+      "time": 82.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.263,
+      "y": 0.696
+    },
+    {
+      "time": 83.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.699,
+      "y": 0.485
+    },
+    {
+      "time": 83.62,
+      "color": "red",
+      "type": "normal",
+      "x": 0.479,
+      "y": 0.261
+    },
+    {
+      "time": 83.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.163,
+      "y": 0.184
+    },
+    {
+      "time": 84.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.27,
+      "y": 0.225
+    },
+    {
+      "time": 85,
+      "color": "red",
+      "type": "normal",
+      "x": 0.509,
+      "y": 0.54
+    },
+    {
+      "time": 85.36,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.641,
+      "y": 0.322
+    },
+    {
+      "time": 85.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.641,
+      "y": 0.321
+    },
+    {
+      "time": 85.7,
+      "color": "red",
+      "type": "normal",
+      "x": 0.825,
+      "y": 0.442
+    },
+    {
+      "time": 86,
+      "color": "red",
+      "type": "normal",
+      "x": 0.824,
+      "y": 0.442
+    },
+    {
+      "time": 86.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.762,
+      "y": 0.563
+    },
+    {
+      "time": 87.24,
+      "color": "red",
+      "type": "normal",
+      "x": 0.267,
+      "y": 0.337
+    },
+    {
+      "time": 87.65,
+      "color": "red",
+      "type": "normal",
+      "x": 0.427,
+      "y": 0.25
+    },
+    {
+      "time": 88,
+      "color": "red",
+      "type": "normal",
+      "x": 0.597,
+      "y": 0.194
+    },
+    {
+      "time": 88.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.498,
+      "y": 0.422
+    },
+    {
+      "time": 89.24,
+      "color": "red",
+      "type": "normal",
+      "x": 0.782,
+      "y": 0.243
+    },
+    {
+      "time": 89.62,
+      "color": "red",
+      "type": "normal",
+      "x": 0.76,
+      "y": 0.403
+    },
+    {
+      "time": 89.98,
+      "color": "red",
+      "type": "normal",
+      "x": 0.73,
+      "y": 0.557
+    },
+    {
+      "time": 90.5,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.54,
+      "y": 0.205
+    },
+    {
+      "time": 91.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.795,
+      "y": 0.236
+    },
+    {
+      "time": 91.64,
+      "color": "red",
+      "type": "normal",
+      "x": 0.764,
+      "y": 0.382
+    },
+    {
+      "time": 91.97,
+      "color": "red",
+      "type": "normal",
+      "x": 0.734,
+      "y": 0.529
+    },
+    {
+      "time": 92.51,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.535,
+      "y": 0.469
+    },
+    {
+      "time": 93.24,
+      "color": "red",
+      "type": "normal",
+      "x": 0.405,
+      "y": 0.384
+    },
+    {
+      "time": 94,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.324,
+      "y": 0.569
+    },
+    {
+      "time": 94.74,
+      "color": "red",
+      "type": "normal",
+      "x": 0.456,
+      "y": 0.429
+    },
+    {
+      "time": 95.25,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.901,
+      "y": 0.589
+    },
+    {
+      "time": 95.69,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.699,
+      "y": 0.708
+    },
+    {
+      "time": 96,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.463,
+      "y": 0.739
+    },
+    {
+      "time": 96.5,
+      "color": "red",
+      "type": "normal",
+      "x": 0.222,
+      "y": 0.597
+    },
+    {
+      "time": 97.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.558,
+      "y": 0.17
+    },
+    {
+      "time": 97.61,
+      "color": "red",
+      "type": "normal",
+      "x": 0.568,
+      "y": 0.304
+    },
+    {
+      "time": 97.97,
+      "color": "red",
+      "type": "normal",
+      "x": 0.564,
+      "y": 0.434
+    },
+    {
+      "time": 98.48,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.563,
+      "y": 0.583
     }
   ],
   "metadata": {},
@@ -1317,5 +2675,5 @@
     "mediaId": null,
     "mediaType": "image"
   },
-  "cover": "cover.jpg"
+  "cover": "file:///C:/Users/Morgan/AppData/Roaming/Project Alpha Plus/custom_songs/MoodMode/cover.jpg"
 }
