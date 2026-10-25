@@ -2668,6 +2668,60 @@ class MapStorage {
   }
 
   /**
+   * Erases all custom tracks, copies, map overrides, player high scores, and stats,
+   * while strictly preserving all built-in default songs.
+   * @returns {Promise<Array>} The remaining default maps
+   */
+  async eraseAllCustomData() {
+    this.customMaps = [];
+    this.mapOverrides = {};
+    this.highscores = {};
+    this.deletedTrackIds = new Set();
+    this.songOrder = [];
+    this.difficultyOrders = {};
+    this.unblacklistDefaultTracks();
+
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(CUSTOM_MAPS_STORAGE_KEY);
+        localStorage.removeItem(MAP_OVERRIDES_STORAGE_KEY);
+        localStorage.removeItem(DELETED_TRACKS_STORAGE_KEY);
+        localStorage.removeItem(HIGHSCORES_STORAGE_KEY);
+        localStorage.removeItem(SELECTED_SONG_STORAGE_KEY);
+        localStorage.removeItem(SONG_ORDER_STORAGE_KEY);
+        localStorage.removeItem(DIFFICULTY_ORDERS_STORAGE_KEY);
+      }
+    } catch (e) {}
+
+    if (typeof window !== "undefined" && window.MediaStorage && typeof window.MediaStorage.clearAllCustomData === "function") {
+      try {
+        await window.MediaStorage.clearAllCustomData();
+      } catch (e) {}
+    }
+
+    if (typeof window !== "undefined" && window.saveSystem && typeof window.saveSystem.eraseAllData === "function") {
+      try {
+        await window.saveSystem.eraseAllData();
+      } catch (e) {}
+    }
+
+    // Re-ensure customMaps & highscores remain empty after any disk scan
+    this.customMaps = [];
+    this.mapOverrides = {};
+    this.highscores = {};
+
+    const allDefaultMaps = this.getAllMaps();
+    if (allDefaultMaps.length > 0) {
+      this.setSelectedSongId(allDefaultMaps[0].id);
+    } else {
+      this.selectedSongId = null;
+    }
+
+    this.notify();
+    return allDefaultMaps;
+  }
+
+  /**
    * Registers a change listener.
    * @param {Function} cb
    */

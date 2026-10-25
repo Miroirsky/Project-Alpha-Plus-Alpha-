@@ -145,6 +145,44 @@ assert.strictEqual(moodModeCount, 1, "MoodMode must appear exactly ONCE in getAl
 
 console.log("✓ Test 4 Passed: getAllMaps strictly deduplicates all entries.");
 
-console.log("\n=======================================================");
-console.log("ALL DEFAULT SONGS & DUPLICATION TESTS PASSED SUCCESSFULLY!");
-console.log("=======================================================");
+// ---------------------------------------------------------------------------
+// TEST 5: Erase All Data (erases custom tracks, copies, highscores & stats; keeps default songs)
+// ---------------------------------------------------------------------------
+console.log("\n[Test 5] Testing Erase All Data (eraseAllCustomData & SaveSystem.eraseAllData)...");
+const SaveSystem = require("../scripts/saveSystem.js");
+const saveSystem = new SaveSystem();
+global.window.saveSystem = saveSystem;
+
+// Record stats and high scores first
+saveSystem.recordRunResult({
+  isCompleted: true,
+  songId: moodMode.id,
+  score: 18500,
+  hits: 90,
+  playedSeconds: 120
+}, "Normal");
+mapStorage.highscores[moodMode.id] = 18500;
+mapStorage.saveHighScoresToStorage();
+
+assert(saveSystem.currentSlotData.stats.totalScore === 18500, "Stats should record score before erase");
+assert(mapStorage.customMaps.length > 0, "Should have custom maps before erase");
+
+(async () => {
+  const remainingMaps = await mapStorage.eraseAllCustomData();
+
+  assert.strictEqual(mapStorage.customMaps.length, 0, "All custom tracks and copies must be erased");
+  assert.strictEqual(Object.keys(mapStorage.highscores).length, 0, "All MapStorage highscores must be erased");
+  assert.strictEqual(saveSystem.currentSlotData.stats.totalScore, 0, "SaveSystem totalScore must be reset to 0");
+  assert.strictEqual(saveSystem.currentSlotData.stats.totalNotesHit, 0, "SaveSystem totalNotesHit must be reset to 0");
+  assert.strictEqual(saveSystem.currentSlotData.stats.tracksCompleted, 0, "SaveSystem tracksCompleted must be reset to 0");
+  assert.strictEqual(Object.keys(saveSystem.currentSlotData.highscores).length, 0, "SaveSystem highscores must be empty");
+
+  // Default songs must still exist and be intact
+  assert.strictEqual(remainingMaps.length, defaults.length, "All built-in default songs must be preserved");
+  assert(remainingMaps.every(m => m.isDefault === true && !m.isCustom), "Remaining songs must all be built-in default songs");
+  console.log("✓ Test 5 Passed: Erase All Data wiped all custom tracks and player stats while preserving all default songs.");
+
+  console.log("\n=======================================================");
+  console.log("ALL DEFAULT SONGS & DUPLICATION TESTS PASSED SUCCESSFULLY!");
+  console.log("=======================================================");
+})();

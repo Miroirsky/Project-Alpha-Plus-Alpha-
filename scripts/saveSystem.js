@@ -82,6 +82,7 @@
      * Fallback for browser environment using localStorage.
      */
     loadFallbackStorage() {
+      if (typeof localStorage === "undefined") return;
       try {
         const savedProfiles = localStorage.getItem(LOCAL_STORAGE_PROFILES_KEY);
         if (savedProfiles) {
@@ -101,6 +102,7 @@
      * Saves fallback storage to localStorage.
      */
     saveFallbackStorage() {
+      if (typeof localStorage === "undefined") return;
       try {
         localStorage.setItem(LOCAL_STORAGE_PROFILES_KEY, JSON.stringify(this.profiles));
         const allSlots = JSON.parse(localStorage.getItem(LOCAL_STORAGE_SLOTS_DATA_KEY) || "{}");
@@ -492,6 +494,83 @@
         }
       }
       return this.currentSlotData.highscores[songId] || 0;
+    }
+
+    /**
+     * Erases all player profiles, save slots, stats, high scores, and custom tracks.
+     * Resets Profile 1 (Player 1) to zero stats while keeping built-in default songs untouched.
+     */
+    async eraseAllData() {
+      const now = Date.now();
+      let freshProfiles = {
+        activeSlotId: "slot_1",
+        slots: [
+          {
+            id: "slot_1",
+            name: "Player 1",
+            createdAt: now,
+            lastPlayed: now,
+            totalPlayTime: 0,
+            totalNotesHit: 0,
+            totalScore: 0,
+            tracksCompleted: 0
+          }
+        ]
+      };
+      let freshSlotData = {
+        id: "slot_1",
+        name: "Player 1",
+        createdAt: now,
+        lastPlayed: now,
+        highscores: {},
+        customMaps: [],
+        stats: {
+          totalPlayTime: 0,
+          totalNotesHit: 0,
+          totalScore: 0,
+          tracksCompleted: 0
+        }
+      };
+
+      if (this.isElectron && window.electronAPI && typeof window.electronAPI.eraseAllData === "function") {
+        try {
+          const res = await window.electronAPI.eraseAllData();
+          if (res && res.success) {
+            if (res.profiles) freshProfiles = res.profiles;
+            if (res.slotData) freshSlotData = res.slotData;
+          }
+        } catch (err) {
+          console.error("[SaveSystem] Electron eraseAllData error:", err);
+        }
+      }
+
+      this.activeSlotId = "slot_1";
+      this.profiles = freshProfiles;
+      this.currentSlotData = freshSlotData;
+
+      try {
+        if (typeof localStorage !== "undefined") {
+          const keysToRemove = [
+            LOCAL_STORAGE_SLOT_KEY,
+            LOCAL_STORAGE_PROFILES_KEY,
+            LOCAL_STORAGE_SLOTS_DATA_KEY,
+            "project_alpha_custom_maps",
+            "project_alpha_map_overrides",
+            "project_alpha_deleted_tracks",
+            "project_alpha_highscores",
+            "project_alpha_selected_song_id",
+            "project_alpha_song_order",
+            "project_alpha_difficulty_orders"
+          ];
+          keysToRemove.forEach((k) => {
+            try { localStorage.removeItem(k); } catch (e) {}
+          });
+        }
+      } catch (e) {}
+
+      this.saveFallbackStorage();
+      this.notifyListeners("dataErased");
+      return { success: true, profiles: this.profiles, slotData: this.currentSlotData };
     }
 
     /**

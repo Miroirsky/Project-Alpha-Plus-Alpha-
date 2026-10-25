@@ -1139,6 +1139,52 @@
               </div>
             </button>
           </div>
+
+          <!-- Data & Application Management (Erase All Data & Uninstall Game) -->
+          <div class="settings-section-divider">
+            <span>Data &amp; Application Management</span>
+          </div>
+
+          <div class="settings-danger-actions">
+            <button id="btn-erase-all-data" type="button" class="btn-danger-tile btn-erase-data" title="Erase all custom tracks, high scores, and player statistics while keeping built-in default songs">
+              <span class="danger-tile-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              </span>
+              <div class="danger-tile-content">
+                <span class="danger-tile-title">Erase All Data</span>
+                <span class="danger-tile-sub">Wipes custom tracks &amp; stats (keeps default songs)</span>
+              </div>
+            </button>
+
+            <button id="btn-uninstall-game" type="button" class="btn-danger-tile btn-uninstall-game" title="Uninstall Project Alpha Plus, remove shortcuts and all user data">
+              <span class="danger-tile-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </span>
+              <div class="danger-tile-content">
+                <span class="danger-tile-title">Uninstall Game</span>
+                <span class="danger-tile-sub">Removes game files, saves &amp; shortcuts</span>
+              </div>
+            </button>
+          </div>
+          <div id="settings-danger-feedback" class="settings-danger-feedback" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Danger Action Confirmation Modal (Erase All Data / Uninstall Game) -->
+    <div id="danger-confirm-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="danger-confirm-title" aria-hidden="true">
+      <div class="modal-dialog danger-confirm-dialog">
+        <header class="modal-header">
+          <h2 id="danger-confirm-title" class="modal-title">Confirm Action</h2>
+          <button id="btn-close-danger-confirm" class="modal-close-btn" type="button" aria-label="Dismiss">&times;</button>
+        </header>
+        <div class="danger-confirm-body">
+          <p id="danger-confirm-desc" class="exit-dialog-desc"></p>
+          <div id="danger-confirm-note" class="exit-dialog-hint"></div>
+          <div class="modal-footer">
+            <button id="btn-danger-cancel" class="btn-modal-action" type="button">Cancel</button>
+            <button id="btn-danger-confirm" class="btn-modal-action btn-danger-confirm-execute" type="button">Confirm</button>
+          </div>
         </div>
       </div>
     </div>

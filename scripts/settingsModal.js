@@ -38,6 +38,20 @@ class SettingsModal {
     // Local Folder Buttons
     this.btnOpenSaves = document.getElementById("btn-open-saves-dir");
     this.btnOpenSongs = document.getElementById("btn-open-songs-dir");
+
+    // Danger Zone Buttons & Confirmation Modal (Erase All Data / Uninstall Game)
+    this.btnEraseAllData = document.getElementById("btn-erase-all-data");
+    this.btnUninstallGame = document.getElementById("btn-uninstall-game");
+    this.dangerFeedback = document.getElementById("settings-danger-feedback");
+
+    this.dangerModal = document.getElementById("danger-confirm-modal");
+    this.dangerTitle = document.getElementById("danger-confirm-title");
+    this.dangerDesc = document.getElementById("danger-confirm-desc");
+    this.dangerNote = document.getElementById("danger-confirm-note");
+    this.btnDangerClose = document.getElementById("btn-close-danger-confirm");
+    this.btnDangerCancel = document.getElementById("btn-danger-cancel");
+    this.btnDangerConfirm = document.getElementById("btn-danger-confirm");
+    this.pendingDangerAction = null;
   }
 
   /**
@@ -394,11 +408,186 @@ class SettingsModal {
       });
     }
 
+    // Erase All Data button
+    if (this.btnEraseAllData) {
+      this.btnEraseAllData.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        this.promptDangerAction("erase");
+      });
+    }
+
+    // Uninstall Game button
+    if (this.btnUninstallGame) {
+      this.btnUninstallGame.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        this.promptDangerAction("uninstall");
+      });
+    }
+
+    // Danger Confirmation Modal buttons
+    if (this.btnDangerClose) {
+      this.btnDangerClose.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        this.closeDangerModal();
+      });
+    }
+    if (this.btnDangerCancel) {
+      this.btnDangerCancel.addEventListener("click", () => {
+        if (this.soundManager) this.soundManager.playClick();
+        this.closeDangerModal();
+      });
+    }
+    if (this.dangerModal) {
+      this.dangerModal.addEventListener("click", (e) => {
+        if (e.target === this.dangerModal) {
+          this.closeDangerModal();
+        }
+      });
+    }
+    if (this.btnDangerConfirm) {
+      this.btnDangerConfirm.addEventListener("click", async () => {
+        if (this.soundManager) this.soundManager.playClick();
+        const action = this.pendingDangerAction;
+        this.closeDangerModal();
+        if (action === "erase") {
+          await this.executeEraseAllData(false);
+        } else if (action === "uninstall") {
+          await this.executeUninstallGame();
+        }
+      });
+    }
+
     // Listen to external theme changes
     if (this.themeManager) {
       this.themeManager.onThemeChange((theme) => {
         this.updateThemeButtons(theme);
       });
+    }
+  }
+
+  /**
+   * Opens the confirmation modal for Erase All Data or Uninstall Game.
+   * @param {"erase"|"uninstall"} actionType
+   */
+  promptDangerAction(actionType) {
+    this.pendingDangerAction = actionType;
+
+    if (!this.dangerModal) {
+      // Fallback if modal element is absent
+      if (actionType === "erase") {
+        if (typeof confirm === "function" && confirm("Erase all custom tracks, save profiles, high scores, and player stats? (Default songs will be kept)")) {
+          this.executeEraseAllData(false);
+        }
+      } else if (actionType === "uninstall") {
+        if (typeof confirm === "function" && confirm("Uninstall Project Alpha Plus and remove all game data and shortcuts?")) {
+          this.executeUninstallGame();
+        }
+      }
+      return;
+    }
+
+    if (actionType === "erase") {
+      if (this.dangerTitle) this.dangerTitle.textContent = "Erase All Game Data?";
+      if (this.dangerDesc) {
+        this.dangerDesc.textContent =
+          "This will permanently erase all custom tracks, modified song copies, save profiles, high scores, and player statistics.";
+      }
+      if (this.dangerNote) {
+        this.dangerNote.innerHTML =
+          "<strong>Preserved:</strong> All built-in default songs (<em>MoodMode</em>, <em>Why Are You Running</em>, <em>IDK</em>) will remain in the game.";
+      }
+      if (this.btnDangerConfirm) {
+        this.btnDangerConfirm.textContent = "Erase All Data";
+      }
+    } else if (actionType === "uninstall") {
+      if (this.dangerTitle) this.dangerTitle.textContent = "Uninstall Project Alpha Plus?";
+      if (this.dangerDesc) {
+        this.dangerDesc.textContent =
+          "This will permanently remove all save data, custom tracks, Desktop/Start Menu shortcuts, and uninstall the game files from your computer.";
+      }
+      if (this.dangerNote) {
+        this.dangerNote.innerHTML =
+          "<strong>Warning:</strong> Project Alpha Plus will close immediately and remove its installation directory.";
+      }
+      if (this.btnDangerConfirm) {
+        this.btnDangerConfirm.textContent = "Uninstall Game";
+      }
+    }
+
+    this.dangerModal.classList.add("is-active");
+    this.dangerModal.setAttribute("aria-hidden", "false");
+  }
+
+  /**
+   * Closes the danger confirmation modal.
+   */
+  closeDangerModal() {
+    this.pendingDangerAction = null;
+    if (this.dangerModal) {
+      this.dangerModal.classList.remove("is-active");
+      this.dangerModal.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  /**
+   * Erases all custom tracks, copies, player stats, and save profiles while keeping default songs.
+   * @param {boolean} [silent=false]
+   */
+  async executeEraseAllData(silent = false) {
+    try {
+      if (window.mapStorage && typeof window.mapStorage.eraseAllCustomData === "function") {
+        await window.mapStorage.eraseAllCustomData();
+      } else if (window.saveSystem && typeof window.saveSystem.eraseAllData === "function") {
+        await window.saveSystem.eraseAllData();
+      }
+
+      this.syncSaveSlots();
+
+      if (window.playMenu && window.mapStorage) {
+        const remainingMaps = window.mapStorage.getAllMaps();
+        if (typeof window.playMenu.updateSongs === "function") {
+          window.playMenu.updateSongs(remainingMaps);
+        }
+      }
+
+      if (window.createMenu && typeof window.createMenu.renderTrackList === "function") {
+        window.createMenu.renderTrackList();
+      }
+
+      if (!silent && this.dangerFeedback) {
+        this.dangerFeedback.textContent = "✓ All custom tracks and player stats erased. Default songs kept.";
+        this.dangerFeedback.classList.add("is-visible");
+        setTimeout(() => {
+          if (this.dangerFeedback) this.dangerFeedback.classList.remove("is-visible");
+        }, 5000);
+      }
+    } catch (err) {
+      console.error("[SettingsModal] Failed to erase all data:", err);
+    }
+  }
+
+  /**
+   * Erases all user data and triggers complete game uninstallation.
+   */
+  async executeUninstallGame() {
+    try {
+      await this.executeEraseAllData(true);
+
+      if (this.dangerFeedback) {
+        this.dangerFeedback.textContent = "Uninstalling Project Alpha Plus...";
+        this.dangerFeedback.classList.add("is-visible");
+      }
+
+      if (this.isElectron && window.electronAPI && typeof window.electronAPI.uninstallGame === "function") {
+        await window.electronAPI.uninstallGame();
+        return;
+      }
+
+      try {
+        window.close();
+      } catch (e) {}
+    } catch (err) {
+      console.error("[SettingsModal] Failed to uninstall game:", err);
     }
   }
 

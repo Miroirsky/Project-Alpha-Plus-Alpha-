@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // App & Window Controls
   exitApp: () => ipcRenderer.invoke('app:exit'),
+  eraseAllData: () => ipcRenderer.invoke('app:erase-all-data'),
+  uninstallGame: () => ipcRenderer.invoke('app:uninstall-game'),
   toggleFullscreen: () => ipcRenderer.invoke('app:toggle-fullscreen'),
   isFullscreen: () => ipcRenderer.invoke('app:is-fullscreen'),
   getAppPaths: () => ipcRenderer.invoke('app:get-paths'),

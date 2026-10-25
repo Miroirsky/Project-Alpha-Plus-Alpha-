@@ -33,6 +33,8 @@
   position: relative;
   width: 90%;
   max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
   background-color: var(--palette-primary, #954132);
   background: var(--color-surface-gradient, linear-gradient(168deg, #9f4737 0%, #954132 55%, #88392d 100%));
   border: 1.5px solid rgba(var(--palette-bg-secondary-rgb), 0.35);
@@ -881,4 +883,114 @@
   border: 1px solid #2ed573;
   color: #2ed573;
 }
+
+/* ==========================================================================
+   Settings Danger Zone: Erase All Data & Uninstall Game
+   ========================================================================== */
+.settings-danger-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+}
+
+@media (max-width: 520px) {
+  .settings-danger-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-danger-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.65rem;
+  background: rgba(var(--palette-secondary-rgb), 0.68);
+  border: 1.5px solid rgba(255, 107, 129, 0.35);
+  color: var(--palette-bg-primary, #FAE3E3);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-danger-tile:hover {
+  background: rgba(255, 71, 87, 0.22);
+  border-color: #ff6b81;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.btn-uninstall-game {
+  border-color: rgba(255, 71, 87, 0.55);
+  background: rgba(120, 22, 32, 0.45);
+}
+
+.btn-uninstall-game:hover {
+  background: rgba(255, 71, 87, 0.35);
+  border-color: #ff4757;
+}
+
+.danger-tile-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 0.5rem;
+  background: rgba(255, 71, 87, 0.18);
+  color: #ff6b81;
+  flex-shrink: 0;
+}
+
+.danger-tile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.danger-tile-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ff8a9b;
+}
+
+.danger-tile-sub {
+  font-size: 0.68rem;
+  line-height: 1.25;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  opacity: 0.9;
+}
+
+.settings-danger-feedback {
+  display: none;
+  font-size: 0.8rem;
+  font-family: var(--font-family-mono);
+  font-weight: 700;
+  padding: 0.55rem 0.8rem;
+  border-radius: 0.45rem;
+  background: rgba(46, 213, 115, 0.2);
+  border: 1px solid #2ed573;
+  color: #2ed573;
+  text-align: center;
+}
+
+.settings-danger-feedback.is-visible {
+  display: block;
+}
+
+.btn-danger-confirm-execute {
+  background-color: #b32432 !important;
+  border-color: #ff6b81 !important;
+  color: #ffffff !important;
+}
+
+.btn-danger-confirm-execute:hover {
+  background-color: #d62839 !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 16px rgba(255, 71, 87, 0.55) !important;
+}
+
 

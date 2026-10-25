@@ -1,6 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
+const { spawn } = require('child_process');
 const https = require('https');
 const http = require('http');
 
@@ -341,6 +343,186 @@ ipcMain.handle('app:exit', () => {
     app.quit();
   }
   return true;
+});
+
+// --- Erase All Data (Custom Tracks, Saves, Profiles, High Scores, Stats; Keeps Default Songs) ---
+ipcMain.handle('app:erase-all-data', async () => {
+  try {
+    // 1. Delete all custom song folders in SONGS_DIR (never touches Default Tracks)
+    if (fs.existsSync(SONGS_DIR)) {
+      const items = fs.readdirSync(SONGS_DIR);
+      for (const item of items) {
+        const target = path.join(SONGS_DIR, item);
+        try {
+          fs.rmSync(target, { recursive: true, force: true });
+        } catch (e) {
+          console.warn(`Failed to remove custom song ${target}:`, e);
+        }
+      }
+    } else {
+      fs.mkdirSync(SONGS_DIR, { recursive: true });
+    }
+
+    // 2. Delete all downloaded files in DOWNLOADS_DIR
+    if (fs.existsSync(DOWNLOADS_DIR)) {
+      const items = fs.readdirSync(DOWNLOADS_DIR);
+      for (const item of items) {
+        const target = path.join(DOWNLOADS_DIR, item);
+        try {
+          fs.rmSync(target, { recursive: true, force: true });
+        } catch (e) {}
+      }
+    } else {
+      fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
+    }
+
+    // 3. Delete all save slots & profile JSONs in SAVES_DIR (preserve settings.json)
+    if (fs.existsSync(SAVES_DIR)) {
+      const items = fs.readdirSync(SAVES_DIR);
+      for (const item of items) {
+        if (item.toLowerCase() === 'settings.json') continue;
+        const target = path.join(SAVES_DIR, item);
+        try {
+          fs.rmSync(target, { recursive: true, force: true });
+        } catch (e) {}
+      }
+    } else {
+      fs.mkdirSync(SAVES_DIR, { recursive: true });
+    }
+
+    // 4. Re-initialize clean default profile & slot_1
+    const now = Date.now();
+    const freshProfiles = {
+      activeSlotId: 'slot_1',
+      slots: [
+        {
+          id: 'slot_1',
+          name: 'Player 1',
+          createdAt: now,
+          lastPlayed: now,
+          totalPlayTime: 0,
+          totalNotesHit: 0,
+          totalScore: 0,
+          tracksCompleted: 0
+        }
+      ]
+    };
+    const freshSlot1 = {
+      id: 'slot_1',
+      name: 'Player 1',
+      createdAt: now,
+      lastPlayed: now,
+      highscores: {},
+      customMaps: [],
+      stats: {
+        totalPlayTime: 0,
+        totalNotesHit: 0,
+        totalScore: 0,
+        tracksCompleted: 0
+      }
+    };
+
+    writeJsonFileSync(PROFILES_FILE, freshProfiles);
+    writeJsonFileSync(path.join(SAVES_DIR, 'slot_1.json'), freshSlot1);
+
+    const defaults = loadDefaultTracksFromDisk();
+    return {
+      success: true,
+      profiles: freshProfiles,
+      slotData: freshSlot1,
+      defaultTracks: defaults.songs
+    };
+  } catch (err) {
+    console.error('Error erasing all data:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// --- Uninstall Game (Removes User Data, Shortcuts, Installation Folder & Exits) ---
+ipcMain.handle('app:uninstall-game', async () => {
+  try {
+    // 1. Remove Desktop and Start Menu shortcuts
+    const shortcutLocations = [
+      path.join(os.homedir(), 'Desktop', 'Project Alpha Plus.lnk'),
+      path.join(process.env.APPDATA || '', 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Project Alpha Plus.lnk')
+    ];
+    for (const lnk of shortcutLocations) {
+      if (lnk && fs.existsSync(lnk)) {
+        try {
+          fs.unlinkSync(lnk);
+        } catch (e) {}
+      }
+    }
+
+    // 2. Wipe saves, custom_songs, downloads directories
+    for (const dir of [SONGS_DIR, DOWNLOADS_DIR, SAVES_DIR]) {
+      if (fs.existsSync(dir)) {
+        try {
+          fs.rmSync(dir, { recursive: true, force: true });
+        } catch (e) {}
+      }
+    }
+
+    // 3. Determine installation directory to remove after process exits
+    const dirsToRemove = [];
+    const execDir = path.dirname(process.execPath);
+    const isSourceRepo = fs.existsSync(path.join(execDir, '.git')) || fs.existsSync(path.join(process.cwd(), '.git'));
+
+    // If running from packaged standalone .exe (not inside git source workspace or node_modules/electron)
+    if (
+      app.isPackaged &&
+      !execDir.toLowerCase().includes('node_modules') &&
+      !fs.existsSync(path.join(execDir, '.git'))
+    ) {
+      dirsToRemove.push(execDir);
+    }
+
+    // Also check default installer destination (%LOCALAPPDATA%\Programs\Project Alpha Plus)
+    const defaultInstallDir = path.join(
+      process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'),
+      'Programs',
+      'Project Alpha Plus'
+    );
+    if (
+      fs.existsSync(defaultInstallDir) &&
+      !fs.existsSync(path.join(defaultInstallDir, '.git')) &&
+      !dirsToRemove.includes(defaultInstallDir)
+    ) {
+      dirsToRemove.push(defaultInstallDir);
+    }
+
+    // Spawn detached Windows cleanup command to remove locked installation directory & userData after exit
+    if (process.platform === 'win32') {
+      const cleanupCmds = ['ping 127.0.0.1 -n 3 > nul'];
+      for (const d of dirsToRemove) {
+        cleanupCmds.push(`rmdir /s /q "${d}"`);
+      }
+      if (fs.existsSync(USER_DATA_PATH) && !isSourceRepo) {
+        cleanupCmds.push(`rmdir /s /q "${USER_DATA_PATH}"`);
+      }
+
+      const child = spawn('cmd.exe', ['/c', cleanupCmds.join(' & ')], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      });
+      child.unref();
+    }
+
+    // Quit the application after a short delay so renderer receives response
+    setTimeout(() => {
+      app.quit();
+    }, 250);
+
+    return {
+      success: true,
+      removedShortcuts: true,
+      scheduledDirs: dirsToRemove
+    };
+  } catch (err) {
+    console.error('Error uninstalling game:', err);
+    return { success: false, error: err.message };
+  }
 });
 
 ipcMain.handle('app:toggle-fullscreen', () => {

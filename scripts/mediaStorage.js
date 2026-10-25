@@ -464,6 +464,49 @@ class MediaStorage {
       return null;
     }
   }
+
+  /**
+   * Clears all custom tracks, background media, and custom audio from IndexedDB and memory cache.
+   * Preserves bundled default audio data.
+   */
+  static async clearAllCustomData() {
+    if (this.activeBlobUrls) {
+      for (const [key, url] of this.activeBlobUrls.entries()) {
+        if (!String(key).startsWith("default_")) {
+          try { URL.revokeObjectURL(url); } catch (e) {}
+          this.activeBlobUrls.delete(key);
+        }
+      }
+    }
+
+    for (const key of Array.from(this.memoryCache.keys())) {
+      if (!String(key).includes("default_")) {
+        this.memoryCache.delete(key);
+      }
+    }
+
+    try {
+      const db = await this.getDB();
+      if (!db) return true;
+      const stores = ["custom_maps", "backgrounds", "audio", "system_handles"].filter((s) =>
+        db.objectStoreNames.contains(s)
+      );
+      if (stores.length === 0) return true;
+
+      return new Promise((resolve) => {
+        const tx = db.transaction(stores, "readwrite");
+        for (const s of stores) {
+          try {
+            tx.objectStore(s).clear();
+          } catch (e) {}
+        }
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(true);
+      });
+    } catch (e) {
+      return true;
+    }
+  }
 }
 
 // Expose to window / global
