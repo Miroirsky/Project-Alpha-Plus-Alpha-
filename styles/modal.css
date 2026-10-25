@@ -993,4 +993,89 @@
   box-shadow: 0 0 16px rgba(255, 71, 87, 0.55) !important;
 }
 
+/* ==========================================================================
+   First-Time Player 30s Quick Tutorial Prompt Modal
+   ========================================================================== */
+.tutorial-prompt-dialog {
+  max-width: 520px;
+}
+
+.tutorial-mechanics-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 520px) {
+  .tutorial-mechanics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tutorial-mechanic-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.65rem;
+  background: rgba(var(--palette-secondary-rgb), 0.55);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb), 0.25);
+}
+
+.tutorial-mechanic-item div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tutorial-mechanic-item strong {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--palette-bg-primary, #FAE3E3);
+}
+
+.tutorial-mechanic-item span {
+  font-size: 0.72rem;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  line-height: 1.3;
+}
+
+.tutorial-orb-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.tutorial-orb-dot.blue {
+  background: rgba(0, 212, 255, 0.2);
+  border: 2px solid #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.45);
+}
+
+.tutorial-orb-dot.red {
+  background: rgba(255, 71, 87, 0.2);
+  border: 2px solid #ff4757;
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.45);
+}
+
+.tutorial-orb-dot.arrow {
+  background: rgba(46, 213, 115, 0.2);
+  border: 2px solid #2ed573;
+  color: #2ed573;
+}
+
+.tutorial-orb-dot.yellow {
+  background: rgba(255, 211, 42, 0.2);
+  border: 2px solid #ffd32a;
+  color: #ffd32a;
+}
+
+
 

@@ -1,0 +1,215 @@
+{
+  "id": "builtin_tutorial_30s",
+  "name": "Tutorial (30s)",
+  "mapper": "Miroirsky",
+  "creator": "Miroirsky",
+  "duration": "00:30",
+  "durationSeconds": 30,
+  "file": "Assets/Tutorial/track.mp3",
+  "cover": "Assets/Tutorial/cover.png",
+  "color": "#00d4ff",
+  "difficulty": "Easy",
+  "nps": 0.4,
+  "isTutorial": true,
+  "background": {
+    "type": "video",
+    "mediaType": "video",
+    "fit": "cover",
+    "opacity": 0.85,
+    "name": "Tutorial.mp4",
+    "url": "Tutorial.mp4"
+  },
+  "notes": [
+    {
+      "time": 4.07,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.494,
+      "y": 0.586
+    },
+    {
+      "time": 7.57,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.276,
+      "y": 0.579
+    },
+    {
+      "time": 12.97,
+      "color": "red",
+      "type": "normal",
+      "x": 0.502,
+      "y": 0.587
+    },
+    {
+      "time": 16.23,
+      "color": "red",
+      "type": "normal",
+      "x": 0.33,
+      "y": 0.601
+    },
+    {
+      "time": 16.73,
+      "color": "red",
+      "type": "normal",
+      "x": 0.452,
+      "y": 0.612
+    },
+    {
+      "time": 17.23,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.422,
+      "y": 0.322
+    },
+    {
+      "time": 22.67,
+      "color": "yellow",
+      "type": "triangle",
+      "x": 0.5,
+      "y": 0.585
+    },
+    {
+      "time": 26.33,
+      "color": "red",
+      "type": "normal",
+      "x": 0.648,
+      "y": 0.543
+    },
+    {
+      "time": 26.33,
+      "color": "yellow",
+      "type": "triangle",
+      "x": 0.486,
+      "y": 0.549
+    },
+    {
+      "time": 26.91,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.324,
+      "y": 0.55
+    },
+    {
+      "time": 27.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.347,
+      "y": 0.696
+    },
+    {
+      "time": 27.57,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.453,
+      "y": 0.793
+    },
+    {
+      "time": 28.27,
+      "color": "red",
+      "type": "normal",
+      "x": 0.67,
+      "y": 0.635
+    }
+  ],
+  "difficulties": {
+    "Easy": {
+      "difficulty": "Easy",
+      "nps": 0.4,
+      "color": "#00d4ff",
+      "notes": [
+        {
+          "time": 4.07,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.494,
+          "y": 0.586
+        },
+        {
+          "time": 7.57,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.276,
+          "y": 0.579
+        },
+        {
+          "time": 12.97,
+          "color": "red",
+          "type": "normal",
+          "x": 0.502,
+          "y": 0.587
+        },
+        {
+          "time": 16.23,
+          "color": "red",
+          "type": "normal",
+          "x": 0.33,
+          "y": 0.601
+        },
+        {
+          "time": 16.73,
+          "color": "red",
+          "type": "normal",
+          "x": 0.452,
+          "y": 0.612
+        },
+        {
+          "time": 17.23,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.422,
+          "y": 0.322
+        },
+        {
+          "time": 22.67,
+          "color": "yellow",
+          "type": "triangle",
+          "x": 0.5,
+          "y": 0.585
+        },
+        {
+          "time": 26.33,
+          "color": "red",
+          "type": "normal",
+          "x": 0.648,
+          "y": 0.543
+        },
+        {
+          "time": 26.33,
+          "color": "yellow",
+          "type": "triangle",
+          "x": 0.486,
+          "y": 0.549
+        },
+        {
+          "time": 26.91,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.324,
+          "y": 0.55
+        },
+        {
+          "time": 27.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.347,
+          "y": 0.696
+        },
+        {
+          "time": 27.57,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.453,
+          "y": 0.793
+        },
+        {
+          "time": 28.27,
+          "color": "red",
+          "type": "normal",
+          "x": 0.67,
+          "y": 0.635
+        }
+      ]
+    }
+  }
+}

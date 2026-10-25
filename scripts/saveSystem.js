@@ -560,7 +560,8 @@
             "project_alpha_highscores",
             "project_alpha_selected_song_id",
             "project_alpha_song_order",
-            "project_alpha_difficulty_orders"
+            "project_alpha_difficulty_orders",
+            "project_alpha_tutorial_prompt_seen"
           ];
           keysToRemove.forEach((k) => {
             try { localStorage.removeItem(k); } catch (e) {}

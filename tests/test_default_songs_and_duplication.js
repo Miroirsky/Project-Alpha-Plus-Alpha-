@@ -182,6 +182,38 @@ assert(mapStorage.customMaps.length > 0, "Should have custom maps before erase")
   assert(remainingMaps.every(m => m.isDefault === true && !m.isCustom), "Remaining songs must all be built-in default songs");
   console.log("✓ Test 5 Passed: Erase All Data wiped all custom tracks and player stats while preserving all default songs.");
 
+  // ---------------------------------------------------------------------------
+  // TEST 6: First-Time Player 30s Quick Tutorial Prompt & Song
+  // ---------------------------------------------------------------------------
+  console.log("\n[Test 6] Testing First-Time 30s Tutorial Manager...");
+  const TutorialManager = require("../scripts/tutorialManager.js");
+  let launchedTutorialSong = null;
+  const tutManager = new TutorialManager({
+    onStartTutorial: (song) => {
+      launchedTutorialSong = song;
+    }
+  });
+
+  // Fresh erased player should be prompted for first-time tutorial
+  assert.strictEqual(tutManager.shouldPromptFirstTime(), true, "Fresh first-time player must be prompted for tutorial");
+
+  const tutSong = TutorialManager.getTutorialSong();
+  assert.strictEqual(tutSong.durationSeconds, 30, "Tutorial song must be exactly 30 seconds");
+  assert.strictEqual(tutSong.duration, "00:30", "Tutorial song duration display must be 00:30");
+  assert.strictEqual(tutSong.isTutorial, true, "Tutorial song must have isTutorial: true");
+  assert(Array.isArray(tutSong.notes) && tutSong.notes.length > 0, "Tutorial song must contain interactive notes");
+  assert(TutorialManager.getCoachingHint(5.0).step.includes("STEP 1"), "Coaching hint at 5s must be Step 1");
+  assert(TutorialManager.getCoachingHint(14.0).step.includes("STEP 2"), "Coaching hint at 14s must be Step 2");
+  assert(TutorialManager.getCoachingHint(22.0).step.includes("STEP 3"), "Coaching hint at 22s must be Step 3");
+  assert(TutorialManager.getCoachingHint(27.0).step.includes("STEP 4"), "Coaching hint at 27s must be Step 4");
+
+  await tutManager.markPromptSeen();
+  assert.strictEqual(tutManager.shouldPromptFirstTime(), false, "Player should not be prompted again after seeing tutorial prompt");
+
+  tutManager.launchTutorial();
+  assert(launchedTutorialSong && launchedTutorialSong.id === "builtin_tutorial_30s", "launchTutorial must pass the 30s tutorial song to callback");
+  console.log("✓ Test 6 Passed: First-time 30s tutorial detection, prompt state, and 30s tutorial beatmap verified.");
+
   console.log("\n=======================================================");
   console.log("ALL DEFAULT SONGS & DUPLICATION TESTS PASSED SUCCESSFULLY!");
   console.log("=======================================================");

@@ -132,12 +132,17 @@ async function initApp() {
     }
     gameView.hide();
 
-    if (currentTestedMap && mapStorage && currentTestedMap.id) {
+    if (currentTestedMap && mapStorage && currentTestedMap.id && !currentTestedMap.isTutorial) {
       mapStorage.setSelectedSongId(currentTestedMap.id);
     }
 
     if (gameReturnTarget === "editor" && currentTestedMap) {
       mapEditor.open(currentTestedMap);
+    } else if (gameReturnTarget === "tutorial") {
+      const mainMenuCard = document.getElementById("main-menu-card");
+      if (mainMenuCard) {
+        mainMenuCard.classList.remove("is-hidden");
+      }
     } else {
       playMenu.updateSongs(mapStorage.getAllMaps());
       playMenu.open();
@@ -147,13 +152,13 @@ async function initApp() {
   /**
    * Transitions to the active Gameplay track.
    * @param {Object} song
-   * @param {'select' | 'editor'} returnTarget
+   * @param {'select' | 'editor' | 'tutorial'} returnTarget
    * @param {number} speedMultiplier
    */
   function launchTrackGameplay(song, returnTarget = "select", speedMultiplier = 1.0) {
     gameReturnTarget = returnTarget;
     currentTestedMap = song;
-    if (mapStorage && song && song.id) {
+    if (mapStorage && song && song.id && !song.isTutorial) {
       mapStorage.setSelectedSongId(song.id);
     }
 
@@ -169,11 +174,15 @@ async function initApp() {
     }
 
     // Hide any open menus
+    const mainMenuCard = document.getElementById("main-menu-card");
+    if (mainMenuCard) {
+      mainMenuCard.classList.add("is-hidden");
+    }
     playMenu.hideForGame();
     createMenu.hide();
 
     // Ensure latest map data is queried from mapStorage
-    const freshSong = (mapStorage && song.id && mapStorage.getMap(song.id)) || song;
+    const freshSong = (!song.isTutorial && mapStorage && song.id && mapStorage.getMap(song.id)) || song;
     const diffs = (mapStorage && mapStorage.getSongDifficulties(freshSong)) || freshSong.difficulties || {};
     const chosenDiff = song.selectedDifficulty || freshSong.selectedDifficulty || freshSong.difficulty || Object.keys(diffs)[0] || "Normal";
     const diffData = diffs[chosenDiff] || {};
@@ -207,6 +216,10 @@ async function initApp() {
         gameView.render(state);
       },
       onSongEnd: (results) => {
+        if (songForGame.isTutorial) {
+          gameView.showResults(results, { bestScore: results.score, isNewBest: Boolean(results.isCompleted) });
+          return;
+        }
         // Record high score (completed runs only) for the chosen difficulty and display comprehensive End Screen
         const scoreRecord = mapStorage.recordScore(results.songId, results.score, results.isCompleted, chosenDiff);
         if (window.saveSystem && typeof window.saveSystem.recordRunResult === "function") {
@@ -315,6 +328,21 @@ async function initApp() {
     });
   }
 
+  // Initialize First-Time 30s Tutorial Manager
+  const TutorialClass = window.TutorialManager;
+  const tutorialManager = TutorialClass
+    ? new TutorialClass({
+        soundManager,
+        onStartTutorial: (tutorialSong) => {
+          launchTrackGameplay(tutorialSong, "tutorial", 1.0);
+        }
+      })
+    : null;
+  if (tutorialManager) {
+    tutorialManager.init();
+    window.tutorialManager = tutorialManager;
+  }
+
   // 8. Complete asynchronous storage & save system initialization after UI buttons are bound
   if (mapStorage.initializationPromise) {
     mapStorage.initializationPromise
@@ -339,9 +367,15 @@ async function initApp() {
         }
         playMenu.updateSongs(mapStorage.getAllMaps());
         settingsModal.syncSaveSlots();
+        if (tutorialManager) {
+          tutorialManager.checkAndPromptFirstTime();
+        }
       })
       .catch((err) => {
         console.warn("SaveSystem initialization warning:", err);
+        if (tutorialManager) {
+          tutorialManager.checkAndPromptFirstTime();
+        }
       });
 
     window.saveSystem.addListener((event) => {

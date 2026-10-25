@@ -87,10 +87,11 @@
   <script defer src="scripts/gameEngine.js?v=20261025-2"></script>
   <script defer src="scripts/gameView.js?v=20261025-2"></script>
   <script defer src="scripts/settingsModal.js?v=20261025-2"></script>
-  <script defer src="scripts/exitHandler.js?v=20261025-2"></script>
-  <script defer src="scripts/backgroundSquares.js?v=20261025-2"></script>
-  <script defer src="scripts/webLanding.js?v=20261025-2"></script>
-  <script defer src="scripts/main.js?v=20261025-2"></script>
+  <script defer src="scripts/exitHandler.js?v=20261025-3"></script>
+  <script defer src="scripts/backgroundSquares.js?v=20261025-3"></script>
+  <script defer src="scripts/tutorialManager.js?v=20261025-3"></script>
+  <script defer src="scripts/webLanding.js?v=20261025-3"></script>
+  <script defer src="scripts/main.js?v=20261025-3"></script>
 </head>
 <body>
   <div class="app-container">
@@ -1140,10 +1141,18 @@
             </button>
           </div>
 
-          <!-- Data & Application Management (Erase All Data & Uninstall Game) -->
+          <!-- Data & Application Management (Tutorial, Erase All Data & Uninstall Game) -->
           <div class="settings-section-divider">
-            <span>Data &amp; Application Management</span>
+            <span>Tutorial, Data &amp; Application</span>
           </div>
+
+          <button id="btn-replay-tutorial" type="button" class="btn-folder-tile" style="width: 100%; margin-bottom: 0.35rem;" title="Launch the 30-second interactive gameplay tutorial">
+            <span class="folder-tile-icon" aria-hidden="true">&#9654;</span>
+            <div class="folder-tile-content">
+              <span class="folder-tile-title">Quick Tutorial (30s)</span>
+              <span class="folder-tile-sub">Interactive 30-second gameplay guide</span>
+            </div>
+          </button>
 
           <div class="settings-danger-actions">
             <button id="btn-erase-all-data" type="button" class="btn-danger-tile btn-erase-data" title="Erase all custom tracks, high scores, and player statistics while keeping built-in default songs">
@@ -1167,6 +1176,65 @@
             </button>
           </div>
           <div id="settings-danger-feedback" class="settings-danger-feedback" aria-live="polite"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- First-Time Player 30s Quick Tutorial Prompt Modal -->
+    <div id="first-time-tutorial-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="first-time-tutorial-title" aria-hidden="true">
+      <div class="modal-dialog tutorial-prompt-dialog">
+        <header class="modal-header">
+          <div class="modal-header-title-group">
+            <h2 id="first-time-tutorial-title" class="modal-title">Welcome to Project Alpha+</h2>
+            <span class="track-type-badge">00:30 Quick Guide</span>
+          </div>
+          <button id="btn-close-first-tutorial" class="modal-close-btn" type="button" aria-label="Skip Tutorial">&times;</button>
+        </header>
+
+        <div class="tutorial-prompt-body">
+          <p class="exit-dialog-desc" style="margin-bottom: 1rem;">
+            Looks like this is your first time joining! Would you like to play a quick <strong>30-second interactive tutorial</strong> to learn the controls?
+          </p>
+
+          <div class="tutorial-mechanics-grid">
+            <div class="tutorial-mechanic-item">
+              <span class="tutorial-orb-dot blue"></span>
+              <div>
+                <strong>Blue Notes</strong>
+                <span>Switch to <em>Blue [Right Click]</em> &amp; hover</span>
+              </div>
+            </div>
+            <div class="tutorial-mechanic-item">
+              <span class="tutorial-orb-dot red"></span>
+              <div>
+                <strong>Red Notes</strong>
+                <span>Switch to <em>Red [Left Click]</em> &amp; hover</span>
+              </div>
+            </div>
+            <div class="tutorial-mechanic-item">
+              <span class="tutorial-orb-dot arrow">&#8599;</span>
+              <div>
+                <strong>Directional Notes</strong>
+                <span>Enter along the arrow direction</span>
+              </div>
+            </div>
+            <div class="tutorial-mechanic-item">
+              <span class="tutorial-orb-dot yellow">&#9650;</span>
+              <div>
+                <strong>Yellow Bombs</strong>
+                <span>Do <em>not</em> touch &mdash; dodge them!</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="margin-top: 1.5rem;">
+            <button id="btn-skip-first-tutorial" class="btn-modal-action" type="button">
+              No Thanks, Skip
+            </button>
+            <button id="btn-start-first-tutorial" class="menu-btn menu-btn-primary" type="button" style="padding: 0.75rem 1.35rem; width: auto;">
+              <span>Start 30s Tutorial &#9654;</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

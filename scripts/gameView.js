@@ -121,6 +121,7 @@ class GameView {
    * @param {Object} song
    */
   setupSong(song) {
+    this.isTutorial = Boolean(song && song.isTutorial);
     const diffTag = song.difficulty ? ` [${song.difficulty}]` : "";
     if (this.trackTitle) this.trackTitle.textContent = `${song.name}${diffTag}`;
     if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} \u2022 Mapped by ${song.mapper || "Mapper"}`;
@@ -176,7 +177,7 @@ class GameView {
 
     if (!mediaUrl) return;
 
-    if (bg.type === "video") {
+    if (bg.type === "video" || bg.mediaType === "video" || /\.(mp4|webm|mkv|mov)$/i.test(mediaUrl)) {
       try {
         const video = document.createElement("video");
         video.muted = true;
@@ -313,9 +314,53 @@ class GameView {
     this.drawEffects(ctx, state.effects);
     this.drawPlayerOrb(ctx, state.playerOrb);
 
+    if (this.isTutorial && !state.isCountingDown) {
+      this.drawTutorialCoachingBanner(ctx, width, height, state.currentTime);
+    }
+
     if (state.isCountingDown) {
       this.drawCountdownOverlay(ctx, width, height, state);
     }
+  }
+
+  /**
+   * Renders an on-screen interactive coaching banner during the 30-second tutorial.
+   * @param {CanvasRenderingContext2D} ctx
+   * @param {number} width
+   * @param {number} height
+   * @param {number} currentTime
+   */
+  drawTutorialCoachingBanner(ctx, width, height, currentTime) {
+    if (typeof window === "undefined" || !window.TutorialManager || typeof window.TutorialManager.getCoachingHint !== "function") {
+      return;
+    }
+    const hint = window.TutorialManager.getCoachingHint(currentTime);
+    if (!hint) return;
+
+    const playArea = PlayArea.getMetrics(width, height);
+    const boxW = Math.min(620, playArea.size * 0.94);
+    const boxH = 66;
+    const boxX = (width - boxW) / 2;
+    const boxY = Math.max(76, playArea.offsetY + 14);
+
+    ctx.save();
+    ctx.fillStyle = "rgba(12, 18, 32, 0.86)";
+    ctx.strokeStyle = hint.accent || "#00d4ff";
+    ctx.lineWidth = 2;
+    this.roundRect(ctx, boxX, boxY, boxW, boxH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.font = "800 12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = hint.accent || "#00d4ff";
+    ctx.fillText(hint.step, width / 2, boxY + 21);
+
+    ctx.font = "700 14px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(hint.text, width / 2, boxY + 45);
+    ctx.restore();
   }
 
   /**
