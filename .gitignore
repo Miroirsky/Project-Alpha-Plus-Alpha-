@@ -17,6 +17,7 @@ build/
 out/
 bin/
 *.exe
+!PAPLUS-Downloader.exe
 *.app
 *.dmg
 *.deb

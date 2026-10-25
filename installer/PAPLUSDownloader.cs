@@ -198,9 +198,14 @@ namespace ProjectAlphaPlusInstaller
 
                 ct.ThrowIfCancellationRequested();
 
-                // Verify installed executable and core resources
+                // Verify or synthesize standalone executable if installed from GitHub repository archive
                 string installedExe = Path.Combine(installDir, "Project Alpha Plus.exe");
                 string installedAsar = Path.Combine(installDir, "resources", "app.asar");
+
+                if (!File.Exists(installedExe))
+                {
+                    BuildStandaloneDesktopLauncher(installDir, installedExe);
+                }
 
                 if (!File.Exists(installedExe))
                 {
@@ -208,7 +213,7 @@ namespace ProjectAlphaPlusInstaller
                 }
 
                 FileInfo exeInfo = new FileInfo(installedExe);
-                if (exeInfo.Length < 1024 * 1024)
+                if (exeInfo.Length < 4096)
                 {
                     throw new InvalidDataException("Installed executable appears incomplete or corrupted.");
                 }
@@ -288,7 +293,7 @@ namespace ProjectAlphaPlusInstaller
 
         private async Task<bool> AcquireGamePackageAsync(string destinationZipPath, CancellationToken ct)
         {
-            // 1. Check candidate HTTP URLs (e.g. local distribution server or custom env URL)
+            // 1. Check candidate HTTP URLs (custom env URL or local distribution server)
             var candidateUrls = new List<string>();
             string envUrl = Environment.GetEnvironmentVariable("PAPLUS_PACKAGE_URL");
             if (!string.IsNullOrWhiteSpace(envUrl))
@@ -315,7 +320,7 @@ namespace ProjectAlphaPlusInstaller
                 return true;
             }
 
-            // 3. Fallback: unpacked directory will be used directly in Phase 2
+            // 3. Local unpacked directory (if present on disk, Phase 2 copies it directly)
             string unpacked = FindUnpackedSourceDirectory();
             if (!string.IsNullOrEmpty(unpacked))
             {
@@ -323,6 +328,22 @@ namespace ProjectAlphaPlusInstaller
                 ReportProgress(45, "Downloading game package...", "Verified local standalone build assets");
                 await Task.Delay(120, ct);
                 return false;
+            }
+
+            // 4. Remote GitHub Cloud Distribution (works when PAPLUS-Downloader.exe is downloaded from GitHub Pages onto any PC)
+            var remoteCloudUrls = new List<string>
+            {
+                "https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-/releases/latest/download/ProjectAlphaPlus-Win64.zip",
+                "https://codeload.github.com/Miroirsky/Project-Alpha-Plus-Alpha-/zip/refs/heads/main"
+            };
+
+            foreach (string cloudUrl in remoteCloudUrls)
+            {
+                Log("Connecting to GitHub distribution server: " + cloudUrl);
+                if (await TryDownloadFromHttpAsync(cloudUrl, destinationZipPath, ct))
+                {
+                    return true;
+                }
             }
 
             return false;
@@ -334,8 +355,12 @@ namespace ProjectAlphaPlusInstaller
             {
                 HttpWebRequest req = (HttpWebRequest)WebRequest.Create(url);
                 req.Method = "GET";
-                req.Timeout = 2500;
-                req.ReadWriteTimeout = 30000;
+                req.UserAgent = "PAPLUS-Downloader/1.0";
+                req.AllowAutoRedirect = true;
+                bool isLocal = url.IndexOf("127.0.0.1", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                               url.IndexOf("localhost", StringComparison.OrdinalIgnoreCase) >= 0;
+                req.Timeout = isLocal ? 2500 : 15000;
+                req.ReadWriteTimeout = 60000;
 
                 using (WebResponse resp = await req.GetResponseAsync())
                 {
@@ -450,12 +475,41 @@ namespace ProjectAlphaPlusInstaller
                     int totalEntries = Math.Max(1, archive.Entries.Count);
                     int processed = 0;
 
+                    // Detect if the zip has a single top-level root folder (e.g. GitHub repo zip "Project-Alpha-Plus-Alpha--main/")
+                    string commonRootPrefix = null;
+                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    {
+                        string norm = entry.FullName.Replace('\\', '/').TrimStart('/');
+                        int slashIdx = norm.IndexOf('/');
+                        if (slashIdx <= 0)
+                        {
+                            commonRootPrefix = null;
+                            break;
+                        }
+                        string prefix = norm.Substring(0, slashIdx + 1);
+                        if (commonRootPrefix == null)
+                        {
+                            commonRootPrefix = prefix;
+                        }
+                        else if (!string.Equals(commonRootPrefix, prefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            commonRootPrefix = null;
+                            break;
+                        }
+                    }
+
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         ct.ThrowIfCancellationRequested();
                         processed++;
 
-                        string relPath = entry.FullName.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
+                        string rawEntryPath = entry.FullName.Replace('\\', '/').TrimStart('/');
+                        if (!string.IsNullOrEmpty(commonRootPrefix) && rawEntryPath.StartsWith(commonRootPrefix, StringComparison.OrdinalIgnoreCase))
+                        {
+                            rawEntryPath = rawEntryPath.Substring(commonRootPrefix.Length);
+                        }
+
+                        string relPath = rawEntryPath.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
                         if (string.IsNullOrEmpty(relPath)) continue;
 
                         string destFile = Path.GetFullPath(Path.Combine(installDir, relPath));
@@ -492,6 +546,89 @@ namespace ProjectAlphaPlusInstaller
                 }
             }, ct);
             Log("All package files extracted and verified.");
+        }
+
+        private void BuildStandaloneDesktopLauncher(string installDir, string outputExePath)
+        {
+            Log("Compiling native standalone desktop executable: Project Alpha Plus.exe");
+            ReportProgress(94, "Building desktop launcher...", "Generating Project Alpha Plus.exe");
+
+            string cscPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"Microsoft.NET\Framework64\v4.0.30319\csc.exe");
+            if (!File.Exists(cscPath))
+            {
+                cscPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), @"Microsoft.NET\Framework\v4.0.30319\csc.exe");
+            }
+
+            string launcherSourcePath = Path.Combine(installDir, "_launcher_build.cs");
+            string launcherCode = @"using System;
+using System.Diagnostics;
+using System.IO;
+using System.Windows.Forms;
+
+[assembly: System.Reflection.AssemblyTitle(""Project Alpha Plus"")]
+[assembly: System.Reflection.AssemblyProduct(""Project Alpha Plus"")]
+[assembly: System.Reflection.AssemblyVersion(""1.0.0.0"")]
+
+internal static class LauncherProgram
+{
+    [STAThread]
+    private static void Main()
+    {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        string indexHtml = Path.Combine(baseDir, ""index.html"");
+        if (!File.Exists(indexHtml))
+        {
+            MessageBox.Show(""Could not find index.html in "" + baseDir, ""Project Alpha Plus"", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        string fileUri = new Uri(indexHtml).AbsoluteUri + ""?env=electron"";
+        string[] browserCandidates = new string[]
+        {
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @""Microsoft\Edge\Application\msedge.exe""),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @""Microsoft\Edge\Application\msedge.exe""),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @""Google\Chrome\Application\chrome.exe""),
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), @""Google\Chrome\Application\chrome.exe"")
+        };
+
+        foreach (string browser in browserCandidates)
+        {
+            if (File.Exists(browser))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = browser,
+                    Arguments = ""--app=\"" + fileUri + ""\"" --window-size=1366,840 --disable-features=Translate"",
+                    UseShellExecute = false
+                });
+                return;
+            }
+        }
+
+        Process.Start(new ProcessStartInfo { FileName = fileUri, UseShellExecute = true });
+    }
+}";
+            try
+            {
+                File.WriteAllText(launcherSourcePath, launcherCode);
+                var psi = new ProcessStartInfo
+                {
+                    FileName = cscPath,
+                    Arguments = string.Format("/target:winexe /optimize+ /out:\"{0}\" /r:System.dll /r:System.Windows.Forms.dll \"{1}\"", outputExePath, launcherSourcePath),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                using (Process p = Process.Start(psi))
+                {
+                    p.WaitForExit(15000);
+                }
+            }
+            finally
+            {
+                try { if (File.Exists(launcherSourcePath)) File.Delete(launcherSourcePath); } catch { }
+            }
         }
 
         private async Task CopyUnpackedBuildWithProgressAsync(string sourceDir, string installDir, CancellationToken ct)

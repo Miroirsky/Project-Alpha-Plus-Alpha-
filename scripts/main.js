@@ -8,6 +8,47 @@
 async function initApp() {
   const ThemeClass = window.ThemeManager;
   const SoundClass = window.SoundManager;
+
+  // 1. Initialize Theme & Sound early (works in both Web and Electron)
+  const themeManager = ThemeClass ? new ThemeClass() : null;
+  if (themeManager && typeof themeManager.init === "function") {
+    themeManager.init();
+  }
+
+  const soundManager = SoundClass ? new SoundClass() : null;
+  if (soundManager) {
+    window.soundManager = soundManager;
+  }
+
+  // 2. Detect whether the game is running in Electron or in a Web Browser
+  const WebLandingClass = window.WebLanding;
+  const isElectron = WebLandingClass && typeof WebLandingClass.isElectronEnvironment === "function"
+    ? WebLandingClass.isElectronEnvironment()
+    : Boolean(
+        (window.electronAPI && window.electronAPI.isElectron) ||
+        (typeof navigator !== "undefined" && /Electron\/\d+/i.test(navigator.userAgent || ""))
+      );
+
+  const webLanding = window.__paplusWebLandingInstance || (WebLandingClass ? new WebLandingClass({ themeManager, soundManager }) : null);
+  if (webLanding) {
+    window.__paplusWebLandingInstance = webLanding;
+    if (themeManager) webLanding.themeManager = themeManager;
+    if (soundManager) webLanding.soundManager = soundManager;
+  }
+
+  if (!isElectron) {
+    // Web Version: Show ONLY the new Web Showcase & Installer Download Menu
+    if (webLanding) {
+      webLanding.initWebMode();
+    }
+    return;
+  }
+
+  // Electron Version: Hide Web Landing Page and initialize the full game interface
+  if (webLanding) {
+    webLanding.hideForElectron();
+  }
+
   const SettingsClass = window.SettingsModal;
   const ExitClass = window.ExitHandler;
   const MusicClass = window.MusicPlayer;
@@ -33,37 +74,6 @@ async function initApp() {
   ) {
     console.error("Project Alpha Plus: Missing dependencies. Ensure all script files are loaded.");
     return;
-  }
-
-  // 1. Initialize Core Managers & Storage
-  const themeManager = new ThemeClass();
-  themeManager.init();
-
-  const soundManager = new SoundClass();
-  window.soundManager = soundManager;
-
-  // Detect whether the game is running in Electron or in a Web Browser
-  const WebLandingClass = window.WebLanding;
-  const isElectron = WebLandingClass && typeof WebLandingClass.isElectronEnvironment === "function"
-    ? WebLandingClass.isElectronEnvironment()
-    : Boolean(
-        (window.electronAPI && window.electronAPI.isElectron) ||
-        (typeof navigator !== "undefined" && /Electron\/\d+/i.test(navigator.userAgent || ""))
-      );
-
-  const webLanding = WebLandingClass ? new WebLandingClass({ themeManager, soundManager }) : null;
-
-  if (!isElectron) {
-    // Web Version: Show ONLY the new Web Showcase & Installer Download Menu
-    if (webLanding) {
-      webLanding.initWebMode();
-    }
-    return;
-  }
-
-  // Electron Version: Hide Web Landing Page and initialize the full game interface
-  if (webLanding) {
-    webLanding.hideForElectron();
   }
 
   const musicPlayer = new MusicClass({ soundManager });

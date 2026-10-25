@@ -72,8 +72,15 @@ class WebLanding {
    * Initializes and displays the Web Landing page (called only in Web Browser mode).
    */
   initWebMode() {
-    if (typeof document !== "undefined" && document.body) {
-      document.body.classList.add("is-web-mode");
+    if (typeof document !== "undefined") {
+      if (document.documentElement) {
+        document.documentElement.classList.remove("is-electron-mode");
+        document.documentElement.classList.add("is-web-mode");
+      }
+      if (document.body) {
+        document.body.classList.remove("is-electron-mode");
+        document.body.classList.add("is-web-mode");
+      }
     }
 
     if (this.mainMenuCard) {
@@ -82,6 +89,7 @@ class WebLanding {
     }
 
     if (this.view) {
+      this.view.style.display = "";
       this.view.classList.add("is-active");
       this.view.setAttribute("aria-hidden", "false");
     }
@@ -98,8 +106,15 @@ class WebLanding {
    * Ensures the Web Landing page is hidden when running inside Electron.
    */
   hideForElectron() {
-    if (typeof document !== "undefined" && document.body) {
-      document.body.classList.remove("is-web-mode");
+    if (typeof document !== "undefined") {
+      if (document.documentElement) {
+        document.documentElement.classList.remove("is-web-mode");
+        document.documentElement.classList.add("is-electron-mode");
+      }
+      if (document.body) {
+        document.body.classList.remove("is-web-mode");
+        document.body.classList.add("is-electron-mode");
+      }
     }
     if (this.view) {
       this.view.classList.remove("is-active");
@@ -116,6 +131,9 @@ class WebLanding {
    * Binds download actions, theme preview buttons, and smooth section navigation.
    */
   bindEvents() {
+    if (this._eventsBound) return;
+    this._eventsBound = true;
+
     const handleDownloadClick = (e) => {
       if (e && typeof e.preventDefault === "function") {
         e.preventDefault();
@@ -196,6 +214,30 @@ class WebLanding {
 
 if (typeof window !== "undefined") {
   window.WebLanding = WebLanding;
+
+  const autoBootWebLanding = () => {
+    try {
+      if (!WebLanding.isElectronEnvironment()) {
+        if (!window.__paplusWebLandingInstance) {
+          const themeManager = window.ThemeManager ? new window.ThemeManager() : null;
+          if (themeManager && typeof themeManager.init === "function") {
+            themeManager.init();
+          }
+          const soundManager = window.soundManager || (window.SoundManager ? new window.SoundManager() : null);
+          window.__paplusWebLandingInstance = new WebLanding({ themeManager, soundManager });
+        }
+        window.__paplusWebLandingInstance.initWebMode();
+      }
+    } catch (e) {}
+  };
+
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", autoBootWebLanding);
+    } else {
+      autoBootWebLanding();
+    }
+  }
 }
 if (typeof module !== "undefined" && module.exports) {
   module.exports = WebLanding;

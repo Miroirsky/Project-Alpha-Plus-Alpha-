@@ -7,37 +7,90 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%23322214%22/><circle cx=%2216%22 cy=%2216%22 r=%229%22 fill=%22none%22 stroke=%22%23F7D4BC%22 stroke-width=%222.5%22/><circle cx=%2216%22 cy=%2216%22 r=%223.5%22 fill=%22%23954132%22/></svg>">
 
   <!-- Modular Stylesheets -->
-  <link rel="stylesheet" href="styles/themes.css">
-  <link rel="stylesheet" href="styles/base.css">
-  <link rel="stylesheet" href="styles/menu.css">
-  <link rel="stylesheet" href="styles/playMenu.css">
-  <link rel="stylesheet" href="styles/createMenu.css">
-  <link rel="stylesheet" href="styles/mapEditor.css">
-  <link rel="stylesheet" href="styles/gameplay.css">
-  <link rel="stylesheet" href="styles/modal.css">
-  <link rel="stylesheet" href="styles/webLanding.css">
+  <link rel="stylesheet" href="styles/themes.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/base.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/menu.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/playMenu.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/createMenu.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/mapEditor.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/gameplay.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/modal.css?v=20261025-2">
+  <link rel="stylesheet" href="styles/webLanding.css?v=20261025-2">
+
+  <!-- Synchronous Environment Guard: Instantly activates Web Landing on GitHub Pages / Browsers before scripts load -->
+  <style>
+    html.is-web-mode,
+    body.is-web-mode {
+      overflow-y: auto !important;
+      overflow-x: hidden !important;
+      height: auto !important;
+      min-height: 100vh !important;
+    }
+    html.is-web-mode .app-container,
+    body.is-web-mode .app-container {
+      height: auto !important;
+      min-height: 100vh !important;
+      overflow-y: visible !important;
+      overflow-x: hidden !important;
+      display: block !important;
+      padding: 0 !important;
+    }
+    html.is-web-mode #main-menu-card,
+    body.is-web-mode #main-menu-card {
+      display: none !important;
+    }
+    html.is-web-mode #web-landing-view,
+    body.is-web-mode #web-landing-view {
+      display: flex !important;
+    }
+    html.is-electron-mode #web-landing-view,
+    body.is-electron-mode #web-landing-view {
+      display: none !important;
+    }
+  </style>
+  <script>
+    (function () {
+      try {
+        var isElec = false;
+        if (window.location && window.location.search) {
+          var params = new URLSearchParams(window.location.search);
+          var env = (params.get("env") || params.get("mode") || "").toLowerCase();
+          if (env === "electron" || env === "desktop") isElec = true;
+          else if (env === "web" || env === "browser") isElec = false;
+        }
+        if (!isElec) {
+          if (window.electronAPI && window.electronAPI.isElectron === true) isElec = true;
+          else if (typeof navigator !== "undefined" && /Electron\/\d+/i.test(navigator.userAgent || "")) isElec = true;
+          else if (window.process && window.process.versions && window.process.versions.electron) isElec = true;
+        }
+        document.documentElement.classList.add(isElec ? "is-electron-mode" : "is-web-mode");
+      } catch (e) {
+        document.documentElement.classList.add("is-web-mode");
+      }
+    })();
+  </script>
 
   <!-- Modular Scripts (compatible with file:// direct launch and http:// servers) -->
-  <script defer src="scripts/config.js"></script>
-  <script defer src="scripts/saveSystem.js"></script>
-  <script defer src="scripts/themeManager.js"></script>
-  <script defer src="scripts/soundManager.js"></script>
-  <script defer src="scripts/mapData.js"></script>
-  <script defer src="scripts/mediaStorage.js"></script>
-  <script defer src="scripts/mapStorage.js"></script>
-  <script defer src="scripts/modDownloader.js"></script>
-  <script defer src="scripts/musicPlayer.js"></script>
-  <script defer src="scripts/playMenu.js"></script>
-  <script defer src="scripts/playArea.js"></script>
-  <script defer src="scripts/mapEditor.js"></script>
-  <script defer src="scripts/createMenu.js"></script>
-  <script defer src="scripts/gameEngine.js"></script>
-  <script defer src="scripts/gameView.js"></script>
-  <script defer src="scripts/settingsModal.js"></script>
-  <script defer src="scripts/exitHandler.js"></script>
-  <script defer src="scripts/backgroundSquares.js"></script>
-  <script defer src="scripts/webLanding.js"></script>
-  <script defer src="scripts/main.js"></script>
+  <script defer src="scripts/config.js?v=20261025-2"></script>
+  <script defer src="scripts/saveSystem.js?v=20261025-2"></script>
+  <script defer src="scripts/themeManager.js?v=20261025-2"></script>
+  <script defer src="scripts/soundManager.js?v=20261025-2"></script>
+  <script defer src="scripts/mapData.js?v=20261025-2"></script>
+  <script defer src="scripts/mediaStorage.js?v=20261025-2"></script>
+  <script defer src="scripts/mapStorage.js?v=20261025-2"></script>
+  <script defer src="scripts/modDownloader.js?v=20261025-2"></script>
+  <script defer src="scripts/musicPlayer.js?v=20261025-2"></script>
+  <script defer src="scripts/playMenu.js?v=20261025-2"></script>
+  <script defer src="scripts/playArea.js?v=20261025-2"></script>
+  <script defer src="scripts/mapEditor.js?v=20261025-2"></script>
+  <script defer src="scripts/createMenu.js?v=20261025-2"></script>
+  <script defer src="scripts/gameEngine.js?v=20261025-2"></script>
+  <script defer src="scripts/gameView.js?v=20261025-2"></script>
+  <script defer src="scripts/settingsModal.js?v=20261025-2"></script>
+  <script defer src="scripts/exitHandler.js?v=20261025-2"></script>
+  <script defer src="scripts/backgroundSquares.js?v=20261025-2"></script>
+  <script defer src="scripts/webLanding.js?v=20261025-2"></script>
+  <script defer src="scripts/main.js?v=20261025-2"></script>
 </head>
 <body>
   <div class="app-container">
