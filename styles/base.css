@@ -287,25 +287,23 @@ select:focus-visible {
   transform: translateY(1px) scale(0.98) !important;
 }
 
-/* Base Theme Action Pill Button */
+/* Base Theme Action Button */
 .btn-theme-action {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  padding: 0.58rem 1.15rem;
-  border-radius: var(--btn-radius-md, 0.75rem);
-  font-size: 0.84rem;
+  gap: 0.5rem;
+  padding: 0.52rem 1rem;
+  border-radius: var(--btn-radius-md, 0.45rem);
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--palette-bg-primary, #FAE3E3);
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.88) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.98) 100%);
-  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.25);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    0 4px 12px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.3);
+  background: var(--palette-secondary, #322214);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.26);
+  box-shadow: 0 2px 8px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.22);
   overflow: hidden;
   white-space: nowrap;
 }
@@ -315,121 +313,60 @@ select:focus-visible {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1;
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  color: var(--palette-bg-secondary, #F7D4BC);
+  transition: transform 0.18s ease, color 0.18s ease;
 }
 
 .btn-theme-action:hover {
-  background: linear-gradient(180deg, var(--palette-secondary-hover, #442f1d) 0%, var(--palette-secondary, #322214) 100%);
+  background: var(--palette-secondary-hover, #442f1d);
   border-color: var(--palette-bg-secondary, #F7D4BC);
   color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 6px 18px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.45),
-    0 0 14px rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.32);
 }
 
 .btn-theme-action:hover .btn-icon,
 .btn-theme-action:hover > span:first-child {
-  transform: scale(1.15);
+  color: #ffffff;
 }
 
 /* ==========================================================================
    Folder Handling Action Buttons & Tile Components
    ========================================================================== */
 
-/* Universal Folder Button Accent */
 .btn-folder-action,
 .play-folder-btn,
 .btn-song-folder,
-.btn-editor-folder {
-  border-color: var(--folder-border, rgba(245, 158, 11, 0.4)) !important;
-  color: var(--folder-accent-hover, #fbbf24) !important;
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.92) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.98) 100%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(251, 191, 36, 0.2),
-    0 4px 12px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.3) !important;
+.btn-editor-folder,
+.play-import-btn,
+.btn-create-import,
+.play-downloader-btn {
+  border-color: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.28);
+  color: var(--palette-bg-primary, #FAE3E3);
+  background: var(--palette-secondary, #322214);
 }
 
 .btn-folder-action:hover,
 .play-folder-btn:hover,
 .btn-song-folder:hover,
-.btn-editor-folder:hover {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.2) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.95) 100%) !important;
-  border-color: var(--folder-accent-hover, #fbbf24) !important;
-  color: #ffffff !important;
-  transform: translateY(-2px) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 6px 20px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.45),
-    0 0 16px var(--folder-glow, rgba(245, 158, 11, 0.35)) !important;
-}
-
-.btn-folder-action:hover .btn-icon,
-.play-folder-btn:hover .btn-icon,
-.btn-song-folder:hover .export-icon,
-.btn-editor-folder:hover .btn-icon {
-  transform: scale(1.18) rotate(-4deg);
-}
-
-/* Import Folder Action (Emerald Tinted) */
-.play-import-btn,
-.btn-create-import {
-  border-color: var(--import-border, rgba(46, 213, 115, 0.42)) !important;
-  color: #ffffff !important;
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.92) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.98) 100%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(46, 213, 115, 0.25),
-    0 4px 12px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.3) !important;
-}
-
+.btn-editor-folder:hover,
 .play-import-btn:hover,
-.btn-create-import:hover {
-  background: linear-gradient(180deg, rgba(46, 213, 115, 0.22) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.95) 100%) !important;
-  border-color: var(--import-accent-hover, #48e288) !important;
-  transform: translateY(-2px) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 6px 20px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.45),
-    0 0 16px var(--import-glow, rgba(46, 213, 115, 0.35)) !important;
-}
-
-.play-import-btn:hover .btn-icon,
-.btn-create-import:hover .btn-icon {
-  transform: translateY(-2px) scale(1.15);
-}
-
-/* Download Action (Electric Cyan Tinted) */
-.play-downloader-btn {
-  border-color: var(--download-border, rgba(0, 212, 255, 0.4)) !important;
-  color: #ffffff !important;
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.92) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.98) 100%) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(0, 212, 255, 0.25),
-    0 4px 12px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.3) !important;
-}
-
+.btn-create-import:hover,
 .play-downloader-btn:hover {
-  background: linear-gradient(180deg, rgba(0, 212, 255, 0.22) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.95) 100%) !important;
-  border-color: var(--download-accent-hover, #38e1ff) !important;
-  transform: translateY(-2px) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 6px 20px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.45),
-    0 0 16px var(--download-glow, rgba(0, 212, 255, 0.35)) !important;
-}
-
-.play-downloader-btn:hover .btn-icon {
-  transform: scale(1.15) rotate(10deg);
+  background: var(--palette-secondary-hover, #442f1d);
+  border-color: var(--palette-bg-secondary, #F7D4BC);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.35);
 }
 
 /* Interactive Folder Tiles (Settings Modal & Dialogs) */
 .settings-folder-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 0.75rem;
+  gap: 0.65rem;
   width: 100%;
 }
 
@@ -437,19 +374,16 @@ select:focus-visible {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.95rem;
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.8) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.95) 100%);
-  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.25);
-  border-radius: var(--btn-radius-md, 0.75rem);
+  gap: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  background: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.75);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.24);
+  border-radius: var(--btn-radius-md, 0.45rem);
   color: var(--palette-bg-primary, #FAE3E3);
   text-align: left;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 4px 12px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.3);
   cursor: pointer;
   overflow: hidden;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s ease;
 }
 
 .btn-folder-tile::before {
@@ -459,65 +393,57 @@ select:focus-visible {
   left: 0;
   width: 3px;
   height: 100%;
-  background: var(--folder-accent, #f59e0b);
-  opacity: 0.6;
-  transition: opacity 0.2s ease, width 0.2s ease;
+  background: var(--palette-bg-secondary, #F7D4BC);
+  opacity: 0.45;
+  transition: opacity 0.18s ease;
 }
 
 .btn-folder-tile .folder-tile-icon {
-  font-size: 1.5rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--palette-bg-secondary, #F7D4BC);
   flex-shrink: 0;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .btn-folder-tile .folder-tile-content {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.12rem;
   min-width: 0;
 }
 
 .btn-folder-tile .folder-tile-title {
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #ffffff;
-  letter-spacing: 0.03em;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--palette-bg-primary, #FAE3E3);
+  letter-spacing: 0.05em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .btn-folder-tile .folder-tile-sub {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-family: var(--font-family-mono, monospace);
   color: var(--palette-bg-secondary, #F7D4BC);
-  opacity: 0.85;
+  opacity: 0.8;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .btn-folder-tile:hover {
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-hover-rgb, 68, 47, 29), 0.95) 0%, rgba(var(--palette-secondary-rgb, 50, 34, 20), 1) 100%);
-  border-color: var(--folder-accent-hover, #fbbf24);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 8px 24px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.5),
-    0 0 14px var(--folder-glow, rgba(245, 158, 11, 0.35));
+  background: var(--palette-secondary, #322214);
+  border-color: var(--palette-bg-secondary, #F7D4BC);
+  transform: translateY(-1px);
 }
 
 .btn-folder-tile:hover::before {
   opacity: 1;
-  width: 4px;
-}
-
-.btn-folder-tile:hover .folder-tile-icon {
-  transform: scale(1.18) rotate(-4deg);
 }
 
 .btn-folder-tile:active {
-  transform: translateY(1px) scale(0.98);
+  transform: translateY(0);
 }

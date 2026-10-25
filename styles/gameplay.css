@@ -144,18 +144,19 @@
 }
 
 .color-dot.red {
-  background: #954132;
-  box-shadow: 0 0 12px #954132;
+  background: #ff4757;
+  box-shadow: 0 0 10px rgba(255, 71, 87, 0.8);
 }
 
 .color-dot.blue {
-  background: #F7D4BC;
-  box-shadow: 0 0 12px #F7D4BC;
+  background: #00d4ff;
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.8);
 }
 
 .color-mode-text {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 800;
+  font-family: var(--font-family-mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--palette-bg-primary, #FAE3E3);
@@ -169,7 +170,7 @@
 }
 
 .hud-badge-label {
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -181,6 +182,7 @@
   font-size: 1.15rem;
   font-weight: 800;
   font-family: var(--font-family-mono);
+  font-variant-numeric: tabular-nums;
   color: var(--palette-bg-primary, #FAE3E3);
 }
 

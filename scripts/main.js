@@ -42,30 +42,8 @@ async function initApp() {
   const soundManager = new SoundClass();
   const musicPlayer = new MusicClass({ soundManager });
   const mapStorage = new MapStorageClass();
-  await mapStorage.initializationPromise;
   window.mapStorage = mapStorage;
   window.soundManager = soundManager;
-
-  // Initialize SaveSystem (Local File Saves & Profiles)
-  if (window.saveSystem) {
-    window.saveSystem.init().then(() => {
-      if (window.saveSystem.getHighscores) {
-        mapStorage.highscores = Object.assign({}, mapStorage.highscores, window.saveSystem.getHighscores());
-      }
-    });
-
-    window.saveSystem.addListener((event) => {
-      if (event === "slotSwitched" || event === "slotCreated" || event === "slotDeleted") {
-        if (mapStorage) {
-          mapStorage.highscores = window.saveSystem.getHighscores();
-          mapStorage.notify();
-        }
-        if (window.playMenu) {
-          window.playMenu.updateSongs(mapStorage.getAllMaps());
-        }
-      }
-    });
-  }
 
   // Initialize Mod & Track Downloader
   if (window.ModDownloader) {
@@ -299,6 +277,51 @@ async function initApp() {
   if (btnExit) {
     btnExit.addEventListener("click", () => {
       exitHandler.handleExit();
+    });
+  }
+
+  // 8. Complete asynchronous storage & save system initialization after UI buttons are bound
+  if (mapStorage.initializationPromise) {
+    mapStorage.initializationPromise
+      .then(() => {
+        playMenu.updateSongs(mapStorage.getAllMaps());
+        createMenu.renderMapsList();
+      })
+      .catch((err) => {
+        console.warn("MapStorage initialization warning:", err);
+      });
+  }
+
+  if (window.saveSystem) {
+    window.saveSystem
+      .init()
+      .then(() => {
+        if (window.saveSystem.getHighscores) {
+          mapStorage.highscores = Object.assign({}, mapStorage.highscores, window.saveSystem.getHighscores());
+          if (typeof mapStorage.saveHighScoresToStorage === "function") {
+            mapStorage.saveHighScoresToStorage();
+          }
+        }
+        playMenu.updateSongs(mapStorage.getAllMaps());
+        settingsModal.syncSaveSlots();
+      })
+      .catch((err) => {
+        console.warn("SaveSystem initialization warning:", err);
+      });
+
+    window.saveSystem.addListener((event) => {
+      if (event === "slotSwitched" || event === "slotCreated" || event === "slotDeleted" || event === "statsUpdated") {
+        if (mapStorage && window.saveSystem.getHighscores) {
+          mapStorage.highscores = Object.assign({}, mapStorage.highscores, window.saveSystem.getHighscores());
+          if (typeof mapStorage.saveHighScoresToStorage === "function") {
+            mapStorage.saveHighScoresToStorage();
+          }
+          mapStorage.notify();
+        }
+        if (window.playMenu) {
+          window.playMenu.updateSongs(mapStorage.getAllMaps());
+        }
+      }
     });
   }
 

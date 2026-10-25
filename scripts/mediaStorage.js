@@ -54,7 +54,9 @@ class MediaStorage {
    */
   static async saveBackgroundMedia(id, blobOrDataUrl, metadata = {}) {
     if (!id || !blobOrDataUrl) return id;
-    this.memoryCache.set(`bg_${id}`, blobOrDataUrl);
+    const cacheKey = id.startsWith("bg_") ? id : `bg_${id}`;
+    this.memoryCache.set(cacheKey, blobOrDataUrl);
+    this.memoryCache.set(id, blobOrDataUrl);
 
     try {
       const db = await this.getDB();
@@ -107,6 +109,11 @@ class MediaStorage {
    */
   static async saveAudio(id, blobOrDataUrl, metadata = {}) {
     if (!id || !blobOrDataUrl) return id;
+
+    if (this.activeBlobUrls && this.activeBlobUrls.has(id)) {
+      try { URL.revokeObjectURL(this.activeBlobUrls.get(id)); } catch (e) {}
+      this.activeBlobUrls.delete(id);
+    }
 
     let dataToStore = blobOrDataUrl;
     if (typeof blobOrDataUrl === "string" && blobOrDataUrl.startsWith("data:")) {
@@ -195,15 +202,23 @@ class MediaStorage {
         stored = await this.getAudio(id);
       }
     }
+    if (!this.activeBlobUrls) this.activeBlobUrls = new Map();
+    if (this.activeBlobUrls.has(id)) {
+      return this.activeBlobUrls.get(id);
+    }
     if (!stored) return null;
     if (typeof Blob !== "undefined" && stored instanceof Blob) {
-      return URL.createObjectURL(stored);
+      const url = URL.createObjectURL(stored);
+      this.activeBlobUrls.set(id, url);
+      return url;
     }
     if (typeof stored === "string") {
       if (stored.startsWith("data:")) {
         const blob = this.dataUrlToBlob(stored);
         if (blob) {
-          return URL.createObjectURL(blob);
+          const url = URL.createObjectURL(blob);
+          this.activeBlobUrls.set(id, url);
+          return url;
         }
       }
       return stored;
@@ -218,6 +233,10 @@ class MediaStorage {
   static async deleteAudio(id) {
     if (!id) return;
     this.memoryCache.delete(`audio_${id}`);
+    if (this.activeBlobUrls && this.activeBlobUrls.has(id)) {
+      try { URL.revokeObjectURL(this.activeBlobUrls.get(id)); } catch (e) {}
+      this.activeBlobUrls.delete(id);
+    }
     try {
       const db = await this.getDB();
       if (!db) return;
@@ -297,6 +316,10 @@ class MediaStorage {
    */
   static async getBackgroundMedia(id) {
     if (!id) return null;
+    const cacheKey = id.startsWith("bg_") ? id : `bg_${id}`;
+    if (this.memoryCache.has(cacheKey)) {
+      return this.memoryCache.get(cacheKey);
+    }
     if (this.memoryCache.has(id)) {
       return this.memoryCache.get(id);
     }
@@ -311,6 +334,7 @@ class MediaStorage {
         const req = store.get(id);
         req.onsuccess = () => {
           if (req.result && req.result.data) {
+            this.memoryCache.set(cacheKey, req.result.data);
             this.memoryCache.set(id, req.result.data);
             resolve(req.result.data);
           } else {
@@ -385,6 +409,8 @@ class MediaStorage {
    */
   static async deleteBackgroundMedia(id) {
     if (!id) return;
+    const cacheKey = id.startsWith("bg_") ? id : `bg_${id}`;
+    this.memoryCache.delete(cacheKey);
     this.memoryCache.delete(id);
     try {
       const db = await this.getDB();

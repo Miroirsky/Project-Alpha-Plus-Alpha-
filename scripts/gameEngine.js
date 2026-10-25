@@ -18,8 +18,8 @@ class GameEngine {
    * @param {Function} dependencies.onStateChange
    * @param {Function} dependencies.onSongEnd
    */
-  constructor({ song, notes = [], musicPlayer, soundManager, onStateChange = null, onSongEnd = null }) {
-    this.song = song;
+  constructor({ song = null, notes = [], musicPlayer = null, soundManager = null, onStateChange = null, onSongEnd = null } = {}) {
+    this.song = song || { name: "Untitled", id: "song_1" };
     this.musicPlayer = musicPlayer;
     this.soundManager = soundManager;
     this.onStateChange = onStateChange;
@@ -71,7 +71,8 @@ class GameEngine {
     this.bombHits = 0;
     this.wrongDirectionHits = 0; // Legacy compatibility
     this.totalBasePointsEarned = 0;
-    this.remainingNotes = this.totalNotes;
+    this.remainingNotes = this.notes.filter((n) => n.type !== "triangle" && n.type !== "bomb").length;
+    this.firstActiveNoteIndex = 0;
 
     // Highest theoretical score calculation
     this.highestPossibleScore = this.calculateHighestPossibleScore();
@@ -234,8 +235,11 @@ class GameEngine {
   onMouseMove(e) {
     const dx = e.clientX - this.playerOrb.x;
     const dy = e.clientY - this.playerOrb.y;
-    this.playerOrb.prevX = this.playerOrb.x;
-    this.playerOrb.prevY = this.playerOrb.y;
+    if (!this.playerOrb.hasMoved) {
+      this.playerOrb.prevX = e.clientX;
+      this.playerOrb.prevY = e.clientY;
+      this.playerOrb.hasMoved = true;
+    }
     this.playerOrb.vx = dx;
     this.playerOrb.vy = dy;
     this.playerOrb.x = e.clientX;
@@ -258,20 +262,72 @@ class GameEngine {
   }
 
   /**
-   * Computes the shortest angular distance between two angles in degrees (0° to 180°).
-   * Correctly handles 0°/360° boundary wraparound.
+   * Uses trigonometry (atan2) to compute the angle in degrees [0, 360)
+   * from a note's center (noteX, noteY) toward the mouse position (mouseX, mouseY).
+   * @param {number} noteX
+   * @param {number} noteY
+   * @param {number} mouseX
+   * @param {number} mouseY
+   * @returns {number}
+   */
+  getAngleTowardMouseDeg(noteX, noteY, mouseX, mouseY) {
+    const dx = mouseX - noteX;
+    const dy = mouseY - noteY;
+    const rad = Math.atan2(dy, dx);
+    return this.normalizeAngle360((rad * 180) / Math.PI);
+  }
+
+  /**
+   * Computes the shortest angular distance between two angles in degrees (0° to 180°)
+   * using trigonometry (atan2 of sin/cos difference) to handle 0°/360° boundary wraparound.
    * @param {number} deg1
    * @param {number} deg2
    * @returns {number}
    */
   getAngularDistanceDeg(deg1, deg2) {
-    const a1 = this.normalizeAngle360(deg1);
-    const a2 = this.normalizeAngle360(deg2);
-    let diff = Math.abs(a1 - a2);
-    if (diff > 180) {
-      diff = 360 - diff;
+    const diffRad = ((deg2 - deg1) * Math.PI) / 180;
+    const shortestRad = Math.atan2(Math.sin(diffRad), Math.cos(diffRad));
+    return Math.abs((shortestRad * 180) / Math.PI);
+  }
+
+  /**
+   * Finds the exact point where the mouse movement segment (x1, y1) -> (x2, y2)
+   * first enters the circle of radius r centered at (cx, cy).
+   * @param {number} cx
+   * @param {number} cy
+   * @param {number} r
+   * @param {number} x1
+   * @param {number} y1
+   * @param {number} x2
+   * @param {number} y2
+   * @returns {{ x: number, y: number }}
+   */
+  getCircleEntryPoint(cx, cy, r, x1, y1, x2, y2) {
+    const px = x1 - cx;
+    const py = y1 - cy;
+    const prevDistSq = px * px + py * py;
+    const rSq = r * r;
+
+    if (prevDistSq > rSq) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const a = dx * dx + dy * dy;
+      if (a > 0.0001) {
+        const b = px * dx + py * dy;
+        const c = prevDistSq - rSq;
+        const disc = b * b - a * c;
+        if (disc >= 0) {
+          const t = Math.max(0, Math.min(1, (-b - Math.sqrt(disc)) / a));
+          return {
+            x: x1 + t * dx,
+            y: y1 + t * dy
+          };
+        }
+        return { x: x1, y: y1 };
+      }
     }
-    return diff;
+
+    return { x: x2, y: y2 };
   }
 
   /**
@@ -471,22 +527,41 @@ class GameEngine {
     const prevOrbX = this.playerOrb.prevX || orbX;
     const prevOrbY = this.playerOrb.prevY || orbY;
 
-    this.notes.forEach((note) => {
+    // Advance first active index past notes that are fully expired or hit
+    while (
+      this.firstActiveNoteIndex < this.notes.length &&
+      (this.notes[this.firstActiveNoteIndex].hit || this.notes[this.firstActiveNoteIndex].isExpired) &&
+      this.currentTime > (this.notes[this.firstActiveNoteIndex].time + fullSizeHittableDuration + fadeDuration)
+    ) {
+      this.firstActiveNoteIndex++;
+    }
+
+    for (let i = this.firstActiveNoteIndex; i < this.notes.length; i++) {
+      const note = this.notes[i];
       if (note.hit || note.isExpired) {
-        return;
+        continue;
       }
 
       const spawnTime = note.time - growDuration;
 
       if (this.currentTime < spawnTime) {
         note.phase = "waiting";
-        return;
+        // Since notes are chronologically sorted, no subsequent notes have spawned yet
+        break;
       }
 
       const isTriangle = note.type === "triangle" || note.type === "bomb";
+      const isDirectional = note.type === "directional" || note.type === "arrow";
       const noteRadius = isTriangle ? triangleRadius : baseRadius;
       const noteX = playArea.toScreenX(note.x);
       const noteY = playArea.toScreenY(note.y);
+
+      const hitDist = isTriangle
+        ? (orbRadius + triangleRadius) * 1.12
+        : (orbRadius + baseRadius) * 1.15;
+      const dist = Math.hypot(orbX - noteX, orbY - noteY);
+      const seg = this.pointToSegmentDist(noteX, noteY, prevOrbX, prevOrbY, orbX, orbY);
+      const inHitZone = dist <= hitDist || seg.dist <= hitDist;
 
       // ----------------------------------------------------------------------
       // Phase 1: 1.0s Grow-In Phase (Notes grow to full size)
@@ -511,7 +586,7 @@ class GameEngine {
       //    Must be avoided! If touched or clicked by the player orb during its
       //    active window, deduct 200 points, reset combo, and trigger bomb explosion.
       //
-      // 2. NORMAL NOTE (RED / BLUE):
+      // 2. NORMAL & DIRECTIONAL NOTE (RED / BLUE):
       //    Requires matching player orb color.
       //    Perfect hit: hittableProgress <= 0.25 (first 250ms of full size): 200 points
       //    Good hit:    hittableProgress > 0.25: 150 down to 50 points based on timing
@@ -521,13 +596,22 @@ class GameEngine {
         note.currentRadius = noteRadius;
         note.hittableProgress = Math.max(0, Math.min(1, (this.currentTime - note.time) / fullSizeHittableDuration)); // 0 to 1
 
+        // Track the perimeter entry angle for directional notes during active phase using trigonometry.
+        // Locked on entry so moving across the center from a wrong direction never flips the angle!
+        if (isDirectional) {
+          if (!inHitZone) {
+            note.mouseInRange = false;
+            note.entryAngleDeg = null;
+          } else if (!note.mouseInRange) {
+            note.mouseInRange = true;
+            const entryPt = this.getCircleEntryPoint(noteX, noteY, hitDist, prevOrbX, prevOrbY, orbX, orbY);
+            note.entryAngleDeg = this.getAngleTowardMouseDeg(noteX, noteY, entryPt.x, entryPt.y);
+          }
+        }
+
         if (isTriangle) {
           // Triangle Bomb Note collision detection (any color touches or clicks -> penalty)
-          const hitDist = (orbRadius + triangleRadius) * 1.12;
-          const dist = Math.hypot(orbX - noteX, orbY - noteY);
-          const seg = this.pointToSegmentDist(noteX, noteY, prevOrbX, prevOrbY, orbX, orbY);
-
-          if (dist <= hitDist || seg.dist <= hitDist) {
+          if (inHitZone) {
             // Trigger bomb penalty: single triangle note triggers only once!
             note.hit = true;
             note.isBombHit = true;
@@ -544,47 +628,28 @@ class GameEngine {
             }
 
             this.triggerBombHitAnimation(noteX, noteY);
-            return;
+            continue;
           }
         } else {
           // Normal and Directional note hit detection (must match player orb color)
-          if (this.playerOrb.color === note.color) {
-            const hitDist = (orbRadius + baseRadius) * 1.15;
-            const dist = Math.hypot(orbX - noteX, orbY - noteY);
-            const seg = this.pointToSegmentDist(noteX, noteY, prevOrbX, prevOrbY, orbX, orbY);
-            if (dist <= hitDist || seg.dist <= hitDist) {
-              const isDirectional = note.type === "directional" || note.type === "arrow";
-              let approachAngleDeg = 0;
-              let angularDiff = 0;
+          if (this.playerOrb.color === note.color && inHitZone) {
+            let isAngleAccepted = true;
 
-              if (isDirectional) {
-                // Trigonometry to calculate approach vector
-                let vx = orbX - prevOrbX;
-                let vy = orbY - prevOrbY;
+            if (isDirectional) {
+              const reqAngle = typeof note.angle === "number" ? note.angle : 0;
+              const mouseAngleDeg = typeof note.entryAngleDeg === "number"
+                ? note.entryAngleDeg
+                : this.getAngleTowardMouseDeg(noteX, noteY, orbX, orbY);
+              const angularDiff = this.getAngularDistanceDeg(reqAngle, mouseAngleDeg);
 
-                if (Math.hypot(vx, vy) < 0.5 && this.mouseHistory.length >= 2) {
-                  const recent = this.mouseHistory[this.mouseHistory.length - 1];
-                  const older = this.mouseHistory[Math.max(0, this.mouseHistory.length - 4)];
-                  vx = recent.x - older.x;
-                  vy = recent.y - older.y;
-                }
+              // Note is hit only if the player is wrong by less than 90°
+              isAngleAccepted = angularDiff < 90;
+            }
 
-                if (Math.hypot(vx, vy) >= 0.5) {
-                  approachAngleDeg = this.normalizeAngle360(Math.atan2(vy, vx) * 180 / Math.PI);
-                } else {
-                  approachAngleDeg = typeof note.angle === "number" ? note.angle : 0;
-                }
-
-                const reqAngle = typeof note.angle === "number" ? note.angle : 0;
-                angularDiff = this.getAngularDistanceDeg(reqAngle, approachAngleDeg);
-              }
-
-              // Tolerance: ±180° (all directions accepted)
-              const isAngleAccepted = !isDirectional || angularDiff <= 180;
-
-              if (isAngleAccepted) {
+            if (isAngleAccepted) {
                 note.hit = true;
                 this.hitsCount++;
+                this.remainingNotes = Math.max(0, this.remainingNotes - 1);
                 this.combo++;
                 if (this.combo > this.maxCombo) this.maxCombo = this.combo;
 
@@ -618,12 +683,11 @@ class GameEngine {
                   if (this.soundManager) this.soundManager.playTestTone();
                   this.triggerGoodHitAnimation(noteX, noteY, note.color, totalPoints);
                 }
-                return;
+                continue;
               }
             }
           }
         }
-      }
 
       // ----------------------------------------------------------------------
       // Phase 3: Active window expired -> Miss (0 points for normal note, safe avoidance for bomb)
@@ -634,6 +698,7 @@ class GameEngine {
           if (!isTriangle) {
             // Normal note missed: resets combo, increments miss count
             this.missesCount++;
+            this.remainingNotes = Math.max(0, this.remainingNotes - 1);
             this.combo = 0;
 
             this.addEffect({
@@ -668,9 +733,17 @@ class GameEngine {
           note.isExpired = true;
         }
       }
-    });
 
-    this.remainingNotes = this.notes.filter((n) => !n.hit && !n.missed && n.type !== "triangle" && n.type !== "bomb").length;
+      // If the mouse is outside the note's radius at the end of this frame, reset entry lock
+      if (isDirectional && dist > hitDist) {
+        note.mouseInRange = false;
+        note.entryAngleDeg = null;
+      }
+    }
+
+    // Sync prevOrb position for the next frame's segment sweep calculation
+    this.playerOrb.prevX = orbX;
+    this.playerOrb.prevY = orbY;
 
     // Check if all notes in track have finished processing (hit or missed)
     if (this.lastNoteProcessedTime === null) {
@@ -678,7 +751,7 @@ class GameEngine {
         this.lastNoteProcessedTime = 0;
         this.lastNoteProcessedWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
       } else {
-        const allProcessed = this.notes.every((n) => n.hit || n.missed);
+        const allProcessed = (this.hitsCount + this.missesCount + this.bombHits) >= this.totalNotes;
         if (allProcessed) {
           this.lastNoteProcessedTime = this.currentTime;
           this.lastNoteProcessedWallTime = typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -904,7 +977,8 @@ class GameEngine {
         fx.type === "hit-ripple" ||
         fx.type === "switch-pulse" ||
         fx.type === "perfect-halo" ||
-        fx.type === "wrong-ripple"
+        fx.type === "wrong-ripple" ||
+        fx.type === "bomb-shockwave"
       ) {
         fx.radius += (fx.maxRadius - fx.radius) * 0.16 + 1.2;
         fx.opacity -= 0.038;
@@ -1065,10 +1139,14 @@ class GameEngine {
       misses: this.missesCount,
       perfectHits: this.perfectHits,
       goodHits: this.goodHits,
+      perfectCount: this.perfectHits,
+      normalCount: this.goodHits,
       bombHits: this.bombHits,
       wrongDirectionHits: this.bombHits,
       maxCombo: this.maxCombo,
       finalCombo: this.combo,
+      playedSeconds: Math.max(0, Math.round(this.currentTime)),
+      durationSeconds: Math.max(0, Math.round(this.duration || 0)),
       completionStatus,
       statusClass,
       isCompleted

@@ -31,8 +31,8 @@ assert(initialDefaults.length >= 3, "Expected at least 3 default tracks loaded i
 const songNames = initialDefaults.map(s => s.name);
 console.log("Discovered songs:", songNames);
 assert(songNames.includes("MoodMode"), "MoodMode should be detected.");
-assert(songNames.includes("Chance"), "Chance should be detected.");
-assert(songNames.includes("Beating Like Hearth"), "Beating Like Hearth should be detected.");
+assert(songNames.includes("Why Are You Running"), "Why Are You Running should be detected.");
+assert(songNames.includes("IDK"), "IDK should be detected.");
 
 // Now simulate "Easy Expansion": add a brand new default song into 'Default Tracks/' WITHOUT editing any code
 const expansionSongPath = path.join("Default Tracks", "ExpansionTestSong.json");

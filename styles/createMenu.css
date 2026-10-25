@@ -156,16 +156,13 @@
 .create-form-panel {
   display: flex;
   flex-direction: column;
-  padding: 1.6rem 1.75rem;
+  padding: 1.5rem 1.6rem;
   background-color: var(--palette-primary, #954132);
   background: var(--color-surface-gradient, linear-gradient(168deg, #9f4737 0%, #954132 55%, #88392d 100%));
-  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb), 0.35);
-  border-radius: 1rem;
-  box-shadow: 0 24px 64px rgba(var(--palette-secondary-rgb), 0.32),
-              0 8px 24px rgba(var(--palette-primary-rgb), 0.24),
-              inset 0 1px 0 rgba(var(--palette-bg-primary-rgb), 0.35);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb), 0.32);
+  border-radius: 0.6rem;
+  box-shadow: 0 18px 48px rgba(var(--palette-secondary-rgb), 0.28),
+              inset 0 1px 0 rgba(var(--palette-bg-primary-rgb), 0.25);
   overflow-y: auto;
   max-height: calc(100vh - 120px);
 }
@@ -978,62 +975,43 @@
 
 /* Song Catalog Folder Button (Reveal in Windows Explorer) */
 .btn-song-export {
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb), 0.88) 0%, rgba(var(--palette-secondary-rgb), 0.98) 100%);
-  border: 1.5px solid var(--folder-border, rgba(245, 158, 11, 0.45));
-  color: var(--folder-accent-hover, #fbbf24);
-  box-shadow:
-    inset 0 1px 0 rgba(251, 191, 36, 0.2),
-    0 2px 8px rgba(0, 0, 0, 0.25);
+  background: var(--palette-secondary, #322214);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb), 0.3);
+  color: var(--palette-bg-secondary, #F7D4BC);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .btn-song-export .export-icon {
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn-song-export:hover {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.22) 0%, rgba(var(--palette-secondary-rgb), 0.95) 100%);
-  border-color: var(--folder-accent-hover, #fbbf24);
+  background: var(--palette-secondary-hover, #442f1d);
+  border-color: var(--palette-bg-secondary, #F7D4BC);
   color: #ffffff;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    0 0 14px var(--folder-glow, rgba(245, 158, 11, 0.35));
-  transform: translateY(-2px);
-}
-
-.btn-song-export:hover .export-icon {
-  transform: scale(1.2) rotate(-5deg);
+  transform: translateY(-1px);
 }
 
 .btn-song-params {
-  background: linear-gradient(180deg, rgba(var(--palette-secondary-rgb), 0.85) 0%, rgba(var(--palette-secondary-rgb), 0.98) 100%);
-  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb), 0.3);
+  background: var(--palette-secondary, #322214);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb), 0.3);
   color: var(--palette-bg-primary, #FAE3E3);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 2px 8px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .btn-song-params .param-icon {
-  font-size: 1rem;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
-  transition: transform 0.25s ease;
 }
 
 .btn-song-params:hover {
-  background: linear-gradient(180deg, var(--palette-secondary-hover, #442f1d) 0%, var(--palette-secondary, #322214) 100%);
+  background: var(--palette-secondary-hover, #442f1d);
   border-color: var(--palette-bg-secondary, #F7D4BC);
   color: #ffffff;
-  box-shadow:
-    0 4px 16px rgba(var(--palette-secondary-rgb), 0.4),
-    0 0 12px rgba(var(--palette-bg-secondary-rgb), 0.3);
-  transform: translateY(-2px);
-}
-
-.btn-song-params:hover .param-icon {
-  transform: scale(1.15) rotate(45deg);
+  transform: translateY(-1px);
 }
 
 .btn-song-delete {

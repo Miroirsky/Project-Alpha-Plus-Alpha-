@@ -26,6 +26,16 @@ class PlayArea {
       : (typeof window !== "undefined" && window.innerHeight ? window.innerHeight : 1000);
 
     const safeMargin = typeof margin === "number" && margin >= 0 ? margin : 0;
+
+    if (
+      PlayArea._cachedMetrics &&
+      PlayArea._cachedW === w &&
+      PlayArea._cachedH === h &&
+      PlayArea._cachedMargin === safeMargin
+    ) {
+      return PlayArea._cachedMetrics;
+    }
+
     const availW = Math.max(50, w - safeMargin * 2);
     const availH = Math.max(50, h - safeMargin * 2);
 
@@ -33,6 +43,8 @@ class PlayArea {
     const size = Math.min(availW, availH);
     const offsetX = (w - size) / 2;
     const offsetY = (h - size) / 2;
+    const centerX = offsetX + size / 2;
+    const centerY = offsetY + size / 2;
 
     // Standard note diameter = 10% of the square's side length
     const bigDiameter = size * 0.10;
@@ -45,12 +57,14 @@ class PlayArea {
     // Proportional player orb radius
     const orbRadius = bigRadius * 0.88;
 
-    return {
+    const metrics = {
       viewportWidth: w,
       viewportHeight: h,
       size,
       offsetX,
       offsetY,
+      centerX,
+      centerY,
       bigDiameter,
       bigRadius,
       noteRadius,
@@ -121,6 +135,13 @@ class PlayArea {
         );
       }
     };
+
+    PlayArea._cachedMetrics = metrics;
+    PlayArea._cachedW = w;
+    PlayArea._cachedH = h;
+    PlayArea._cachedMargin = safeMargin;
+
+    return metrics;
   }
 
   /**

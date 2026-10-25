@@ -19,6 +19,7 @@ class MapStorage {
   constructor(config = null) {
     this.config = this.resolveConfig(config);
     this.deletedTrackIds = this.loadDeletedTrackIds();
+    this.unblacklistDefaultTracks();
     this.customMaps = this.loadCustomMaps();
     this.mapOverrides = this.loadMapOverrides();
     this.highscores = this.loadHighscores();
@@ -30,7 +31,7 @@ class MapStorage {
     this.difficultyOrders = this.loadDifficultyOrders();
 
     // In Electron standalone / browser environment, automatically detect custom song folders & default tracks
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && typeof window.document !== "undefined") {
       this.initializationPromise = this.autoDetectSongs();
       this.restoreCustomAudio();
     } else if (typeof process !== "undefined") {
@@ -209,11 +210,16 @@ class MapStorage {
 
   /**
    * Checks whether a track (by ID or name) has been deleted by the user.
+   * Default songs can NEVER be deleted.
    * @param {string} idOrName
    * @returns {boolean}
    */
   isTrackDeleted(idOrName) {
     if (!idOrName || !this.deletedTrackIds) return false;
+    // Default songs can never be marked or treated as deleted
+    if (this.isDefaultTrack({ id: idOrName, name: idOrName, _folderName: idOrName })) {
+      return false;
+    }
     const raw = String(idOrName);
     const clean = raw.toLowerCase().trim();
     return this.deletedTrackIds.has(raw) || this.deletedTrackIds.has(clean);
@@ -221,10 +227,14 @@ class MapStorage {
 
   /**
    * Marks a track ID or name as deleted and saves to storage.
+   * Default songs are strictly protected and can never be added to deleted list.
    * @param {string} idOrName
    */
   addDeletedTrackId(idOrName) {
     if (!idOrName) return;
+    if (this.isDefaultTrack({ id: idOrName, name: idOrName, _folderName: idOrName })) {
+      return;
+    }
     if (!this.deletedTrackIds) this.deletedTrackIds = new Set();
     this.deletedTrackIds.add(String(idOrName));
     this.deletedTrackIds.add(String(idOrName).toLowerCase().trim());
@@ -252,12 +262,21 @@ class MapStorage {
       if (t) {
         if (t.id) this.removeDeletedTrackId(t.id);
         if (t.name) this.removeDeletedTrackId(t.name);
+        if (t._folderName) this.removeDeletedTrackId(t._folderName);
       }
+    });
+    // Known protected default tracks
+    [
+      "MoodMode", "Why Are You Running", "IDK",
+      "custom_1792673284154_4614", "custom_1792674724366_2151", "custom_1792575111719_6316"
+    ].forEach((k) => {
+      this.removeDeletedTrackId(k);
     });
   }
 
   /**
    * Loads custom maps from localStorage.
+   * Ensures default tracks are never loaded as custom maps.
    * @returns {Array}
    */
   loadCustomMaps() {
@@ -271,6 +290,8 @@ class MapStorage {
             const seenIds = new Set();
             for (const m of parsed) {
               if (m && m.id && !seenIds.has(m.id) && !this.isTrackDeleted(m.id) && (!m.name || !this.isTrackDeleted(m.name))) {
+                // NEVER load default tracks into customMaps
+                if (this.isDefaultTrack(m)) continue;
                 seenIds.add(m.id);
                 const customMap = {
                   ...m,
@@ -518,6 +539,26 @@ class MapStorage {
   }
 
   /**
+   * Saves high scores to localStorage.
+   */
+  saveHighScoresToStorage() {
+    try {
+      if (typeof localStorage !== "undefined" && this.highscores) {
+        localStorage.setItem(HIGHSCORES_STORAGE_KEY, JSON.stringify(this.highscores));
+      }
+    } catch (err) {
+      console.warn("Unable to save highscores to localStorage:", err);
+    }
+  }
+
+  /**
+   * Alias for saveHighScoresToStorage.
+   */
+  saveHighscoresToStorage() {
+    this.saveHighScoresToStorage();
+  }
+
+  /**
    * Repairs and verifies audio paths for default tracks, healing any broken or stale blob URLs.
    * @param {Array} tracks
    */
@@ -567,6 +608,13 @@ class MapStorage {
             if (im && im.id) {
               // NEVER restore a track that has been deleted!
               if (this.isTrackDeleted(im.id) || (im.name && this.isTrackDeleted(im.name))) {
+                if (typeof window.MediaStorage.deleteMap === "function") {
+                  window.MediaStorage.deleteMap(im.id);
+                }
+                continue;
+              }
+              // NEVER restore a default track into custom maps!
+              if (this.isDefaultTrack(im) || (this.defaultTracks || []).some((d) => d.id === im.id)) {
                 if (typeof window.MediaStorage.deleteMap === "function") {
                   window.MediaStorage.deleteMap(im.id);
                 }
@@ -1125,8 +1173,21 @@ class MapStorage {
         }
       });
 
+      const folderTracks = this.loadDefaultTracksSyncNode() || [];
       if (rawItems.length > 0) {
-        this.defaultTracks = this.processDefaultTrackItems(rawItems);
+        const fileTracks = this.processDefaultTrackItems(rawItems);
+        const combined = [...folderTracks];
+        const seen = new Set(folderTracks.map(t => t.name));
+        fileTracks.forEach(t => {
+          if (!seen.has(t.name)) {
+            seen.add(t.name);
+            combined.push(t);
+          }
+        });
+        this.defaultTracks = combined;
+        this.applyMapOverrides();
+      } else if (folderTracks.length > 0) {
+        this.defaultTracks = folderTracks;
         this.applyMapOverrides();
       }
 
@@ -1134,9 +1195,17 @@ class MapStorage {
       try {
         if (fs.existsSync(defaultTracksDir) && validTrackFileNames.length > 0) {
           const manifestPath = path.join(defaultTracksDir, "manifest.json");
+          let existingTracks = [];
+          if (fs.existsSync(manifestPath)) {
+            try {
+              const m = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+              if (Array.isArray(m.tracks)) existingTracks = m.tracks;
+            } catch (e) {}
+          }
+          const merged = Array.from(new Set([...existingTracks, ...validTrackFileNames]));
           const manifestData = {
             updatedAt: new Date().toISOString(),
-            tracks: validTrackFileNames
+            tracks: merged
           };
           fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2), "utf8");
         }
@@ -1199,22 +1268,46 @@ class MapStorage {
     try {
       const res = await window.electronAPI.scanFolders();
       if (res) {
-        if (Array.isArray(res.songs)) {
-          this.customMaps = res.songs.map(s => {
-            s.isCustom = true;
-            s.isDefault = false;
-            this.normalizeSongDifficulties(s);
-            return s;
-          });
-        }
         if (Array.isArray(res.defaultTracks)) {
-          this.defaultTracks = res.defaultTracks.map(s => {
+          const seenDefIds = new Set();
+          const cleanDefaults = [];
+          for (const s of res.defaultTracks) {
+            if (!s || !s.id || seenDefIds.has(s.id)) continue;
+            seenDefIds.add(s.id);
             s.isCustom = false;
             s.isDefault = true;
             this.normalizeSongDifficulties(s);
-            return s;
-          });
+            cleanDefaults.push(s);
+          }
+          this.defaultTracks = cleanDefaults;
         }
+        if (Array.isArray(res.songs)) {
+          const defaultIds = new Set((this.defaultTracks || []).map((d) => d.id));
+          const defaultFolders = new Set((this.defaultTracks || []).map((d) => (d._folderName || "").toLowerCase().trim()));
+          const defaultNames = new Set((this.defaultTracks || []).map((d) => (d.name || "").toLowerCase().trim()));
+
+          const filteredSongs = [];
+          const seenCustomIds = new Set();
+          for (const s of res.songs) {
+            if (!s || !s.id || seenCustomIds.has(s.id)) continue;
+            const isCopy = (s.name || "").includes("(Copy)") || (s.id || "").includes("copy");
+            const folderLower = (s._folderName || "").toLowerCase().trim();
+            const nameLower = (s.name || "").toLowerCase().trim();
+
+            // Discard uncopied duplicates of default tracks
+            if (!isCopy && (defaultIds.has(s.id) || defaultFolders.has(folderLower) || defaultNames.has(nameLower))) {
+              continue;
+            }
+
+            s.isCustom = true;
+            s.isDefault = false;
+            this.normalizeSongDifficulties(s);
+            seenCustomIds.add(s.id);
+            filteredSongs.push(s);
+          }
+          this.customMaps = filteredSongs;
+        }
+        this.unblacklistDefaultTracks();
         this.notify();
         return this.getAllMaps();
       }
@@ -1240,16 +1333,17 @@ class MapStorage {
       if (fs.existsSync(manifestPath)) {
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-          if (Array.isArray(manifest.tracks)) trackFolders = manifest.tracks;
+          if (Array.isArray(manifest.tracks)) trackFolders = [...manifest.tracks];
         } catch (e) {}
       }
-      if (trackFolders.length === 0) {
+      try {
         const items = fs.readdirSync(defaultTracksDir);
         for (const item of items) {
+          if (trackFolders.some((f) => f.toLowerCase() === item.toLowerCase())) continue;
           const p = path.join(defaultTracksDir, item);
           if (fs.statSync(p).isDirectory()) trackFolders.push(item);
         }
-      }
+      } catch (e) {}
       const loaded = [];
       for (const t of trackFolders) {
         const tPath = path.join(defaultTracksDir, t);
@@ -1636,20 +1730,48 @@ class MapStorage {
 
   /**
    * Returns all maps (both Default Tracks and custom maps).
+   * Strictly deduplicates songs so each map only appears once.
    * @returns {Array}
    */
   getAllMaps() {
-    const all = [...(this.defaultTracks || []), ...this.customMaps];
+    const defaults = this.defaultTracks || [];
+    const customs = this.customMaps || [];
+    const seenIds = new Set();
+    const seenKeys = new Set();
+    const unique = [];
+
+    // 1. Default tracks always come first and are authoritative
+    for (const d of defaults) {
+      if (!d || !d.id) continue;
+      const key = `${(d.name || "").toLowerCase().trim()}::${(d.creator || "").toLowerCase().trim()}`;
+      seenIds.add(d.id);
+      seenKeys.add(key);
+      unique.push(d);
+    }
+
+    // 2. Custom maps: filter out any that duplicate a default track or another custom map
+    for (const c of customs) {
+      if (!c || !c.id) continue;
+      if (seenIds.has(c.id)) continue;
+      const key = `${(c.name || "").toLowerCase().trim()}::${(c.creator || "").toLowerCase().trim()}`;
+      const isCopy = (c.name || "").includes("(Copy)") || (c.id && c.id.includes("copy"));
+      if (!isCopy && seenKeys.has(key)) {
+        continue;
+      }
+      seenIds.add(c.id);
+      unique.push(c);
+    }
+
     if (Array.isArray(this.songOrder) && this.songOrder.length > 0) {
       const orderMap = new Map();
       this.songOrder.forEach((id, index) => orderMap.set(id, index));
-      all.sort((a, b) => {
+      unique.sort((a, b) => {
         const posA = orderMap.has(a.id) ? orderMap.get(a.id) : 999999;
         const posB = orderMap.has(b.id) ? orderMap.get(b.id) : 999999;
         return posA - posB;
       });
     }
-    return all;
+    return unique;
   }
 
   /**
@@ -1718,9 +1840,46 @@ class MapStorage {
     if (!track) return false;
     if (track.isDefault) return true;
     if (track._source === "default_disk") return true;
-    return (this.defaultTracks || []).some(
-      (m) => m.id === track.id || (m._folderName && m._folderName === track._folderName)
-    );
+
+    const trackId = String(track.id || "");
+    const trackName = String(track.name || "").toLowerCase().trim();
+    const trackFolder = String(track._folderName || "").toLowerCase().trim();
+
+    // Copies are explicitly custom and NEVER default tracks
+    if (trackName.includes("(copy)") || trackId.toLowerCase().includes("copy")) {
+      return false;
+    }
+
+    if (Array.isArray(this.defaultTracks)) {
+      const match = this.defaultTracks.some((m) => {
+        if (!m) return false;
+        if (m.id && m.id === trackId) return true;
+        if (m._folderName && m._folderName.toLowerCase().trim() === trackFolder) return true;
+        if (m.name && m.name.toLowerCase().trim() === trackName) return true;
+        return false;
+      });
+      if (match) return true;
+    }
+
+    // Hardcoded known default track signatures (MoodMode, Why Are You Running, IDK)
+    const knownDefaultIds = new Set([
+      "custom_1792673284154_4614", // MoodMode
+      "custom_1792674724366_2151", // Why Are You Running
+      "custom_1792575111719_6316", // IDK
+      "moodmode",
+      "why are you running",
+      "idk"
+    ]);
+
+    if (
+      knownDefaultIds.has(trackId.toLowerCase()) ||
+      knownDefaultIds.has(trackName) ||
+      knownDefaultIds.has(trackFolder)
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -1819,43 +1978,75 @@ class MapStorage {
         difficulties: sanitizedDifficulties
       };
       this.saveCustomMapsToStorage();
+      if (typeof window !== "undefined" && window.electronAPI && typeof this.saveSongFolderOnDisk === "function") {
+        this.saveSongFolderOnDisk(this.customMaps[customIndex]).catch(() => {});
+      }
       this.setSelectedSongId(this.customMaps[customIndex].id);
       this.notify();
       return this.customMaps[customIndex];
     }
 
-    // 2. If this is a default track, update in-place in defaultTracks directly
-    // (stays in Default Tracks, never copied into custom_songs)
-    const defIndex = (this.defaultTracks || []).findIndex(
-      (m) => m.id === updatedMap.id || (m._folderName && m._folderName === updatedMap._folderName)
-    );
-    if (defIndex !== -1) {
-      this.defaultTracks[defIndex] = {
-        ...this.defaultTracks[defIndex],
+    // 2. If this is a default track, save as a separate local copy in customMaps!
+    // Leaves the original default track untouched and pristine in defaultTracks.
+    if (this.isDefaultTrack(updatedMap)) {
+      const origDefault = (this.defaultTracks || []).find(
+        (m) => m.id === updatedMap.id || (m._folderName && m._folderName === updatedMap._folderName)
+      );
+      const origName = origDefault ? origDefault.name : (updatedMap.name || "Default Song");
+      const copyName = (updatedMap.name && updatedMap.name !== origName)
+        ? updatedMap.name
+        : `${origName} (Copy)`;
+      const copyId = `custom_copy_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+
+      const audioPath = updatedMap._localAudioPath || (origDefault && origDefault._localAudioPath) || updatedMap.file || (origDefault && origDefault.file);
+      const bgConfig = updatedMap.background || (origDefault && origDefault.background) || null;
+      const bgPath = updatedMap._localBgPath || (origDefault && origDefault._localBgPath) || (bgConfig && bgConfig.url);
+      const coverPath = updatedMap.cover || (origDefault && origDefault.cover) || trackCover;
+
+      const newCopy = {
         ...updatedMap,
-        id: updatedMap.id,
-        isCustom: false,
-        isDefault: true,
-        _source: "default_disk",
-        cover: trackCover,
+        id: copyId,
+        name: copyName,
+        isCustom: true,
+        isDefault: false,
+        _source: "custom_disk",
+        _folderName: copyName.replace(/[/\\?%*:|"<>]/g, "_").trim() || `song_${Date.now()}`,
+        _localAudioPath: audioPath,
+        _localBgPath: bgPath,
+        file: audioPath,
+        cover: coverPath,
+        background: bgConfig,
         nps: computedNps,
         notes: notesClone,
         difficulty: primaryKey,
         selectedDifficulty: activeDiff,
         difficulties: sanitizedDifficulties
       };
-      this.setSelectedSongId(this.defaultTracks[defIndex].id);
+
+      this.customMaps.unshift(newCopy);
+      this.removeDeletedTrackId(newCopy.id);
+      if (newCopy.name) this.removeDeletedTrackId(newCopy.name);
+      if (Array.isArray(this.songOrder)) {
+        this.songOrder.unshift(newCopy.id);
+        this.saveSongOrder(this.songOrder);
+      }
+      this.saveCustomMapsToStorage();
+      if (typeof window !== "undefined" && window.electronAPI && typeof this.saveSongFolderOnDisk === "function") {
+        this.saveSongFolderOnDisk(newCopy).catch(() => {});
+      }
+      this.setSelectedSongId(newCopy.id);
       this.notify();
-      return this.defaultTracks[defIndex];
+      return newCopy;
     }
 
     // 3. Fallback: custom track not yet in customMaps (e.g. freshly created custom map)
     const newCustomMap = {
       ...updatedMap,
-      id: updatedMap.id,
+      id: updatedMap.id || `custom_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       cover: trackCover,
       isCustom: true,
       isDefault: false,
+      _source: "custom_disk",
       nps: computedNps,
       notes: notesClone,
       difficulty: primaryKey,
@@ -1870,6 +2061,9 @@ class MapStorage {
       this.saveSongOrder(this.songOrder);
     }
     this.saveCustomMapsToStorage();
+    if (typeof window !== "undefined" && window.electronAPI && typeof this.saveSongFolderOnDisk === "function") {
+      this.saveSongFolderOnDisk(newCustomMap).catch(() => {});
+    }
     this.setSelectedSongId(newCustomMap.id);
     this.notify();
     return newCustomMap;
@@ -1886,6 +2080,12 @@ class MapStorage {
     if (!songId || !diffName) return false;
     const targetMap = this.getMap(songId);
     if (!targetMap) return false;
+
+    // Default tracks are protected presets and cannot have difficulties deleted!
+    if (this.isDefaultTrack(targetMap)) {
+      console.warn("Default tracks cannot have difficulties deleted:", songId);
+      return false;
+    }
 
     const map = this.customMaps.find((m) => m.id === songId);
     if (!map || !map.difficulties) return false;
@@ -1908,6 +2108,7 @@ class MapStorage {
   /**
    * Deletes a custom map permanently, ensuring it stays deleted across reloads and storage refreshes.
    * Cleans up from memory, localStorage, and IndexedDB (MediaStorage).
+   * Default songs are strictly protected and CANNOT be deleted.
    * @param {string} id
    * @returns {boolean}
    */
@@ -1915,6 +2116,12 @@ class MapStorage {
     if (!id) return false;
     const targetMap = this.getMap(id);
     if (!targetMap) return false;
+
+    // Default tracks CANNOT be deleted!
+    if (this.isDefaultTrack(targetMap)) {
+      console.warn("Default tracks cannot be deleted:", id);
+      return false;
+    }
 
     const targetName = targetMap.name || "";
 
@@ -1924,9 +2131,8 @@ class MapStorage {
       this.addDeletedTrackId(targetName);
     }
 
-    // Filter out from custom maps and default tracks
+    // Filter out from custom maps ONLY; defaultTracks is protected and never touched
     this.customMaps = this.customMaps.filter((m) => m.id !== id);
-    this.defaultTracks = (this.defaultTracks || []).filter((m) => m.id !== id);
 
     if (this.songOrder) {
       this.songOrder = this.songOrder.filter((songId) => songId !== id);

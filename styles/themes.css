@@ -74,42 +74,42 @@
   --menu-bg-secondary: var(--palette-bg-secondary);
 
   /* Universal Button & Folder Component Tokens */
-  --btn-radius-sm: 0.55rem;
-  --btn-radius-md: 0.75rem;
-  --btn-radius-lg: 0.95rem;
+  --btn-radius-sm: 0.35rem;
+  --btn-radius-md: 0.45rem;
+  --btn-radius-lg: 0.55rem;
   --btn-radius-pill: 999px;
 
-  --folder-accent: #f59e0b;
-  --folder-accent-hover: #fbbf24;
-  --folder-bg: rgba(245, 158, 11, 0.12);
-  --folder-bg-hover: rgba(245, 158, 11, 0.22);
-  --folder-border: rgba(245, 158, 11, 0.4);
-  --folder-border-hover: rgba(251, 191, 36, 0.8);
-  --folder-glow: rgba(245, 158, 11, 0.35);
+  --folder-accent: var(--palette-bg-secondary);
+  --folder-accent-hover: #ffffff;
+  --folder-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
+  --folder-bg-hover: rgba(var(--palette-bg-secondary-rgb), 0.18);
+  --folder-border: rgba(var(--palette-bg-secondary-rgb), 0.32);
+  --folder-border-hover: var(--palette-bg-secondary);
+  --folder-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
 
-  --download-accent: #00d4ff;
-  --download-accent-hover: #38e1ff;
-  --download-bg: rgba(0, 212, 255, 0.12);
-  --download-border: rgba(0, 212, 255, 0.4);
-  --download-glow: rgba(0, 212, 255, 0.35);
+  --download-accent: var(--palette-bg-secondary);
+  --download-accent-hover: #ffffff;
+  --download-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
+  --download-border: rgba(var(--palette-bg-secondary-rgb), 0.32);
+  --download-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
 
-  --import-accent: #2ed573;
-  --import-accent-hover: #48e288;
-  --import-bg: rgba(46, 213, 115, 0.12);
-  --import-border: rgba(46, 213, 115, 0.42);
-  --import-glow: rgba(46, 213, 115, 0.35);
+  --import-accent: var(--palette-bg-secondary);
+  --import-accent-hover: #ffffff;
+  --import-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
+  --import-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
+  --import-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
 
   --save-accent: #2ed573;
   --save-accent-hover: #48e288;
-  --save-bg: rgba(46, 213, 115, 0.16);
-  --save-border: rgba(46, 213, 115, 0.48);
-  --save-glow: rgba(46, 213, 115, 0.35);
+  --save-bg: rgba(46, 213, 115, 0.14);
+  --save-border: rgba(46, 213, 115, 0.45);
+  --save-glow: rgba(46, 213, 115, 0.22);
 
   --danger-accent: #ff4757;
   --danger-accent-hover: #ff6b81;
   --danger-bg: rgba(255, 71, 87, 0.12);
-  --danger-border: rgba(255, 71, 87, 0.35);
-  --danger-glow: rgba(255, 71, 87, 0.35);
+  --danger-border: rgba(255, 71, 87, 0.38);
+  --danger-glow: rgba(255, 71, 87, 0.22);
 }
 
 /* --------------------------------------------------------------------------

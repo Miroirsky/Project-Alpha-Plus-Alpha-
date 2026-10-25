@@ -436,12 +436,14 @@
 
       const stats = this.currentSlotData.stats;
       const score = Math.max(0, parseInt(results.score, 10) || 0);
-      const perfects = results.perfectCount || 0;
-      const normals = results.normalCount || 0;
-      const notesHit = perfects + normals;
+      const perfects = results.perfectHits !== undefined ? results.perfectHits : (results.perfectCount || 0);
+      const goods = results.goodHits !== undefined ? results.goodHits : (results.normalCount || 0);
+      const notesHit = results.hits !== undefined ? results.hits : (perfects + goods);
+      const playSeconds = Math.max(0, parseInt(results.playedSeconds, 10) || parseInt(results.durationSeconds, 10) || 0);
 
       stats.totalScore = (stats.totalScore || 0) + score;
       stats.totalNotesHit = (stats.totalNotesHit || 0) + notesHit;
+      stats.totalPlayTime = (stats.totalPlayTime || 0) + playSeconds;
 
       if (results.isCompleted) {
         stats.tracksCompleted = (stats.tracksCompleted || 0) + 1;
@@ -523,7 +525,12 @@
     }
   }
 
-  // Expose to window
-  window.SaveSystem = SaveSystem;
-  window.saveSystem = new SaveSystem();
+  // Expose to window and Node.js
+  if (typeof window !== "undefined") {
+    window.SaveSystem = SaveSystem;
+    window.saveSystem = new SaveSystem();
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = SaveSystem;
+  }
 })();

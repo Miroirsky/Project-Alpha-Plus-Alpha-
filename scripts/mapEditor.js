@@ -284,7 +284,8 @@ class MapEditor {
         this.difficulties[name] = {
           difficulty: name,
           notes: this.cloneNotes(diffVal.notes || []),
-          nps: diffVal.nps || 0
+          nps: diffVal.nps || 0,
+          color: diffVal.color || this.activeMap.color || "#00d4ff"
         };
       }
     }
@@ -293,7 +294,8 @@ class MapEditor {
       this.difficulties[defName] = {
         difficulty: defName,
         notes: this.cloneNotes(this.activeMap.notes || []),
-        nps: this.activeMap.nps || 0
+        nps: this.activeMap.nps || 0,
+        color: this.activeMap.color || "#00d4ff"
       };
     }
 
@@ -388,8 +390,9 @@ class MapEditor {
       label.textContent = `${diffName} (${count})`;
       tab.appendChild(label);
 
-      // Only allow deleting difficulty if more than one exists
-      if (diffNames.length > 1) {
+      // Only allow deleting difficulty if more than one exists and song is NOT a default track
+      const isDefSong = Boolean(this.mapStorage && this.activeMap && this.mapStorage.isDefaultTrack(this.activeMap));
+      if (!isDefSong && diffNames.length > 1) {
         const delBtn = document.createElement("span");
         delBtn.className = "tab-del-btn";
         delBtn.innerHTML = "&times;";
@@ -496,10 +499,12 @@ class MapEditor {
     if (!this.difficulties[diffName]) return;
 
     // Flush current active difficulty notes
+    const existingActiveDiff = this.difficulties[this.activeDifficulty];
     this.difficulties[this.activeDifficulty] = {
       difficulty: this.activeDifficulty,
       notes: this.cloneNotes(this.notes),
-      nps: this.computeNps(this.notes, this.duration)
+      nps: this.computeNps(this.notes, this.duration),
+      color: (existingActiveDiff && existingActiveDiff.color) || (this.activeMap && this.activeMap.color) || "#00d4ff"
     };
 
     // Auto-save state
@@ -508,10 +513,7 @@ class MapEditor {
     this.activeDifficulty = diffName;
     const targetDiff = this.difficulties[diffName];
     this.notes = this.cloneNotes(targetDiff.notes || []);
-    this.selectedNote = null;
-    if (this.noteInspector) {
-      this.noteInspector.classList.remove("is-visible");
-    }
+    this.selectNote(null);
 
     this.renderDifficultyTabs();
     this.renderTimeline();
@@ -613,6 +615,11 @@ class MapEditor {
    * @param {string} diffName
    */
   promptDeleteDifficulty(diffName) {
+    if (this.mapStorage && this.activeMap && this.mapStorage.isDefaultTrack(this.activeMap)) {
+      alert("Default songs cannot have difficulties deleted.");
+      return;
+    }
+
     const keys = Object.keys(this.difficulties || {});
     if (keys.length <= 1) {
       alert("A track must have at least one difficulty track.");
@@ -1041,18 +1048,26 @@ class MapEditor {
    * Attaches listeners for keyboard, mouse clicks, and timeline controls.
    */
   bindEvents() {
-    // Only bind canvas, window, and DOM events once to avoid duplicate firing
-    if (this.eventsBound) return;
+    // 1. Window and Canvas events are bound on open and unbound on close/testMap
+    if (!this.windowEventsBound) {
+      this.windowEventsBound = true;
+      window.addEventListener("keydown", this.boundKeyDown);
+      window.addEventListener("mouseup", this.boundMouseUp);
+      window.addEventListener("mousemove", this.boundMouseMove);
+
+      if (this.canvas) {
+        this.canvas.addEventListener("mousemove", this.boundMouseMove);
+        this.canvas.addEventListener("mousedown", this.boundMouseDown);
+        this.canvas.addEventListener("contextmenu", this.boundContextMenu);
+      }
+    }
+
+    // 2. DOM button and input controls are bound once to avoid duplicate firing
+    if (this.domEventsBound) return;
+    this.domEventsBound = true;
     this.eventsBound = true;
 
-    window.addEventListener("keydown", this.boundKeyDown);
-    window.addEventListener("mouseup", this.boundMouseUp);
-    window.addEventListener("mousemove", this.boundMouseMove);
-
     if (this.canvas) {
-      this.canvas.addEventListener("mousemove", this.boundMouseMove);
-      this.canvas.addEventListener("mousedown", this.boundMouseDown);
-      this.canvas.addEventListener("contextmenu", this.boundContextMenu);
       this.canvas.addEventListener("mouseenter", () => {
         this.mouse.isHovering = true;
       });
@@ -1083,6 +1098,7 @@ class MapEditor {
       this.clearBtn.addEventListener("click", () => {
         if (confirm("Are you sure you want to clear all mapped notes in this track?")) {
           this.notes = [];
+          this.selectNote(null);
           this.markDirty();
           this.saveMapState();
           this.renderTimelineMarkers();
@@ -1912,18 +1928,22 @@ class MapEditor {
 
     if (newDifficulty !== this.activeDifficulty) {
       const currentNotes = this.cloneNotes(this.notes);
+      const oldColor = (this.difficulties[this.activeDifficulty] && this.difficulties[this.activeDifficulty].color) || newColor;
       delete this.difficulties[this.activeDifficulty];
       this.difficulties[newDifficulty] = {
         difficulty: newDifficulty,
         notes: currentNotes,
-        nps: this.computeNps(currentNotes, newDurationSeconds)
+        nps: this.computeNps(currentNotes, newDurationSeconds),
+        color: oldColor
       };
       this.activeDifficulty = newDifficulty;
     } else {
+      const oldColor = (this.difficulties[this.activeDifficulty] && this.difficulties[this.activeDifficulty].color) || newColor;
       this.difficulties[this.activeDifficulty] = {
         difficulty: this.activeDifficulty,
         notes: this.cloneNotes(this.notes),
-        nps: this.computeNps(this.notes, newDurationSeconds)
+        nps: this.computeNps(this.notes, newDurationSeconds),
+        color: oldColor
       };
     }
 
@@ -1988,19 +2008,16 @@ class MapEditor {
    * Cleans up event listeners when closing editor.
    */
   unbindEvents() {
+    this.windowEventsBound = false;
     this.eventsBound = false;
+    this.isDraggingPlayhead = false;
+    if (this.timelineWrapper) {
+      this.timelineWrapper.classList.remove("is-dragging-playhead");
+    }
     if (typeof window !== "undefined" && window.removeEventListener) {
       window.removeEventListener("keydown", this.boundKeyDown);
       window.removeEventListener("mouseup", this.boundMouseUp);
       window.removeEventListener("mousemove", this.boundMouseMove);
-      if (this._windowTimelineMove) {
-        window.removeEventListener("mousemove", this._windowTimelineMove);
-        this._windowTimelineMove = null;
-      }
-      if (this._windowTimelineUp) {
-        window.removeEventListener("mouseup", this._windowTimelineUp);
-        this._windowTimelineUp = null;
-      }
     }
 
     if (this.canvas && typeof this.canvas.removeEventListener === "function") {
@@ -2672,12 +2689,19 @@ class MapEditor {
     }
 
     const totalSeconds = this.duration || 180;
+    const scrollLeft = this.timelineScroll ? this.timelineScroll.scrollLeft : 0;
+    const viewWidth = this.timelineScroll ? this.timelineScroll.clientWidth : (w || 1200);
+    const minSec = Math.max(0, (scrollLeft - 80) / pps);
+    const maxSec = Math.min(totalSeconds, (scrollLeft + viewWidth + 80) / pps);
+
+    const startMinor = Math.floor(minSec / minorStepSec) * minorStepSec;
+    const endMinor = Math.ceil(maxSec / minorStepSec) * minorStepSec;
 
     // Draw Minor Ticks
     ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let t = 0; t <= totalSeconds; t += minorStepSec) {
+    for (let t = startMinor; t <= endMinor; t += minorStepSec) {
       const x = Math.round(t * pps) + 0.5;
       ctx.moveTo(x, h - 5);
       ctx.lineTo(x, h);
@@ -2691,8 +2715,11 @@ class MapEditor {
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
 
+    const startMajor = Math.floor(minSec / majorStepSec) * majorStepSec;
+    const endMajor = Math.ceil(maxSec / majorStepSec) * majorStepSec;
+
     ctx.beginPath();
-    for (let t = 0; t <= totalSeconds; t += majorStepSec) {
+    for (let t = startMajor; t <= endMajor; t += majorStepSec) {
       const x = Math.round(t * pps) + 0.5;
       ctx.moveTo(x, h - 11);
       ctx.lineTo(x, h);
@@ -2740,9 +2767,16 @@ class MapEditor {
     ctx.fillStyle = "rgba(0, 212, 255, 0.4)";
     ctx.fillText("BLUE", 6, 64);
 
-    // Render every note on the timeline at its exact timestamp
+    // Render every note on the timeline at its exact timestamp within visible viewport
+    const scrollLeft = this.timelineScroll ? this.timelineScroll.scrollLeft : 0;
+    const viewWidth = this.timelineScroll ? this.timelineScroll.clientWidth : w;
+    const minVisibleX = scrollLeft - 80;
+    const maxVisibleX = scrollLeft + viewWidth + 80;
+
     this.notes.forEach((note) => {
       const x = note.time * pps;
+      if (x < minVisibleX || x > maxVisibleX) return;
+
       const isTriangle = note.type === "triangle" || note.type === "bomb";
       const isRed = note.color === "red";
       // Red lane: 22, Blue lane: 62, Triangle lane: centered at 42 (on line between lanes)
@@ -2804,8 +2838,8 @@ class MapEditor {
         ctx.lineWidth = isSelected ? 2.5 : 1.75;
         ctx.stroke();
 
-        // Mini arrow indicating angle
-        const angRad = ((note.angle || 0) * Math.PI) / 180;
+        // Mini arrow indicating angle (reversed: pointing inward from hit side)
+        const angRad = ((note.angle || 0) * Math.PI) / 180 + Math.PI;
         ctx.save();
         ctx.translate(x, laneCenterY);
         ctx.rotate(angRad);
@@ -2897,6 +2931,12 @@ class MapEditor {
 
     const maxDrawX = Math.min(w, Math.ceil((this.duration || 180) * pps));
 
+    // Viewport culling: only calculate and draw waveform bars in the visible scroll window
+    const scrollLeft = this.timelineScroll ? this.timelineScroll.scrollLeft : 0;
+    const viewWidth = this.timelineScroll ? this.timelineScroll.clientWidth : w;
+    const minX = Math.max(0, Math.floor((scrollLeft - 40) / stepPx) * stepPx);
+    const maxX = Math.min(maxDrawX, Math.ceil((scrollLeft + viewWidth + 40) / stepPx) * stepPx);
+
     // Prepare styles
     const grad = ctx.createLinearGradient(0, centerY - maxHalfHeight, 0, centerY + maxHalfHeight);
     grad.addColorStop(0.0, "rgba(255, 71, 87, 0.42)");   // Red lane top tint
@@ -2907,7 +2947,7 @@ class MapEditor {
 
     ctx.save();
 
-    for (let x = 0; x <= maxDrawX; x += stepPx) {
+    for (let x = minX; x <= maxX; x += stepPx) {
       const tStart = x / pps;
       const tEnd = (x + stepPx) / pps;
 
@@ -3090,10 +3130,12 @@ class MapEditor {
       }
 
       const cloned = this.cloneNotes(this.notes);
+      const prevDiffColor = (this.difficulties[this.activeDifficulty] && this.difficulties[this.activeDifficulty].color) || this.activeMap.color || "#00d4ff";
       this.difficulties[this.activeDifficulty] = {
         difficulty: this.activeDifficulty,
         notes: cloned,
-        nps: this.computeNps(cloned, this.duration)
+        nps: this.computeNps(cloned, this.duration),
+        color: prevDiffColor
       };
 
       this.activeMap.difficulties = { ...this.difficulties };
@@ -3368,22 +3410,23 @@ class MapEditor {
           ctx.fill();
           ctx.stroke();
 
-          // Thicker stroke on required hit side (arc along note.angle)
+          // Thicker stroke on required hit side (±90° arc along note.angle)
           const rad = ((note.angle || 0) * Math.PI) / 180;
           ctx.beginPath();
-          ctx.arc(noteX, noteY, radius, rad - Math.PI / 3, rad + Math.PI / 3);
+          ctx.arc(noteX, noteY, radius, rad - Math.PI / 2, rad + Math.PI / 2);
           ctx.strokeStyle = colorHex;
           ctx.lineWidth = Math.abs(timeDiff) < 0.1 ? 6.5 : 4.5;
           ctx.shadowColor = colorHex;
           ctx.shadowBlur = 15;
           ctx.stroke();
 
-          // Arrow pointing in direction note.angle
+          // Arrow pointing inward from the required hit side
+          const arrowRad = rad + Math.PI;
           const shaftLen = radius * 0.55;
-          const sx = noteX - Math.cos(rad) * radius * 0.45;
-          const sy = noteY - Math.sin(rad) * radius * 0.45;
-          const ex = noteX + Math.cos(rad) * shaftLen;
-          const ey = noteY + Math.sin(rad) * shaftLen;
+          const sx = noteX - Math.cos(arrowRad) * radius * 0.45;
+          const sy = noteY - Math.sin(arrowRad) * radius * 0.45;
+          const ex = noteX + Math.cos(arrowRad) * shaftLen;
+          const ey = noteY + Math.sin(arrowRad) * shaftLen;
 
           ctx.beginPath();
           ctx.moveTo(sx, sy);
@@ -3397,8 +3440,8 @@ class MapEditor {
           const headAngle = Math.PI / 5.5;
           ctx.beginPath();
           ctx.moveTo(ex, ey);
-          ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
-          ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+          ctx.lineTo(ex - Math.cos(arrowRad - headAngle) * headLen, ey - Math.sin(arrowRad - headAngle) * headLen);
+          ctx.lineTo(ex - Math.cos(arrowRad + headAngle) * headLen, ey - Math.sin(arrowRad + headAngle) * headLen);
           ctx.closePath();
           ctx.fillStyle = "#ffffff";
           ctx.fill();
@@ -3476,21 +3519,22 @@ class MapEditor {
       ctx.fill();
       ctx.stroke();
 
-      // Thicker stroke on required hit side (arc along angle)
+      // Thicker stroke on required hit side (±90° arc along angle)
       ctx.beginPath();
-      ctx.arc(startX, startY, radius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.arc(startX, startY, radius, rad - Math.PI / 2, rad + Math.PI / 2);
       ctx.strokeStyle = colorHex;
       ctx.lineWidth = 6;
       ctx.shadowColor = colorHex;
       ctx.shadowBlur = 18;
       ctx.stroke();
 
-      // Arrow
+      // Arrow (reversed: pointing inward from the required hit side)
+      const arrowRad = rad + Math.PI;
       const shaftLen = radius * 0.55;
-      const sx = startX - Math.cos(rad) * radius * 0.45;
-      const sy = startY - Math.sin(rad) * radius * 0.45;
-      const ex = startX + Math.cos(rad) * shaftLen;
-      const ey = startY + Math.sin(rad) * shaftLen;
+      const sx = startX - Math.cos(arrowRad) * radius * 0.45;
+      const sy = startY - Math.sin(arrowRad) * radius * 0.45;
+      const ex = startX + Math.cos(arrowRad) * shaftLen;
+      const ey = startY + Math.sin(arrowRad) * shaftLen;
 
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -3503,8 +3547,8 @@ class MapEditor {
       const headAngle = Math.PI / 5.5;
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
-      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad - headAngle) * headLen, ey - Math.sin(arrowRad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad + headAngle) * headLen, ey - Math.sin(arrowRad + headAngle) * headLen);
       ctx.closePath();
       ctx.fillStyle = "#ffffff";
       ctx.fill();

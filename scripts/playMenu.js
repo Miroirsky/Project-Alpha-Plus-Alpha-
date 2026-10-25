@@ -101,8 +101,8 @@ class PlayMenu {
       const loadErrors = this.mapStorage ? this.mapStorage.getLoadErrors() : [];
       const errorHtml = loadErrors.length > 0
         ? `
-          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 8px; font-size: 0.82rem; text-align: left; max-width: 380px;">
-            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">⚠️ Loading Diagnostics:</div>
+          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 6px; font-size: 0.82rem; text-align: left; max-width: 380px;">
+            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">Loading Diagnostics:</div>
             <ul style="margin: 0; padding-left: 18px; color: var(--color-secondary, #322214);">
               ${loadErrors.map(e => `<li><strong>${e.file}</strong>: ${e.error}</li>`).join("")}
             </ul>
@@ -114,7 +114,7 @@ class PlayMenu {
       emptyState.className = "song-list-empty";
       emptyState.innerHTML = `
         <div class="empty-state-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
         </div>
         <h4 class="empty-state-title">No Songs in Library</h4>
         <p class="empty-state-desc">
@@ -122,12 +122,12 @@ class PlayMenu {
         </p>
         <div class="empty-state-actions">
           <button type="button" class="btn-theme-action play-import-btn btn-empty-import" title="Import complete song folder">
-            <span class="btn-icon">📥</span>
-            <span>Import Song Folder</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            <span>Import Folder</span>
           </button>
           <button type="button" class="btn-theme-action play-folder-btn btn-empty-folder" title="Open Custom Songs folder on disk">
-            <span class="btn-icon">📂</span>
-            <span>Open Custom Songs Folder</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span>Open Songs Folder</span>
           </button>
         </div>
       `;
@@ -310,6 +310,9 @@ class PlayMenu {
    * Binds navigation and container events.
    */
   bindEvents() {
+    if (this.eventsBound) return;
+    this.eventsBound = true;
+
     // Back button
     if (this.backBtn) {
       this.backBtn.addEventListener("click", () => {
@@ -848,11 +851,11 @@ class PlayMenu {
               </div>
               <div class="selected-status-actions" style="display: flex; gap: 0.65rem; align-items: center; flex-wrap: wrap;">
                 <button id="btn-song-open-folder" class="btn-song-params-action btn-song-folder-action" type="button" title="Open this song's folder (track.ogg, background.mp4, notes.json) in Windows File Explorer">
-                  <span class="action-icon">📁</span>
+                  <span class="action-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
                   <span>Folder</span>
                 </button>
                 <button id="btn-song-edit-params" class="btn-song-params-action" type="button" title="Edit song parameters & metadata">
-                  <span class="action-icon">⚙</span>
+                  <span class="action-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                   <span>Parameters</span>
                 </button>
                 <button id="btn-start-gameplay" class="btn-start-action" type="button">

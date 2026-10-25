@@ -106,8 +106,12 @@ class GameView {
     }
 
     window.addEventListener("keydown", (e) => {
+      if (e.defaultPrevented) return;
       if (e.key === "Escape" && this.isOpen()) {
-        if (this.onExit) this.onExit();
+        if (this.resultsOverlay && this.resultsOverlay.classList.contains("is-active")) {
+          this.hideResults();
+          if (this.onExit) this.onExit();
+        }
       }
     });
   }
@@ -119,7 +123,7 @@ class GameView {
   setupSong(song) {
     const diffTag = song.difficulty ? ` [${song.difficulty}]` : "";
     if (this.trackTitle) this.trackTitle.textContent = `${song.name}${diffTag}`;
-    if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} &bull; Mapped by ${song.mapper || "Mapper"}`;
+    if (this.trackArtist) this.trackArtist.textContent = `By ${song.creator || "Artist"} \u2022 Mapped by ${song.mapper || "Mapper"}`;
     this.hideResults();
 
     if (this.exitBtn) {
@@ -324,8 +328,8 @@ class GameView {
    */
   drawCountdownOverlay(ctx, width, height, state) {
     const playArea = PlayArea.getMetrics(width, height);
-    const cx = playArea.centerX;
-    const cy = playArea.centerY;
+    const cx = Number.isFinite(playArea.centerX) ? playArea.centerX : (width / 2);
+    const cy = Number.isFinite(playArea.centerY) ? playArea.centerY : (height / 2);
     const remaining = Math.max(0, state.countdownRemaining || 0);
     const duration = state.countdownDuration || 3.0;
     const progress = Math.max(0, Math.min(1, remaining / duration));
@@ -688,19 +692,31 @@ class GameView {
    * Supports normal round notes (red/blue) and triangle bomb hazard notes (yellow/amber).
    */
   drawNotes(ctx, width, height, notes, currentTime) {
-    if (!notes) return;
+    if (!notes || notes.length === 0) return;
 
     const playArea = PlayArea.getMetrics(width, height);
     const growDuration = 1.0;
     const fullDuration = 1.0;
+    const fadeDuration = 0.5;
     const baseRadius = playArea.noteRadius || playArea.bigRadius;
     const triangleRadius = playArea.triangleRadius || (baseRadius * 1.05);
+    const noteCount = notes.length;
 
-    notes.forEach((note) => {
-      if (note.hit || note.isExpired) return;
+    for (let i = 0; i < noteCount; i++) {
+      const note = notes[i];
+      if (note.hit || note.isExpired) continue;
 
       const spawnTime = note.time - growDuration;
-      if (currentTime < spawnTime) return; // Not yet spawned
+      // Because notes are ordered chronologically by note.time,
+      // if currentTime < spawnTime, no subsequent note can have spawned yet.
+      if (currentTime < spawnTime) {
+        break;
+      }
+
+      // If the note has completely faded out beyond its max lifetime, skip rendering
+      if (currentTime > note.time + fullDuration + fadeDuration) {
+        continue;
+      }
 
       const isTriangle = note.type === "triangle" || note.type === "bomb";
       const noteRadius = isTriangle ? triangleRadius : baseRadius;
@@ -889,7 +905,7 @@ class GameView {
 
         ctx.restore();
       }
-    });
+    }
   }
 
   /**
@@ -1095,21 +1111,22 @@ class GameView {
       ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.42)" : "rgba(0, 212, 255, 0.42)";
       ctx.fill();
 
-      // Thicker stroke on required hit side (scaled with current radius)
+      // Thicker stroke on required hit side (±90° arc along angle)
       ctx.beginPath();
-      ctx.arc(x, y, currentRadius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.arc(x, y, currentRadius, rad - Math.PI / 2, rad + Math.PI / 2);
       ctx.strokeStyle = colorHex;
       ctx.lineWidth = 6;
       ctx.shadowColor = colorHex;
       ctx.shadowBlur = 20;
       ctx.stroke();
 
-      // Scaled directional arrow inside core
+      // Scaled directional arrow inside core (reversed: pointing inward from the hit side)
+      const arrowRad = rad + Math.PI;
       const shaftLen = currentRadius * 0.55;
-      const sx = x - Math.cos(rad) * currentRadius * 0.45;
-      const sy = y - Math.sin(rad) * currentRadius * 0.45;
-      const ex = x + Math.cos(rad) * shaftLen;
-      const ey = y + Math.sin(rad) * shaftLen;
+      const sx = x - Math.cos(arrowRad) * currentRadius * 0.45;
+      const sy = y - Math.sin(arrowRad) * currentRadius * 0.45;
+      const ex = x + Math.cos(arrowRad) * shaftLen;
+      const ey = y + Math.sin(arrowRad) * shaftLen;
 
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -1122,8 +1139,8 @@ class GameView {
       const headAngle = Math.PI / 5.5;
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
-      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad - headAngle) * headLen, ey - Math.sin(arrowRad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad + headAngle) * headLen, ey - Math.sin(arrowRad + headAngle) * headLen);
       ctx.closePath();
       ctx.fillStyle = "#ffffff";
       ctx.fill();
@@ -1141,21 +1158,22 @@ class GameView {
       ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.35)" : "rgba(0, 212, 255, 0.35)";
       ctx.fill();
 
-      // 2. Thicker stroke on required hit side (arc along angle)
+      // 2. Thicker stroke on required hit side (±90° arc along angle)
       ctx.beginPath();
-      ctx.arc(x, y, targetRadius, rad - Math.PI / 3, rad + Math.PI / 3);
+      ctx.arc(x, y, targetRadius, rad - Math.PI / 2, rad + Math.PI / 2);
       ctx.strokeStyle = colorHex;
       ctx.lineWidth = 6.5;
       ctx.shadowColor = colorHex;
       ctx.shadowBlur = 22;
       ctx.stroke();
 
-      // 3. Arrow pointing in required direction
+      // 3. Arrow pointing inward from the required hit side
+      const arrowRad = rad + Math.PI;
       const shaftLen = targetRadius * 0.58;
-      const sx = x - Math.cos(rad) * targetRadius * 0.48;
-      const sy = y - Math.sin(rad) * targetRadius * 0.48;
-      const ex = x + Math.cos(rad) * shaftLen;
-      const ey = y + Math.sin(rad) * shaftLen;
+      const sx = x - Math.cos(arrowRad) * targetRadius * 0.48;
+      const sy = y - Math.sin(arrowRad) * targetRadius * 0.48;
+      const ex = x + Math.cos(arrowRad) * shaftLen;
+      const ey = y + Math.sin(arrowRad) * shaftLen;
 
       ctx.beginPath();
       ctx.moveTo(sx, sy);
@@ -1168,8 +1186,8 @@ class GameView {
       const headAngle = Math.PI / 5.5;
       ctx.beginPath();
       ctx.moveTo(ex, ey);
-      ctx.lineTo(ex - Math.cos(rad - headAngle) * headLen, ey - Math.sin(rad - headAngle) * headLen);
-      ctx.lineTo(ex - Math.cos(rad + headAngle) * headLen, ey - Math.sin(rad + headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad - headAngle) * headLen, ey - Math.sin(arrowRad - headAngle) * headLen);
+      ctx.lineTo(ex - Math.cos(arrowRad + headAngle) * headLen, ey - Math.sin(arrowRad + headAngle) * headLen);
       ctx.closePath();
       ctx.fillStyle = "#ffffff";
       ctx.shadowColor = "#ffffff";

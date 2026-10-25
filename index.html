@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Alpha Plus</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎵</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22><rect width=%2232%22 height=%2232%22 rx=%226%22 fill=%22%23322214%22/><circle cx=%2216%22 cy=%2216%22 r=%229%22 fill=%22none%22 stroke=%22%23F7D4BC%22 stroke-width=%222.5%22/><circle cx=%2216%22 cy=%2216%22 r=%223.5%22 fill=%22%23954132%22/></svg>">
 
   <!-- Modular Stylesheets -->
   <link rel="stylesheet" href="styles/themes.css">
@@ -109,16 +109,16 @@
         </div>
         <div class="play-header-actions">
           <button id="btn-play-import-native" class="btn-theme-action play-header-btn play-import-btn" type="button" title="Import complete song folder (must contain notes.json, track.ogg/mp3, background.mp4)">
-            <span class="btn-icon">📥</span>
-            <span>Import Song Folder</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            <span>Import Folder</span>
           </button>
           <button id="btn-open-downloader" class="btn-theme-action play-header-btn play-downloader-btn" type="button" title="Download song package from URL">
-            <span class="btn-icon">🌐</span>
-            <span>Download Track</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
+            <span>Web Import</span>
           </button>
           <button id="btn-open-custom-songs" class="btn-theme-action play-header-btn play-folder-btn" type="button" title="Reveal Custom Songs folder on disk">
-            <span class="btn-icon">📂</span>
-            <span>Custom Songs</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+            <span>Songs Dir</span>
           </button>
         </div>
       </header>
@@ -156,8 +156,8 @@
         <div class="create-header-right">
           <span id="create-stats-badge" class="create-stats-pill" title="Total songs in catalog">0 Songs</span>
           <button id="btn-create-import" class="btn-create-import" type="button" aria-label="Import Song Folder" title="Import complete song folder (pack_01) containing notes.json, track.ogg, and background.mp4">
-            <span class="btn-icon">📥</span>
-            <span>Import Song Folder</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            <span>Import Folder</span>
           </button>
         </div>
       </header>
@@ -166,12 +166,12 @@
         <!-- Left Panel: Create New Map Form -->
         <section class="create-form-panel">
           <div class="panel-header-block">
-            <div class="panel-icon-wrap">
-              <span class="panel-icon">✦</span>
+            <div class="panel-icon-wrap" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </div>
             <div>
-              <h3 class="create-form-title">Create New Song</h3>
-              <p class="create-form-desc">Configure track details and import audio to start mapping.</p>
+              <h3 class="create-form-title">New Beatmap</h3>
+              <p class="create-form-desc">Configure metadata and audio source to initialize a track.</p>
             </div>
           </div>
 
@@ -179,25 +179,22 @@
             <!-- Section 1: Song Identity -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">1</span>
-                <span>Song Identity</span>
+                <span class="legend-number">01</span>
+                <span>Metadata</span>
               </legend>
 
               <div class="form-group">
-                <label for="new-map-name" class="form-label">Song Title <span class="required-star">*</span></label>
-                <div class="input-with-icon">
-                  <span class="input-icon">🎵</span>
-                  <input type="text" id="new-map-name" class="form-input" placeholder="e.g. Cyber Rush" required autocomplete="off">
-                </div>
+                <label for="new-map-name" class="form-label">Track Title <span class="required-star">*</span></label>
+                <input type="text" id="new-map-name" class="form-input" placeholder="e.g. Cyber Rush" required autocomplete="off">
               </div>
 
               <div class="form-row-2">
                 <div class="form-group">
-                  <label for="new-map-creator" class="form-label">Music Artist / Creator</label>
+                  <label for="new-map-creator" class="form-label">Artist</label>
                   <input type="text" id="new-map-creator" class="form-input" placeholder="e.g. SynthWave Studio" autocomplete="off">
                 </div>
                 <div class="form-group">
-                  <label for="new-map-mapper" class="form-label">Mapper Name</label>
+                  <label for="new-map-mapper" class="form-label">Mapper</label>
                   <input type="text" id="new-map-mapper" class="form-input" placeholder="e.g. AlphaMaker" autocomplete="off">
                 </div>
               </div>
@@ -206,18 +203,18 @@
             <!-- Section 2: Audio Source -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">2</span>
-                <span>Audio Track</span>
+                <span class="legend-number">02</span>
+                <span>Audio Source</span>
               </legend>
 
               <div class="form-group">
-                <label class="form-label">Upload Song Audio File <span class="required-star">*</span></label>
+                <label class="form-label">Audio File <span class="required-star">*</span></label>
                 <div class="file-upload-dropzone">
                   <input type="file" id="new-map-file" accept="audio/*" style="display: none;">
                   <label for="new-map-file" class="dropzone-label">
-                    <span class="dropzone-icon">🎧</span>
-                    <span class="dropzone-main-text">Choose Audio File...</span>
-                    <span class="dropzone-hint">Supports MP3, WAV, OGG, M4A, FLAC</span>
+                    <span class="dropzone-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></span>
+                    <span class="dropzone-main-text">Select Audio File</span>
+                    <span class="dropzone-hint">MP3, WAV, OGG, M4A, FLAC</span>
                   </label>
                   <span id="new-map-file-status" class="file-status-text">No audio file selected</span>
                 </div>
@@ -227,18 +224,18 @@
             <!-- Section 3: Arena Background (Video or Image) -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">3</span>
-                <span>Arena Background (Video or Image)</span>
+                <span class="legend-number">03</span>
+                <span>Arena Background</span>
               </legend>
 
               <div class="form-group">
-                <label class="form-label">Upload Background Video or Image</label>
+                <label class="form-label">Background Media (Optional)</label>
                 <div class="file-upload-dropzone">
                   <input type="file" id="new-map-bg-file" accept="video/*,image/*" style="display: none;">
                   <label for="new-map-bg-file" class="dropzone-label">
-                    <span class="dropzone-icon">🎬</span>
-                    <span class="dropzone-main-text">Choose Background Video / Image...</span>
-                    <span class="dropzone-hint">Supports MP4, WebM, PNG, JPG</span>
+                    <span class="dropzone-icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
+                    <span class="dropzone-main-text">Select Video or Image</span>
+                    <span class="dropzone-hint">MP4, WebM, PNG, JPG</span>
                   </label>
                   <span id="new-map-bg-status" class="file-status-text">Default Arena Grid</span>
                 </div>
@@ -248,12 +245,12 @@
             <!-- Section 4: Starting Difficulty Track -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">4</span>
-                <span>Initial Difficulty Track</span>
+                <span class="legend-number">04</span>
+                <span>Initial Difficulty</span>
               </legend>
 
               <div class="form-group">
-                <label for="new-map-difficulty" class="form-label">Difficulty Name</label>
+                <label for="new-map-difficulty" class="form-label">Difficulty Label</label>
                 <div class="diff-preset-chips" id="create-initial-diff-chips">
                   <button type="button" class="chip-btn" data-diff="Easy">Easy</button>
                   <button type="button" class="chip-btn is-selected" data-diff="Normal">Normal</button>
@@ -261,15 +258,15 @@
                   <button type="button" class="chip-btn" data-diff="Expert">Expert</button>
                   <button type="button" class="chip-btn" data-diff="Master">Master</button>
                 </div>
-                <input type="text" id="new-map-difficulty" class="form-input" placeholder="e.g. Normal, Easy, Skibidi..." value="Normal" maxlength="30" autocomplete="off">
+                <input type="text" id="new-map-difficulty" class="form-input" placeholder="e.g. Normal, Hard, Insane..." value="Normal" maxlength="30" autocomplete="off">
               </div>
             </fieldset>
 
             <!-- Section 5: Cover Artwork -->
             <fieldset class="form-section-card">
               <legend class="section-legend">
-                <span class="legend-number">5</span>
-                <span>Track Artwork / Cover</span>
+                <span class="legend-number">05</span>
+                <span>Jacket Artwork</span>
               </legend>
 
               <div class="artwork-picker-box">
@@ -312,8 +309,7 @@
             </fieldset>
 
             <button type="submit" id="btn-create-submit" class="btn-create-submit">
-              <span class="btn-submit-icon">✦</span>
-              <span>Create Song &amp; Open Editor</span>
+              <span>Initialize &amp; Open Editor</span>
               <span class="btn-arrow">&rarr;</span>
             </button>
           </form>
@@ -324,17 +320,19 @@
           <header class="create-list-header">
             <div class="list-header-left">
               <h3 class="create-list-title">Song Catalog</h3>
-              <p class="create-list-desc">Manage songs, difficulty tracks, parameters, and exports.</p>
+              <p class="create-list-desc">Manage beatmaps, difficulties, parameters, and local directories.</p>
             </div>
 
             <!-- Search and Filter Controls -->
             <div class="catalog-filter-bar">
               <div class="catalog-search-wrap">
-                <span class="search-icon">🔍</span>
-                <input type="text" id="create-search-input" class="catalog-search-input" placeholder="Search songs or mappers..." autocomplete="off">
+                <span class="search-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+                <input type="text" id="create-search-input" class="catalog-search-input" placeholder="Filter by title, artist, or mapper..." autocomplete="off">
               </div>
               <div class="catalog-filter-pills" id="create-filter-pills" role="tablist" aria-label="Filter Songs">
-                <button type="button" class="filter-pill is-active" data-filter="all">All Songs</button>
+                <button type="button" class="filter-pill is-active" data-filter="all">All</button>
+                <button type="button" class="filter-pill" data-filter="default">Default</button>
+                <button type="button" class="filter-pill" data-filter="custom">Custom</button>
               </div>
             </div>
           </header>
@@ -398,24 +396,24 @@
 
         <div class="editor-bar-right">
           <button id="btn-editor-save" class="btn-editor-action btn-editor-save" type="button" title="Save song directly to folder (Ctrl+S)">
-            <span class="btn-icon">💾</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
             <span>Save</span>
           </button>
           <button id="btn-editor-open-folder" class="btn-editor-action btn-editor-folder" type="button" title="Open this song folder in Windows Explorer">
-            <span class="btn-icon">📁</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
             <span>Folder</span>
           </button>
           <button id="btn-editor-bg" class="btn-editor-action btn-editor-bg" type="button" title="Configure playfield background image/video">
-            <span class="btn-icon">&#128444;</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></span>
             <span>Background</span>
           </button>
           <button id="btn-editor-params" class="btn-editor-action btn-editor-params" type="button" title="Edit track parameters & metadata">
-            <span class="btn-icon">&#9881;</span>
-            <span>Track Parameters</span>
+            <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+            <span>Parameters</span>
           </button>
           <button id="btn-editor-clear" class="btn-editor-action btn-editor-clear" type="button" title="Clear all notes">
             <span class="btn-icon">&times;</span>
-            <span>Clear Notes</span>
+            <span>Clear</span>
           </button>
           <!-- Test Button -->
           <button id="btn-editor-test" class="btn-editor-test" type="button" title="Playtest map (Enter)">
@@ -525,15 +523,14 @@
         <div class="editor-help-legend">
           <span class="legend-item"><span class="key-tag">Space</span> Play / Pause</span>
           <span class="legend-item"><span class="key-tag">&larr; / &rarr;</span> Step 0.1s</span>
-          <span class="legend-item"><span class="key-tag">Mouse Wheel</span> Scroll Timeline</span>
-          <span class="legend-item"><span class="key-tag">Ctrl + Wheel</span> Zoom Timeline</span>
-          <span class="legend-item"><span class="key-tag">Click Note</span> Select &amp; Edit Time</span>
-          <span class="legend-item"><span class="key-tag">1 / 2 / 3</span> Tool Select</span>
-          <span class="legend-item"><strong style="color: var(--palette-primary, #954132);">[Left Click]</strong> Terracotta</span>
-          <span class="legend-item"><strong style="color: var(--palette-bg-secondary, #F7D4BC);">[Right Click]</strong> Peach</span>
-          <span class="legend-item"><strong style="color: var(--palette-bg-primary, #FAE3E3);">[Directional]</strong> Drag to set angle</span>
-          <span class="legend-item"><strong style="color: #ffd32a;">[Bomb]</strong> Click Places Bomb</span>
-          <span class="legend-item"><span class="key-tag">Enter</span> Test Map</span>
+          <span class="legend-item"><span class="key-tag">Wheel</span> Scroll</span>
+          <span class="legend-item"><span class="key-tag">Ctrl + Wheel</span> Zoom</span>
+          <span class="legend-item"><span class="key-tag">1 / 2 / 3</span> Tool</span>
+          <span class="legend-item"><strong class="legend-color-red">[L-Click]</strong> Red Note</span>
+          <span class="legend-item"><strong class="legend-color-blue">[R-Click]</strong> Blue Note</span>
+          <span class="legend-item"><strong class="legend-color-dir">[Directional]</strong> Drag Angle</span>
+          <span class="legend-item"><strong class="legend-color-bomb">[Bomb]</strong> Place Hazard</span>
+          <span class="legend-item"><span class="key-tag">Enter</span> Test</span>
         </div>
       </footer>
     </section>
@@ -762,36 +759,36 @@
 
           <!-- Save Slots & Player Profile Section -->
           <div class="settings-section-divider">
-            <span>💾 Save Slots &amp; Local Progress</span>
+            <span>Save Slots &amp; Local Progress</span>
           </div>
 
           <div class="save-slots-panel">
             <div class="form-group" style="margin-bottom: 0.75rem;">
-              <label for="save-slot-select" class="form-label" style="font-size: 0.82rem;">Active Save Slot</label>
-              <select id="save-slot-select" class="form-select" style="width: 100%;">
+              <label for="save-slot-select" class="form-label">Active Profile</label>
+              <select id="save-slot-select" class="form-select">
                 <option value="slot_1">Slot 1: Player 1</option>
               </select>
             </div>
 
             <!-- Profile Summary Stats -->
-            <div class="slot-stats-card" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 10px; background: rgba(50,34,20,0.5); border-radius: 8px; border: 1px solid rgba(247,212,188,0.2); margin-bottom: 12px; text-align: center; font-size: 0.8rem;">
-              <div>
-                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">TOTAL SCORE</span>
-                <strong id="slot-stat-score" style="color: #fff; font-size: 0.95rem;">0</strong>
+            <div class="slot-stats-card">
+              <div class="slot-stat-cell">
+                <span class="slot-stat-label">Total Score</span>
+                <strong id="slot-stat-score" class="slot-stat-value">0</strong>
               </div>
-              <div>
-                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">NOTES HIT</span>
-                <strong id="slot-stat-notes" style="color: #fff; font-size: 0.95rem;">0</strong>
+              <div class="slot-stat-cell">
+                <span class="slot-stat-label">Notes Hit</span>
+                <strong id="slot-stat-notes" class="slot-stat-value">0</strong>
               </div>
-              <div>
-                <span style="display: block; color: var(--color-text-secondary, #F7D4BC); font-size: 0.72rem;">COMPLETED</span>
-                <strong id="slot-stat-cleared" style="color: #fff; font-size: 0.95rem;">0</strong>
+              <div class="slot-stat-cell">
+                <span class="slot-stat-label">Completed</span>
+                <strong id="slot-stat-cleared" class="slot-stat-value">0</strong>
               </div>
             </div>
 
             <!-- Save Slot Action Buttons -->
             <div class="slot-actions-grid">
-              <button id="btn-slot-new" type="button" class="btn-theme-action slot-action-btn" title="Create new save slot profile">+ New Slot</button>
+              <button id="btn-slot-new" type="button" class="btn-theme-action slot-action-btn" title="Create new save slot profile">+ New</button>
               <button id="btn-slot-rename" type="button" class="btn-theme-action slot-action-btn" title="Rename active save slot">Rename</button>
               <button id="btn-slot-export" type="button" class="btn-theme-action slot-action-btn" title="Export save slot file (.json)">Export</button>
               <button id="btn-slot-import" type="button" class="btn-theme-action slot-action-btn" title="Import save slot file (.json)">Import</button>
@@ -801,22 +798,22 @@
 
           <!-- Local Folders on Disk Section -->
           <div class="settings-section-divider">
-            <span>📁 Local Folders (Windows File Explorer)</span>
+            <span>Local Directories</span>
           </div>
 
           <div class="settings-folder-actions">
             <button id="btn-open-saves-dir" type="button" class="btn-folder-tile" title="Open player save profiles folder in Windows Explorer">
-              <span class="folder-tile-icon">📁</span>
+              <span class="folder-tile-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></span>
               <div class="folder-tile-content">
-                <span class="folder-tile-title">Saves Folder</span>
+                <span class="folder-tile-title">Saves Directory</span>
                 <span class="folder-tile-sub">Profiles &amp; Records</span>
               </div>
             </button>
             <button id="btn-open-songs-dir" type="button" class="btn-folder-tile" title="Open custom songs packages directory in Windows Explorer">
-              <span class="folder-tile-icon">📂</span>
+              <span class="folder-tile-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <div class="folder-tile-content">
-                <span class="folder-tile-title">Custom Songs</span>
-                <span class="folder-tile-sub">Song Folders &amp; Media</span>
+                <span class="folder-tile-title">Songs Directory</span>
+                <span class="folder-tile-sub">Beatmaps &amp; Media</span>
               </div>
             </button>
           </div>
@@ -1083,7 +1080,7 @@
               <button type="button" class="chip-btn" data-diff="Expert">Expert</button>
               <button type="button" class="chip-btn" data-diff="Master">Master</button>
             </div>
-            <input type="text" id="create-new-diff-name" class="form-input" placeholder="Or enter any custom name (e.g. Skibidi, Insane...)" required maxlength="30">
+            <input type="text" id="create-new-diff-name" class="form-input" placeholder="Or enter custom difficulty name (e.g. Insane, Challenge...)" required maxlength="30">
           </div>
           <div class="form-group">
             <label class="form-label">Initial Notes</label>
@@ -1125,7 +1122,7 @@
           <div class="params-note-callout" id="create-diff-params-subtitle">Song: ...</div>
           <div class="form-group">
             <label for="create-diff-param-name" class="form-label">Difficulty Name</label>
-            <input type="text" id="create-diff-param-name" class="form-input" required maxlength="30" placeholder="e.g. Easy, Normal, Skibidi...">
+            <input type="text" id="create-diff-param-name" class="form-input" required maxlength="30" placeholder="e.g. Easy, Normal, Insane...">
           </div>
           <div class="form-group">
             <label class="form-label">Accent / Theme Color</label>
@@ -1141,10 +1138,10 @@
               </div>
             </div>
           </div>
-          <div class="diff-stats-box" id="create-diff-stats-box" style="padding: 0.75rem 1rem; background: rgba(50,34,20,0.4); border-radius: 0.5rem; border: 1px solid rgba(247,212,188,0.25); font-size: 0.85rem; color: var(--color-text-secondary); display: flex; justify-content: space-around;">
-            <span>Notes: <strong id="create-diff-stats-notes" style="color: var(--color-text-primary);">0</strong></span>
-            <span>NPS: <strong id="create-diff-stats-nps" style="color: var(--color-text-primary);">0.0</strong></span>
-            <span>High Score: <strong id="create-diff-stats-score" style="color: var(--color-accent);">0</strong></span>
+          <div class="diff-stats-box" id="create-diff-stats-box">
+            <span>Notes: <strong id="create-diff-stats-notes">0</strong></span>
+            <span>NPS: <strong id="create-diff-stats-nps">0.0</strong></span>
+            <span>High Score: <strong id="create-diff-stats-score">0</strong></span>
           </div>
           <div class="modal-footer" style="margin-top: 1.25rem;">
             <button id="btn-cancel-create-diff-params" class="btn-editor-action" type="button">Cancel</button>
@@ -1358,23 +1355,24 @@
           </div>
 
           <!-- Progress Bar & Text -->
-          <div class="downloader-progress-container" style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px; margin-bottom: 1rem; border: 1px solid rgba(247,212,188,0.2);">
-            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 6px; color: var(--color-text-secondary, #F7D4BC);">
-              <span>Download Progress</span>
+          <div class="downloader-progress-container">
+            <div class="downloader-progress-header">
+              <span>Status</span>
               <span id="downloader-progress-text">Ready</span>
             </div>
-            <div style="width: 100%; height: 10px; background: rgba(255,255,255,0.1); border-radius: 5px; overflow: hidden;">
-              <div id="downloader-progress-bar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ff4757, #00d4ff); border-radius: 5px; transition: width 0.2s ease;"></div>
+            <div class="downloader-progress-track">
+              <div id="downloader-progress-bar" class="downloader-progress-bar"></div>
             </div>
           </div>
 
-          <div id="downloader-status-alert" class="downloader-alert" style="display: none; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 1rem;"></div>
+          <div id="downloader-status-alert" class="downloader-alert" style="display: none;"></div>
 
           <div class="modal-footer" style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: 1rem;">
             <button id="btn-downloader-open-folder" class="btn-editor-action" type="button" style="margin-right: auto;">
-              <span>📁 Open Songs Folder</span>
+              <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
+              <span>Open Songs Folder</span>
             </button>
-            <button id="btn-start-download" class="menu-btn menu-btn-primary" type="button">
+            <button id="btn-start-download" class="menu-btn menu-btn-primary" type="button" style="width: auto;">
               <span>Start Download</span>
             </button>
           </div>

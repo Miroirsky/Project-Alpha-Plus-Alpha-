@@ -763,8 +763,41 @@ function loadDefaultTracksFromDisk() {
 ipcMain.handle('tracks:scan-folders', async () => {
   const custom = scanCustomSongsFromDisk();
   const defaults = loadDefaultTracksFromDisk();
+
+  // Deduplicate: remove any errant uncopied duplicates of default tracks from custom_songs
+  const defaultIds = new Set(defaults.songs.map((s) => s.id));
+  const defaultFolders = new Set(defaults.songs.map((s) => (s._folderName || '').toLowerCase().trim()));
+  const defaultNames = new Set(defaults.songs.map((s) => (s.name || '').toLowerCase().trim()));
+
+  const filteredCustom = [];
+  const seenCustomIds = new Set();
+  for (const song of custom.songs) {
+    if (!song || !song.id) continue;
+    if (seenCustomIds.has(song.id)) continue;
+
+    const isCopy = (song.name || '').includes('(Copy)') || (song.id || '').includes('copy');
+    const folderLower = (song._folderName || '').toLowerCase().trim();
+    const nameLower = (song.name || '').toLowerCase().trim();
+
+    // If an uncopied custom_songs folder has the same ID or name as a default track, it is an accidental duplicate of a default track!
+    if (!isCopy && (defaultIds.has(song.id) || defaultFolders.has(folderLower) || defaultNames.has(nameLower))) {
+      if (song._folderPath && fs.existsSync(song._folderPath)) {
+        try {
+          fs.rmSync(song._folderPath, { recursive: true, force: true });
+          console.log(`Cleaned up errant default song duplicate from custom_songs: ${song._folderPath}`);
+        } catch (e) {
+          console.warn(`Could not delete duplicate folder ${song._folderPath}:`, e);
+        }
+      }
+      continue;
+    }
+
+    seenCustomIds.add(song.id);
+    filteredCustom.push(song);
+  }
+
   return {
-    songs: custom.songs,
+    songs: filteredCustom,
     defaultTracks: defaults.songs,
     errors: [...custom.errors, ...defaults.errors]
   };
@@ -780,7 +813,11 @@ ipcMain.handle('tracks:save-song-folder', async (event, folderName, songPackage)
     if (!songPackage) return { success: false, error: 'No song data provided' };
 
     const isDefaultTrack = Boolean(songPackage.isDefault || songPackage._source === 'default_disk');
-    const targetBaseDir = isDefaultTrack ? getDefaultTracksDir() : SONGS_DIR;
+    if (isDefaultTrack) {
+      console.warn('Direct modification of Default Tracks folder is prohibited; changes must be saved as a custom copy.');
+      return { success: false, error: 'Default tracks cannot be overwritten. Save as a copy instead.' };
+    }
+    const targetBaseDir = SONGS_DIR;
 
     // Choose clean, filesystem-safe folder name
     const rawName = folderName || songPackage._folderName || songPackage.id || songPackage.name || 'pack_01';

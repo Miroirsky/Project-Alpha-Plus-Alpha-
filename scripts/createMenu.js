@@ -927,20 +927,39 @@ class CreateMenu {
         difficulty
       });
 
+      let needsResave = false;
+
       if (this.importedBgUrl) {
+        const bgType = this.importedBgIsVideo ? "video" : "image";
+        const mediaKey = `bg_${newMap.id}_${Date.now()}`;
+        if (this.importedBgFile && typeof window !== "undefined" && window.MediaStorage) {
+          window.MediaStorage.saveBackgroundMedia(mediaKey, this.importedBgFile, {
+            name: this.importedBgFile.name || "Background",
+            type: bgType
+          });
+        }
         newMap.background = {
+          mediaId: this.importedBgFile ? mediaKey : undefined,
           url: this.importedBgUrl,
-          mediaType: this.importedBgIsVideo ? "video" : "image",
+          type: bgType,
+          mediaType: bgType,
+          name: (this.importedBgFile && this.importedBgFile.name) || (bgType === "video" ? "Custom Video" : "Custom Image"),
           fit: "cover",
           opacity: 0.7
         };
+        needsResave = true;
       }
 
       if (this.importedAudioFile && typeof window !== "undefined" && window.MediaStorage) {
         window.MediaStorage.saveAudio(newMap.id, this.importedAudioFile);
         newMap.hasStoredAudio = true;
+        needsResave = true;
       }
       this.importedAudioFile = null;
+
+      if (needsResave) {
+        this.mapStorage.saveMap(newMap);
+      }
 
       if (typeof window !== "undefined" && window.electronAPI && typeof this.mapStorage.saveSongFolderOnDisk === "function") {
         this.mapStorage.saveSongFolderOnDisk(newMap).catch(() => {});
@@ -1002,8 +1021,8 @@ class CreateMenu {
       const loadErrors = this.mapStorage ? this.mapStorage.getLoadErrors() : [];
       const errorHtml = loadErrors.length > 0
         ? `
-          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 8px; font-size: 0.82rem; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto;">
-            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">⚠️ Loading Diagnostics:</div>
+          <div class="empty-state-errors" style="margin-top: 12px; padding: 10px 14px; background: rgba(149, 65, 50, 0.12); border: 1px solid var(--color-primary, #954132); border-radius: 6px; font-size: 0.82rem; text-align: left; max-width: 420px; margin-left: auto; margin-right: auto;">
+            <div style="font-weight: 700; color: var(--color-primary, #954132); margin-bottom: 6px;">Loading Diagnostics:</div>
             <ul style="margin: 0; padding-left: 18px; color: var(--color-secondary, #322214);">
               ${loadErrors.map(e => `<li><strong>${e.file}</strong>: ${e.error}</li>`).join("")}
             </ul>
@@ -1015,16 +1034,16 @@ class CreateMenu {
         <div class="empty-maps-notice" style="text-align: center; padding: 28px 16px;">
           <p style="margin: 0 0 8px 0; font-weight: 700; font-size: 1.05rem;">No Songs in Library</p>
           <p style="margin: 0; font-size: 0.85rem; opacity: 0.85; max-width: 380px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-            Import a complete song folder (containing <code>notes.json</code>, track audio, and background video) or configure and create a new song on the left!
+            Import a complete song folder (containing <code>notes.json</code>, track audio, and background video) or configure and create a new song on the left.
           </p>
           ${errorHtml}
           <div style="margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
             <button type="button" class="btn-theme-action play-import-btn btn-empty-maps-import" title="Import complete song folder">
-              <span class="btn-icon">📥</span>
-              <span>Import Song Folder</span>
+              <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+              <span>Import Folder</span>
             </button>
             <label class="btn-theme-action btn-folder-action empty-maps-folder-btn" title="Select song folder from disk">
-              <span class="btn-icon">📁</span>
+              <span class="btn-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
               <span>Browse Folder</span>
               <input type="file" class="empty-maps-folder-input" webkitdirectory directory multiple style="display: none;">
             </label>
@@ -1121,6 +1140,7 @@ class CreateMenu {
       const songDiffs = this.mapStorage.getSongDifficulties(map) || map.difficulties || {};
       const diffKeys = Object.keys(songDiffs);
       const isExpanded = this.expandedSongIds.has(map.id);
+      const isDef = Boolean(map.isDefault || (this.mapStorage && this.mapStorage.isDefaultTrack(map)));
       const coverUrl = map.cover || map.image || map.artwork || "Assets/Tracks Placeholders/Default-0.png";
       const safeCoverUrl = coverUrl ? coverUrl.replace(/'/g, "%27") : "Assets/Tracks Placeholders/Default-0.png";
 
@@ -1149,7 +1169,7 @@ class CreateMenu {
         <div class="song-parent-info">
           <div class="song-parent-header">
             <span class="song-name">${map.name}</span>
-            <span class="map-tag-custom">Track Package</span>
+            <span class="${isDef ? 'map-tag-default' : 'map-tag-custom'}">${isDef ? 'Default' : 'Custom'}</span>
           </div>
           <div class="song-parent-meta">
             <span>Mapper: <strong>${map.mapper || "Anonymous"}</strong></span>
@@ -1163,14 +1183,14 @@ class CreateMenu {
         </div>
         <div class="song-parent-actions">
           <button class="btn-song-export btn-song-folder" type="button" aria-label="Open folder for ${map.name}" title="Reveal song folder (track.ogg, background.mp4, notes.json) in Windows Explorer">
-            <span class="export-icon">📁</span>
+            <span class="export-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>
             <span>Folder</span>
           </button>
           <button class="btn-song-params" type="button" aria-label="Song Parameters" title="Song metadata and global arena background">
-            <span class="param-icon">⚙</span>
+            <span class="param-icon" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
             <span>Parameters</span>
           </button>
-          <button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete song ${map.name}" title="Delete song">&times;</button>
+          ${!isDef ? `<button class="btn-map-delete btn-song-delete" type="button" aria-label="Delete song ${map.name}" title="Delete song">&times;</button>` : ""}
         </div>
       `;
 
@@ -1277,6 +1297,10 @@ class CreateMenu {
       if (songDelBtn) {
         songDelBtn.addEventListener("click", (e) => {
           e.stopPropagation();
+          if (this.mapStorage && this.mapStorage.isDefaultTrack(map)) {
+            alert("Default songs cannot be deleted.");
+            return;
+          }
           if (confirm(`Delete song "${map.name}" and all its difficulty tracks?`)) {
             if (this.soundManager) this.soundManager.playClick();
             this.mapStorage.deleteMap(map.id);
@@ -1296,7 +1320,7 @@ class CreateMenu {
           const noteCount = (diffData.notes && diffData.notes.length) || 0;
           const nps = typeof diffData.nps === "number" ? diffData.nps : 0;
           const diffColor = diffData.color || map.color || "#00d4ff";
-          const canDelete = diffKeys.length > 1;
+          const canDelete = !isDef && diffKeys.length > 1;
 
           const diffRow = document.createElement("div");
           diffRow.className = "difficulty-tree-row";
@@ -1317,7 +1341,7 @@ class CreateMenu {
                 <span>Edit</span>
               </button>
               <button class="btn-diff-action btn-diff-params" type="button" aria-label="Parameters for ${diffName}" title="Difficulty settings & rename">
-                <span class="param-icon">⚙</span>
+                <span class="param-icon" aria-hidden="true"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                 <span>Parameters</span>
               </button>
               ${
@@ -1417,6 +1441,10 @@ class CreateMenu {
           const delDiffBtn = diffRow.querySelector(".btn-diff-delete");
           if (delDiffBtn) {
             delDiffBtn.addEventListener("click", () => {
+              if (this.mapStorage && this.mapStorage.isDefaultTrack(map)) {
+                alert("Default songs cannot have difficulties deleted.");
+                return;
+              }
               if (confirm(`Delete difficulty track "${diffName}" from "${map.name}"?`)) {
                 if (this.soundManager) this.soundManager.playClick();
                 this.mapStorage.deleteDifficulty(map.id, diffName);

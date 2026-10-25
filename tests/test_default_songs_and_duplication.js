@@ -1,0 +1,150 @@
+/**
+ * @file test_default_songs_and_duplication.js
+ * Verification test suite for:
+ * 1. Immutability of default songs (cannot delete default songs or their difficulties).
+ * 2. Modifying a default song duplicates it ONLY ONCE as a copy.
+ * 3. Subsequent modifications to the copy update in-place without duplicating.
+ * 4. All duplication problems fixed (getAllMaps deduplication, no ghost duplicates).
+ */
+
+const assert = require("assert");
+const fs = require("fs");
+const path = require("path");
+
+// Mock browser globals for MapStorage
+global.window = {
+  APP_CONFIG: {
+    defaultTracksPath: "Default Tracks",
+    supportedTrackExtensions: [".json"]
+  },
+  DEFAULT_AUDIO_DATA: {}
+};
+
+const MapStorage = require("../scripts/mapStorage.js");
+
+console.log("=== STARTING DEFAULT SONGS & DUPLICATION VERIFICATION TESTS ===");
+
+const mapStorage = new MapStorage();
+const defaults = mapStorage.getDefaultMaps();
+console.log(`Loaded ${defaults.length} default tracks:`, defaults.map(d => d.name));
+
+assert(defaults.length >= 3, "Must have at least 3 default tracks loaded");
+const moodMode = defaults.find(d => d.name === "MoodMode");
+assert(moodMode, "MoodMode must exist as a default track");
+assert.strictEqual(mapStorage.isDefaultTrack(moodMode), true, "MoodMode must be identified as default track");
+
+// ---------------------------------------------------------------------------
+// TEST 1: Default songs CANNOT be deleted
+// ---------------------------------------------------------------------------
+console.log("\n[Test 1] Testing that default songs cannot be deleted...");
+const delResult = mapStorage.deleteMap(moodMode.id);
+assert.strictEqual(delResult, false, "deleteMap on a default track must return false");
+assert.strictEqual(mapStorage.isTrackDeleted(moodMode.id), false, "Default track ID must never be marked deleted");
+assert.strictEqual(mapStorage.isTrackDeleted(moodMode.name), false, "Default track name must never be marked deleted");
+
+const defaultsAfterDel = mapStorage.getDefaultMaps();
+assert.strictEqual(defaultsAfterDel.some(d => d.id === moodMode.id), true, "Default track must remain in defaultTracks");
+
+// Test that difficulties on default tracks cannot be deleted
+const diffKeys = Object.keys(moodMode.difficulties);
+if (diffKeys.length > 0) {
+  const diffDelRes = mapStorage.deleteDifficulty(moodMode.id, diffKeys[0]);
+  assert.strictEqual(diffDelRes, false, "deleteDifficulty on a default track must return false");
+}
+console.log("✓ Test 1 Passed: Default tracks and their difficulties are strictly protected against deletion.");
+
+// ---------------------------------------------------------------------------
+// TEST 2: Modifying a default song creates a copy
+// ---------------------------------------------------------------------------
+console.log("\n[Test 2] Modifying a default song saves as a copy...");
+const initialCustomCount = mapStorage.customMaps.length;
+const initialAllCount = mapStorage.getAllMaps().length;
+
+// Clone MoodMode and modify it (e.g. add a note)
+const modifiedMoodMode = {
+  ...moodMode,
+  difficulties: {
+    ...moodMode.difficulties,
+    Normal: {
+      ...moodMode.difficulties.Normal,
+      notes: [
+        ...(moodMode.difficulties.Normal ? moodMode.difficulties.Normal.notes : []),
+        { time: 99.9, color: "blue", type: "normal", x: 0.5, y: 0.5 }
+      ]
+    }
+  }
+};
+
+const savedCopy = mapStorage.saveMap(modifiedMoodMode);
+assert(savedCopy, "saveMap must return the saved object");
+assert.notStrictEqual(savedCopy.id, moodMode.id, "Saved copy must have a distinct unique ID");
+assert.strictEqual(savedCopy.name, "MoodMode (Copy)", "Saved copy must be named 'MoodMode (Copy)'");
+assert.strictEqual(savedCopy.isCustom, true, "Saved copy must be marked isCustom = true");
+assert.strictEqual(savedCopy.isDefault, false, "Saved copy must be marked isDefault = false");
+assert.strictEqual(mapStorage.customMaps.length, initialCustomCount + 1, "customMaps count should increase by 1");
+
+// Verify original default track is untouched
+const defaultMoodModeAfter = mapStorage.getDefaultMaps().find(d => d.id === moodMode.id);
+assert.strictEqual(defaultMoodModeAfter.name, "MoodMode", "Original default track name must remain MoodMode");
+assert.strictEqual(defaultMoodModeAfter.isDefault, true, "Original default track must still be default");
+
+console.log(`✓ Test 2 Passed: Modifying default song created copy '${savedCopy.name}' with ID ${savedCopy.id}`);
+
+// ---------------------------------------------------------------------------
+// TEST 3: Modifying the copy updates IN-PLACE without creating duplicates
+// ---------------------------------------------------------------------------
+console.log("\n[Test 3] Further modifying the copy updates in-place without duplicating...");
+const customCountBeforeSecondEdit = mapStorage.customMaps.length;
+const copyIdBeforeSecondEdit = savedCopy.id;
+
+// Further edit the copy
+const furtherEditedCopy = {
+  ...savedCopy,
+  bpm: 145,
+  difficulties: {
+    ...savedCopy.difficulties,
+    Normal: {
+      ...savedCopy.difficulties.Normal,
+      notes: [
+        ...savedCopy.difficulties.Normal.notes,
+        { time: 105.0, color: "red", type: "normal", x: 0.2, y: 0.8 }
+      ]
+    }
+  }
+};
+
+const secondSaved = mapStorage.saveMap(furtherEditedCopy);
+assert.strictEqual(secondSaved.id, copyIdBeforeSecondEdit, "Second save must keep the exact same copy ID");
+assert.strictEqual(mapStorage.customMaps.length, customCountBeforeSecondEdit, "customMaps count MUST NOT increase on second edit");
+assert.strictEqual(secondSaved.bpm, 145, "BPM update must be applied");
+
+console.log("✓ Test 3 Passed: Further edits to the copy updated in-place without duplicating.");
+
+// ---------------------------------------------------------------------------
+// TEST 4: getAllMaps deduplication check
+// ---------------------------------------------------------------------------
+console.log("\n[Test 4] Testing getAllMaps deduplication...");
+const allMaps = mapStorage.getAllMaps();
+const allIds = allMaps.map(m => m.id);
+const uniqueIds = new Set(allIds);
+assert.strictEqual(allIds.length, uniqueIds.size, "getAllMaps must have NO duplicate IDs!");
+
+// Simulate an accidental errant duplicate injected into customMaps (e.g. from legacy cache)
+mapStorage.customMaps.push({
+  id: moodMode.id,
+  name: "MoodMode",
+  isCustom: true,
+  isDefault: false
+});
+
+const dedupedMaps = mapStorage.getAllMaps();
+const dedupedIds = dedupedMaps.map(m => m.id);
+assert.strictEqual(new Set(dedupedIds).size, dedupedIds.length, "getAllMaps must filter out custom duplicates of default tracks");
+const moodModeCount = dedupedMaps.filter(m => m.id === moodMode.id).length;
+assert.strictEqual(moodModeCount, 1, "MoodMode must appear exactly ONCE in getAllMaps");
+
+console.log("✓ Test 4 Passed: getAllMaps strictly deduplicates all entries.");
+
+console.log("\n=======================================================");
+console.log("ALL DEFAULT SONGS & DUPLICATION TESTS PASSED SUCCESSFULLY!");
+console.log("=======================================================");
