@@ -1,0 +1,231 @@
+{
+  "id": "custom_1792933532150_9287",
+  "name": "Tutorial",
+  "mapper": "Miroirsky",
+  "creator": "Tutorial",
+  "duration": "00:30",
+  "bpm": 120,
+  "color": "#00d4ff",
+  "difficulty": "Easy",
+  "difficulties": {
+    "Easy": {
+      "difficulty": "Easy",
+      "notes": [
+        {
+          "time": 4.07,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.496,
+          "y": 0.587
+        },
+        {
+          "time": 6.95,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.329,
+          "y": 0.604
+        },
+        {
+          "time": 7.65,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.626,
+          "y": 0.595
+        },
+        {
+          "time": 12.91,
+          "color": "red",
+          "type": "normal",
+          "x": 0.502,
+          "y": 0.583
+        },
+        {
+          "time": 16.21,
+          "color": "red",
+          "type": "normal",
+          "x": 0.418,
+          "y": 0.6
+        },
+        {
+          "time": 16.75,
+          "color": "red",
+          "type": "normal",
+          "x": 0.568,
+          "y": 0.65
+        },
+        {
+          "time": 17.11,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.69,
+          "y": 0.741
+        },
+        {
+          "time": 22.61,
+          "color": "yellow",
+          "type": "triangle",
+          "x": 0.498,
+          "y": 0.587
+        },
+        {
+          "time": 26.31,
+          "color": "red",
+          "type": "normal",
+          "x": 0.286,
+          "y": 0.551
+        },
+        {
+          "time": 26.91,
+          "color": "yellow",
+          "type": "triangle",
+          "x": 0.474,
+          "y": 0.558
+        },
+        {
+          "time": 26.91,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.665,
+          "y": 0.555
+        },
+        {
+          "time": 27.27,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.628,
+          "y": 0.403
+        },
+        {
+          "time": 27.61,
+          "color": "blue",
+          "type": "normal",
+          "x": 0.5,
+          "y": 0.323
+        },
+        {
+          "time": 28.25,
+          "color": "blue",
+          "type": "directional",
+          "x": 0.329,
+          "y": 0.315,
+          "angle": 358
+        }
+      ],
+      "nps": 0.5
+    }
+  },
+  "notes": [
+    {
+      "time": 4.07,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.496,
+      "y": 0.587
+    },
+    {
+      "time": 6.95,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.329,
+      "y": 0.604
+    },
+    {
+      "time": 7.65,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.626,
+      "y": 0.595
+    },
+    {
+      "time": 12.91,
+      "color": "red",
+      "type": "normal",
+      "x": 0.502,
+      "y": 0.583
+    },
+    {
+      "time": 16.21,
+      "color": "red",
+      "type": "normal",
+      "x": 0.418,
+      "y": 0.6
+    },
+    {
+      "time": 16.75,
+      "color": "red",
+      "type": "normal",
+      "x": 0.568,
+      "y": 0.65
+    },
+    {
+      "time": 17.11,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.69,
+      "y": 0.741
+    },
+    {
+      "time": 22.61,
+      "color": "yellow",
+      "type": "triangle",
+      "x": 0.498,
+      "y": 0.587
+    },
+    {
+      "time": 26.31,
+      "color": "red",
+      "type": "normal",
+      "x": 0.286,
+      "y": 0.551
+    },
+    {
+      "time": 26.91,
+      "color": "yellow",
+      "type": "triangle",
+      "x": 0.474,
+      "y": 0.558
+    },
+    {
+      "time": 26.91,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.665,
+      "y": 0.555
+    },
+    {
+      "time": 27.27,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.628,
+      "y": 0.403
+    },
+    {
+      "time": 27.61,
+      "color": "blue",
+      "type": "normal",
+      "x": 0.5,
+      "y": 0.323
+    },
+    {
+      "time": 28.25,
+      "color": "blue",
+      "type": "directional",
+      "x": 0.329,
+      "y": 0.315,
+      "angle": 358
+    }
+  ],
+  "metadata": {},
+  "_folderName": "Tutorial",
+  "file": "track.mp3",
+  "background": {
+    "type": "video",
+    "fit": "cover",
+    "opacity": 0.7,
+    "name": "Tutorial.mp4",
+    "url": "background.mp4",
+    "mediaId": "bg_custom_1792933532150_9287_1792933532155",
+    "mediaType": "video"
+  },
+  "cover": "Assets/Tracks Placeholders/Default-0.png"
+}
