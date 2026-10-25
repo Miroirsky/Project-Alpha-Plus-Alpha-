@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="styles/mapEditor.css">
   <link rel="stylesheet" href="styles/gameplay.css">
   <link rel="stylesheet" href="styles/modal.css">
+  <link rel="stylesheet" href="styles/webLanding.css">
 
   <!-- Modular Scripts (compatible with file:// direct launch and http:// servers) -->
   <script defer src="scripts/config.js"></script>
@@ -35,6 +36,7 @@
   <script defer src="scripts/settingsModal.js"></script>
   <script defer src="scripts/exitHandler.js"></script>
   <script defer src="scripts/backgroundSquares.js"></script>
+  <script defer src="scripts/webLanding.js"></script>
   <script defer src="scripts/main.js"></script>
 </head>
 <body>
@@ -43,6 +45,273 @@
     <div id="main-menu-bg" class="main-menu-bg" aria-hidden="true">
       <div id="floating-squares-container" class="floating-squares-container"></div>
     </div>
+
+    <!-- Web Browser Showcase & Installer Download View (Shown ONLY in Web Browser, Hidden in Electron) -->
+    <section id="web-landing-view" class="web-landing-view" aria-label="Project Alpha Plus Official Web Portal" aria-hidden="true">
+      <header class="web-nav">
+        <a href="#web-overview" class="web-nav-brand">
+          <div class="web-brand-emblem" aria-hidden="true">&alpha;+</div>
+          <div class="web-brand-text">
+            <span class="web-brand-title">Project Alpha+</span>
+            <span class="web-brand-sub">Desktop Rhythm Arcade &bull; v1.0.0</span>
+          </div>
+        </a>
+
+        <nav class="web-nav-links" aria-label="Page Sections">
+          <a href="#web-overview" class="web-nav-link">Overview</a>
+          <a href="#web-features" class="web-nav-link">Features</a>
+          <a href="#web-installer-steps" class="web-nav-link">How to Install</a>
+          <a href="#web-specs" class="web-nav-link">Specifications</a>
+        </nav>
+
+        <div class="web-nav-actions">
+          <div class="web-theme-switcher" role="group" aria-label="Preview UI Themes">
+            <button type="button" class="web-theme-dot-btn is-active" data-theme="terracotta" style="background: #954132;" title="Terracotta Theme"></button>
+            <button type="button" class="web-theme-dot-btn" data-theme="midnight" style="background: #1B4965;" title="Midnight Theme"></button>
+            <button type="button" class="web-theme-dot-btn" data-theme="sage" style="background: #3A5A40;" title="Sage Theme"></button>
+            <button type="button" class="web-theme-dot-btn" data-theme="amethyst" style="background: #5A3E7A;" title="Amethyst Theme"></button>
+          </div>
+          <a id="btn-web-nav-download" href="PAPLUS-Downloader.exe" download="PAPLUS-Downloader.exe" class="web-nav-download-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span>Download .EXE</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="web-main-container">
+        <!-- Hero Section -->
+        <section id="web-overview" class="web-hero-section">
+          <div class="web-hero-left">
+            <div class="web-platform-pill">
+              <span class="web-platform-dot" aria-hidden="true"></span>
+              <span>Windows 10 / 11 (64-Bit) &bull; Standalone Desktop Edition</span>
+            </div>
+
+            <h1 class="web-hero-title">
+              Precision Rhythm Action Meets <span class="web-hero-title-accent">Full Beatmap Studio</span>.
+            </h1>
+
+            <p class="web-hero-desc">
+              <strong>Project Alpha Plus</strong> is a high-tempo desktop rhythm game built around a mouse-guided dual-polarity orb, trigonometric directional notes, explosive hazard bombs, and an integrated waveform map editor with custom video arenas.
+            </p>
+
+            <div class="web-download-cta-box">
+              <div class="web-download-btn-row">
+                <a id="btn-web-download-installer" href="PAPLUS-Downloader.exe" download="PAPLUS-Downloader.exe" class="btn-web-download-hero">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  <span class="btn-download-text-col">
+                    <span class="btn-download-main-label">Download PAPLUS-Downloader.exe</span>
+                    <span class="btn-download-sub-label">Official Windows Setup Wizard &amp; Standalone Game Installer</span>
+                  </span>
+                </a>
+              </div>
+
+              <div class="web-download-meta-list">
+                <span class="web-download-meta-item">&#10003; Custom Install Folder Picker</span>
+                <span class="web-download-meta-item">&#10003; Live Download &amp; Extract Progress</span>
+                <span class="web-download-meta-item">&#10003; Optional Desktop Shortcut</span>
+                <span class="web-download-meta-item">&#10003; Standalone .EXE</span>
+              </div>
+
+              <div id="web-download-status-banner" class="web-download-status-banner" role="status" aria-live="polite">
+                <span id="web-download-status-text">✓ Downloading PAPLUS-Downloader.exe — Launch it to install Project Alpha Plus.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="web-hero-right">
+            <div class="web-preview-card">
+              <div class="web-preview-topbar">
+                <div class="web-window-dots" aria-hidden="true">
+                  <span class="web-window-dot"></span>
+                  <span class="web-window-dot"></span>
+                  <span class="web-window-dot"></span>
+                </div>
+                <span>Project Alpha Plus.exe &mdash; Gameplay Preview</span>
+              </div>
+              <div class="web-preview-video-wrap">
+                <video id="web-preview-video" class="web-preview-video" src="Tutorial.mp4" muted loop playsinline controls poster="Assets/Tracks Placeholders/Default-0.png"></video>
+              </div>
+              <div class="web-preview-stats-strip">
+                <div class="web-preview-stat">
+                  <span class="web-preview-stat-val">3 Tracks</span>
+                  <span class="web-preview-stat-lbl">Bundled Classics</span>
+                </div>
+                <div class="web-preview-stat">
+                  <span class="web-preview-stat-val">&lt; 90&deg; Trig</span>
+                  <span class="web-preview-stat-lbl">Directional Vectors</span>
+                </div>
+                <div class="web-preview-stat">
+                  <span class="web-preview-stat-val">0.25x&ndash;2.0x</span>
+                  <span class="web-preview-stat-lbl">Waveform Studio</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section id="web-features" class="web-section">
+          <div class="web-section-header">
+            <span class="web-section-kicker">Core Architecture</span>
+            <h2 class="web-section-title">Built for Rhythm Players &amp; Mappers</h2>
+            <p class="web-section-subtitle">
+              The standalone desktop edition delivers zero-latency local file access, hardware-accelerated canvas rendering, and unrestricted custom beatmap authoring.
+            </p>
+          </div>
+
+          <div class="web-features-grid">
+            <article class="web-feature-card">
+              <div class="web-feature-card-top">
+                <div class="web-feature-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
+                </div>
+                <h3 class="web-feature-title">Dual-Polarity &amp; Trigonometric Directional Notes</h3>
+              </div>
+              <p class="web-feature-desc">
+                Guide your cursor orb across the square arena while toggling between Red (Left Click) and Blue (Right Click) polarities. Strike directional notes from the required approach vector (within &pm;90&deg; trigonometric tolerance) and evade high-voltage Triangle Bomb hazards.
+              </p>
+              <div class="web-feature-tags">
+                <span class="web-feature-tag">Red / Blue Polarity</span>
+                <span class="web-feature-tag">360&deg; Angle Vectors</span>
+                <span class="web-feature-tag">Hazard Bombs</span>
+              </div>
+            </article>
+
+            <article class="web-feature-card">
+              <div class="web-feature-card-top">
+                <div class="web-feature-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </div>
+                <h3 class="web-feature-title">Visual Beatmap Editor &amp; Waveform Scrubber</h3>
+              </div>
+              <p class="web-feature-desc">
+                Chart custom maps with a real-time decoded audio waveform timeline, frame-accurate 0.1s stepping, variable playback speed (0.25x to 2.0x), drag-to-angle directional note placement, and multi-difficulty tabs under a single song.
+              </p>
+              <div class="web-feature-tags">
+                <span class="web-feature-tag">Audio Waveform</span>
+                <span class="web-feature-tag">Multi-Difficulty</span>
+                <span class="web-feature-tag">Live Playtesting</span>
+              </div>
+            </article>
+
+            <article class="web-feature-card">
+              <div class="web-feature-card-top">
+                <div class="web-feature-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <h3 class="web-feature-title">Self-Contained Song Folders &amp; Video Arenas</h3>
+              </div>
+              <p class="web-feature-desc">
+                Songs are stored as clean, portable folders on disk (<code>notes.json</code>, <code>track.ogg</code>, <code>background.mp4</code>, <code>cover.png</code>). Import complete song folders in one click, customize MP4/WebM arena backgrounds, or fetch tracks via the built-in URL downloader.
+              </p>
+              <div class="web-feature-tags">
+                <span class="web-feature-tag">MP4 / WebM Backgrounds</span>
+                <span class="web-feature-tag">Direct Folder Save</span>
+                <span class="web-feature-tag">Protected Default Songs</span>
+              </div>
+            </article>
+
+            <article class="web-feature-card">
+              <div class="web-feature-card-top">
+                <div class="web-feature-icon" aria-hidden="true">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                </div>
+                <h3 class="web-feature-title">Multi-Slot Save Profiles &amp; SSS Ranking</h3>
+              </div>
+              <p class="web-feature-desc">
+                Compete for SSS (100.0%) to F rank emblems with detailed accuracy, combo, and hit-timing breakdowns. Manage multiple local player save slots, track lifetime notes hit and play time, and export/import profile backups anytime.
+              </p>
+              <div class="web-feature-tags">
+                <span class="web-feature-tag">SSS &ndash; F Grading</span>
+                <span class="web-feature-tag">Local Save Slots</span>
+                <span class="web-feature-tag">4 UI Color Themes</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- How the Downloader / Installer Works -->
+        <section id="web-installer-steps" class="web-section">
+          <div class="web-section-header">
+            <span class="web-section-kicker">Standalone Setup</span>
+            <h2 class="web-section-title">How PAPLUS-Downloader.exe Works</h2>
+            <p class="web-section-subtitle">
+              Our dedicated Windows downloader &amp; installer sets up the complete standalone desktop game in four quick steps.
+            </p>
+          </div>
+
+          <div class="web-steps-grid">
+            <div class="web-step-card">
+              <span class="web-step-num">01</span>
+              <h3 class="web-step-title">Download Installer</h3>
+              <p class="web-step-desc">
+                Click the <strong>Download PAPLUS-Downloader.exe</strong> button and launch the executable on your Windows PC.
+              </p>
+            </div>
+
+            <div class="web-step-card">
+              <span class="web-step-num">02</span>
+              <h3 class="web-step-title">Choose Install Folder</h3>
+              <p class="web-step-desc">
+                Pick your preferred installation directory using the built-in folder browser, or keep the default local programs path.
+              </p>
+            </div>
+
+            <div class="web-step-card">
+              <span class="web-step-num">03</span>
+              <h3 class="web-step-title">Progress &amp; Shortcut</h3>
+              <p class="web-step-desc">
+                Watch live download and file extraction progress bars and choose whether to create a Windows Desktop &amp; Start Menu shortcut.
+              </p>
+            </div>
+
+            <div class="web-step-card">
+              <span class="web-step-num">04</span>
+              <h3 class="web-step-title">Launch Standalone .EXE</h3>
+              <p class="web-step-desc">
+                Click <strong>Launch Game</strong> in the installer or double-click <code>Project Alpha Plus.exe</code> to play offline anytime!
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- System Specifications & Package Manifest -->
+        <section id="web-specs" class="web-specs-banner">
+          <div class="web-specs-col">
+            <h3 class="web-specs-title">System Requirements</h3>
+            <ul class="web-specs-list">
+              <li><span class="web-spec-key">Operating System</span><span class="web-spec-val">Windows 10 / Windows 11 (64-bit)</span></li>
+              <li><span class="web-spec-key">Processor</span><span class="web-spec-val">Dual-Core 2.0 GHz or higher</span></li>
+              <li><span class="web-spec-key">Memory</span><span class="web-spec-val">4 GB RAM</span></li>
+              <li><span class="web-spec-key">Disk Space</span><span class="web-spec-val">~400 MB free space</span></li>
+              <li><span class="web-spec-key">Input</span><span class="web-spec-val">Mouse (Left / Right Click) + Keyboard</span></li>
+            </ul>
+          </div>
+
+          <div class="web-specs-col">
+            <h3 class="web-specs-title">Installer Package Info</h3>
+            <ul class="web-specs-list">
+              <li><span class="web-spec-key">Installer Binary</span><span class="web-spec-val">PAPLUS-Downloader.exe</span></li>
+              <li><span class="web-spec-key">Installed Executable</span><span class="web-spec-val">Project Alpha Plus.exe</span></li>
+              <li><span class="web-spec-key">Bundled Default Songs</span><span class="web-spec-val">MoodMode, Why Are You Running, IDK</span></li>
+              <li><span class="web-spec-key">Desktop Shortcut</span><span class="web-spec-val">Configurable in Installer UI</span></li>
+            </ul>
+            <div style="margin-top: 0.5rem;">
+              <a id="btn-web-bottom-download" href="PAPLUS-Downloader.exe" download="PAPLUS-Downloader.exe" class="web-nav-download-btn" style="padding: 0.75rem 1.35rem; font-size: 0.85rem;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Download PAPLUS-Downloader.exe</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer class="web-footer">
+        <span>PROJECT ALPHA PLUS &copy; 2026 &bull; STANDALONE WINDOWS DESKTOP RELEASE</span>
+        <span>WEB PORTAL MODE &bull; LAUNCH INSTALLED .EXE FOR FULL GAMEPLAY</span>
+      </footer>
+    </section>
 
     <!-- Main Menu Card: Primary (#954132) container with Secondary (#322214) buttons -->
     <main id="main-menu-card" class="menu-card" role="main">

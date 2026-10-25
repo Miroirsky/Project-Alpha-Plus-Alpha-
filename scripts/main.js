@@ -40,10 +40,35 @@ async function initApp() {
   themeManager.init();
 
   const soundManager = new SoundClass();
+  window.soundManager = soundManager;
+
+  // Detect whether the game is running in Electron or in a Web Browser
+  const WebLandingClass = window.WebLanding;
+  const isElectron = WebLandingClass && typeof WebLandingClass.isElectronEnvironment === "function"
+    ? WebLandingClass.isElectronEnvironment()
+    : Boolean(
+        (window.electronAPI && window.electronAPI.isElectron) ||
+        (typeof navigator !== "undefined" && /Electron\/\d+/i.test(navigator.userAgent || ""))
+      );
+
+  const webLanding = WebLandingClass ? new WebLandingClass({ themeManager, soundManager }) : null;
+
+  if (!isElectron) {
+    // Web Version: Show ONLY the new Web Showcase & Installer Download Menu
+    if (webLanding) {
+      webLanding.initWebMode();
+    }
+    return;
+  }
+
+  // Electron Version: Hide Web Landing Page and initialize the full game interface
+  if (webLanding) {
+    webLanding.hideForElectron();
+  }
+
   const musicPlayer = new MusicClass({ soundManager });
   const mapStorage = new MapStorageClass();
   window.mapStorage = mapStorage;
-  window.soundManager = soundManager;
 
   // Initialize Mod & Track Downloader
   if (window.ModDownloader) {

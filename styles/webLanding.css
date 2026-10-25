@@ -1,0 +1,685 @@
+/* ==========================================================================
+   Project Alpha Plus - Web Landing & Installer Download Portal Stylesheet
+   Shown ONLY when running in a standard Web Browser (hidden in Electron).
+   ========================================================================== */
+
+body.is-web-mode {
+  overflow: hidden;
+}
+
+.web-landing-view {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--palette-bg-primary, #FAE3E3);
+  color: var(--palette-secondary, #322214);
+  scroll-behavior: smooth;
+}
+
+.web-landing-view.is-active {
+  display: flex;
+}
+
+/* --------------------------------------------------------------------------
+   1. Sticky Top Navigation Header
+   -------------------------------------------------------------------------- */
+.web-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 0.9rem 3rem;
+  background: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.96);
+  border-bottom: 1.5px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.22);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--palette-bg-primary, #FAE3E3);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.22);
+}
+
+.web-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.web-brand-emblem {
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  background: var(--palette-primary, #954132);
+  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--palette-bg-primary, #FAE3E3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.web-brand-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.web-brand-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  color: var(--palette-bg-primary, #FAE3E3);
+}
+
+.web-brand-sub {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  opacity: 0.85;
+}
+
+.web-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.75rem;
+}
+
+.web-nav-link {
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.82);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: color 0.18s ease;
+}
+
+.web-nav-link:hover {
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.web-theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.45rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.18);
+  border-radius: 6px;
+}
+
+.web-theme-dot-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.web-theme-dot-btn:hover {
+  transform: scale(1.12);
+}
+
+.web-theme-dot-btn.is-active {
+  border-color: #ffffff;
+  box-shadow: 0 0 0 2px var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-nav-download-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.1rem;
+  background: var(--palette-primary, #954132);
+  color: var(--palette-bg-primary, #FAE3E3);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.45);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.web-nav-download-btn:hover {
+  background: var(--palette-primary-hover, #a84b3b);
+  border-color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* --------------------------------------------------------------------------
+   2. Main Container & Hero Section
+   -------------------------------------------------------------------------- */
+.web-main-container {
+  width: 100%;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 3rem 2.5rem 4.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+
+.web-hero-section {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 2.75rem;
+  align-items: center;
+  background: linear-gradient(165deg, var(--palette-primary, #954132) 0%, var(--palette-primary-active, #7d3528) 100%);
+  border: 2px solid var(--palette-secondary, #322214);
+  border-radius: 12px;
+  padding: 3rem;
+  color: var(--palette-bg-primary, #FAE3E3);
+  box-shadow: 0 20px 50px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.web-hero-left {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  z-index: 2;
+}
+
+.web-platform-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  align-self: flex-start;
+  padding: 0.35rem 0.85rem;
+  background: var(--palette-secondary, #322214);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.35);
+  border-radius: 4px;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-platform-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2ed573;
+  box-shadow: 0 0 8px #2ed573;
+}
+
+.web-hero-title {
+  font-size: clamp(2.1rem, 3.6vw, 3.1rem);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
+  color: var(--palette-bg-primary, #FAE3E3);
+}
+
+.web-hero-title-accent {
+  color: var(--palette-bg-secondary, #F7D4BC);
+  text-decoration: underline;
+  text-decoration-color: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.4);
+  text-underline-offset: 6px;
+}
+
+.web-hero-desc {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.92);
+  max-width: 580px;
+}
+
+/* Primary Download CTA Box */
+.web-download-cta-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+  padding: 1.35rem 1.5rem;
+  background: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.55);
+  border: 1.5px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.32);
+  border-radius: 10px;
+}
+
+.web-download-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-web-download-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.75rem;
+  background: var(--palette-secondary, #322214);
+  color: var(--palette-bg-primary, #FAE3E3);
+  border: 2px solid var(--palette-bg-secondary, #F7D4BC);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+}
+
+.btn-web-download-hero:hover {
+  background: var(--palette-secondary-hover, #442f1d);
+  color: #ffffff;
+  border-color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+}
+
+.btn-web-download-hero:active {
+  transform: translateY(0);
+}
+
+.btn-download-text-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.btn-download-main-label {
+  font-size: 0.98rem;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.btn-download-sub-label {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.web-download-meta-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1.25rem;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.74rem;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-download-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Status Banner when download is triggered */
+.web-download-status-banner {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(46, 213, 115, 0.16);
+  border: 1px solid rgba(46, 213, 115, 0.55);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.web-download-status-banner.is-visible {
+  display: flex;
+}
+
+/* Right Hero Column: Video & Telemetry Card */
+.web-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  z-index: 2;
+}
+
+.web-preview-card {
+  background: var(--palette-secondary, #322214);
+  border: 2px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.35);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.4);
+}
+
+.web-preview-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+  background: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.16);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-window-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.web-window-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.35);
+}
+
+.web-preview-video-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: #0d0805;
+  overflow: hidden;
+}
+
+.web-preview-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.web-preview-stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.16);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.web-preview-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.7rem 0.5rem;
+  border-right: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.12);
+}
+
+.web-preview-stat:last-child {
+  border-right: none;
+}
+
+.web-preview-stat-val {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-preview-stat-lbl {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.7);
+  margin-top: 2px;
+}
+
+/* --------------------------------------------------------------------------
+   3. Section Headers & Feature Cards Grid
+   -------------------------------------------------------------------------- */
+.web-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.web-section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.web-section-kicker {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--palette-primary, #954132);
+}
+
+.web-section-title {
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--palette-secondary, #322214);
+}
+
+.web-section-subtitle {
+  font-size: 0.95rem;
+  color: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.78);
+  max-width: 700px;
+  line-height: 1.5;
+}
+
+.web-features-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.web-feature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.75rem;
+  background: var(--palette-secondary, #322214);
+  color: var(--palette-bg-primary, #FAE3E3);
+  border: 1.5px solid rgba(var(--palette-primary-rgb, 149, 65, 50), 0.55);
+  border-radius: 10px;
+  box-shadow: 0 10px 26px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.16);
+}
+
+.web-feature-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.web-feature-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  background: var(--palette-primary, #954132);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  flex-shrink: 0;
+}
+
+.web-feature-title {
+  font-size: 1.12rem;
+  font-weight: 800;
+  color: var(--palette-bg-primary, #FAE3E3);
+}
+
+.web-feature-desc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.84);
+}
+
+.web-feature-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+.web-feature-tag {
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 4px;
+  background: rgba(var(--palette-primary-rgb, 149, 65, 50), 0.38);
+  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.22);
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+/* --------------------------------------------------------------------------
+   4. Installer Walkthrough Steps (4-Step Pipeline)
+   -------------------------------------------------------------------------- */
+.web-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+
+.web-step-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 1.5rem;
+  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.55);
+  border: 1.5px solid rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.2);
+  border-radius: 10px;
+}
+
+.web-step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: var(--palette-primary, #954132);
+  color: var(--palette-bg-primary, #FAE3E3);
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.web-step-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--palette-secondary, #322214);
+}
+
+.web-step-desc {
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.82);
+}
+
+/* --------------------------------------------------------------------------
+   5. System Requirements & Bottom Download Banner
+   -------------------------------------------------------------------------- */
+.web-specs-banner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  padding: 2.25rem;
+  background: var(--palette-secondary, #322214);
+  color: var(--palette-bg-primary, #FAE3E3);
+  border: 2px solid var(--palette-primary, #954132);
+  border-radius: 12px;
+}
+
+.web-specs-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.web-specs-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--palette-bg-secondary, #F7D4BC);
+}
+
+.web-specs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  list-style: none;
+}
+
+.web-specs-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.14);
+  font-size: 0.86rem;
+}
+
+.web-spec-key {
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.72);
+  font-weight: 600;
+}
+
+.web-spec-val {
+  font-family: var(--font-family-mono, monospace);
+  font-weight: 700;
+  color: var(--palette-bg-secondary, #F7D4BC);
+  text-align: right;
+}
+
+.web-footer {
+  padding: 1.75rem 3rem;
+  background: var(--palette-secondary, #322214);
+  color: rgba(var(--palette-bg-primary-rgb, 250, 227, 227), 0.75);
+  border-top: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.75rem;
+  margin-top: auto;
+}
+
+@media (max-width: 980px) {
+  .web-hero-section {
+    grid-template-columns: 1fr;
+    padding: 2rem;
+  }
+  .web-features-grid {
+    grid-template-columns: 1fr;
+  }
+  .web-steps-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .web-specs-banner {
+    grid-template-columns: 1fr;
+  }
+  .web-nav-links {
+    display: none;
+  }
+}
