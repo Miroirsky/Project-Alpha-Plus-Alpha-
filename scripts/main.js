@@ -179,6 +179,11 @@ async function initApp() {
     if (mainMenuCard) {
       mainMenuCard.classList.add("is-hidden");
     }
+    const updateLogViewEl = document.getElementById("update-log-view");
+    if (updateLogViewEl) {
+      updateLogViewEl.classList.remove("is-active");
+      updateLogViewEl.setAttribute("aria-hidden", "true");
+    }
     playMenu.hideForGame();
     createMenu.hide();
 
@@ -369,23 +374,133 @@ async function initApp() {
     window.tutorialManager = tutorialManager;
   }
 
-  const btnMenuNotif = document.getElementById("btn-menu-notif");
-  const menuWhatsNewBox = document.getElementById("menu-whats-new-box");
-  [btnMenuNotif, menuWhatsNewBox].forEach((el) => {
-    if (el) {
-      el.addEventListener("click", () => {
-        try {
-          soundManager.playClick();
-        } catch (e) {}
-        if (tutorialManager && typeof tutorialManager.openPrompt === "function") {
-          tutorialManager.openPrompt();
-        } else {
-          playMenu.updateSongs(mapStorage.getAllMaps());
-          playMenu.open();
-        }
-      });
+  // Update Log Menu (populated from scripts/updates.js)
+  const updateLogView = document.getElementById("update-log-view");
+  const updateLogList = document.getElementById("update-log-list");
+  const updateLogVersionPill = document.getElementById("update-log-version-pill");
+  const whatsNewLatestLabel = document.getElementById("whats-new-latest-label");
+  const btnBackUpdates = document.getElementById("btn-back-updates");
+  const mainMenuCardEl = document.getElementById("main-menu-card");
+
+  function renderUpdateLog() {
+    const updatesObj = (typeof Updates !== "undefined" && Updates) || window.Updates || {};
+    const entries = Object.entries(updatesObj);
+    if (entries.length > 0) {
+      const [latestTitle, latestInfo] = entries[0];
+      if (whatsNewLatestLabel) {
+        whatsNewLatestLabel.textContent = latestTitle.toLowerCase();
+      }
+      if (updateLogVersionPill && latestInfo && latestInfo.id) {
+        updateLogVersionPill.textContent = `v${latestInfo.id} • ${entries.length} Updates`;
+      }
+    }
+    if (!updateLogList) return;
+    updateLogList.innerHTML = "";
+    entries.forEach(([title, info], index) => {
+      if (!info) return;
+      const card = document.createElement("article");
+      card.className = `update-log-card${index === 0 ? " is-latest" : ""}`;
+      card.setAttribute("role", "listitem");
+
+      const topRow = document.createElement("div");
+      topRow.className = "update-log-card-top";
+
+      const titleWrap = document.createElement("div");
+      titleWrap.className = "update-log-title-wrap";
+
+      const verBadge = document.createElement("span");
+      verBadge.className = "update-log-version-badge";
+      verBadge.textContent = `v${info.id || "0.0.0"}`;
+
+      const heading = document.createElement("h3");
+      heading.className = "update-log-item-title";
+      heading.textContent = title;
+
+      titleWrap.appendChild(verBadge);
+      titleWrap.appendChild(heading);
+      topRow.appendChild(titleWrap);
+
+      if (index === 0) {
+        const latestTag = document.createElement("span");
+        latestTag.className = "update-log-latest-tag";
+        latestTag.textContent = "Latest Release";
+        topRow.appendChild(latestTag);
+      }
+
+      const desc = document.createElement("p");
+      desc.className = "update-log-item-desc";
+      desc.textContent = info.description || "";
+
+      card.appendChild(topRow);
+      card.appendChild(desc);
+      updateLogList.appendChild(card);
+    });
+  }
+
+  function openUpdateLogMenu() {
+    renderUpdateLog();
+    if (mainMenuCardEl) {
+      mainMenuCardEl.style.display = "none";
+      mainMenuCardEl.classList.add("is-hidden");
+    }
+    if (updateLogView) {
+      updateLogView.classList.add("is-active");
+      updateLogView.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function closeUpdateLogMenu() {
+    if (updateLogView) {
+      updateLogView.classList.remove("is-active");
+      updateLogView.setAttribute("aria-hidden", "true");
+    }
+    if (mainMenuCardEl) {
+      mainMenuCardEl.classList.remove("is-hidden");
+      mainMenuCardEl.style.display = "";
+    }
+  }
+
+  renderUpdateLog();
+
+  if (btnBackUpdates) {
+    btnBackUpdates.addEventListener("click", () => {
+      try {
+        soundManager.playClick();
+      } catch (e) {}
+      closeUpdateLogMenu();
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && updateLogView && updateLogView.classList.contains("is-active")) {
+      closeUpdateLogMenu();
     }
   });
+
+  const btnMenuNotif = document.getElementById("btn-menu-notif");
+  const menuWhatsNewBox = document.getElementById("menu-whats-new-box");
+
+  if (menuWhatsNewBox) {
+    menuWhatsNewBox.addEventListener("click", () => {
+      try {
+        soundManager.playClick();
+      } catch (e) {}
+      openUpdateLogMenu();
+    });
+  }
+
+  if (btnMenuNotif) {
+    btnMenuNotif.addEventListener("click", () => {
+      try {
+        soundManager.playClick();
+      } catch (e) {}
+      if (tutorialManager && typeof tutorialManager.openPrompt === "function") {
+        tutorialManager.openPrompt();
+      } else {
+        openUpdateLogMenu();
+      }
+    });
+  }
 
   // 8. Complete asynchronous storage & save system initialization after UI buttons are bound
   if (mapStorage.initializationPromise) {

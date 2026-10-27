@@ -90,8 +90,9 @@
   <script defer src="scripts/exitHandler.js?v=20261025-3"></script>
   <script defer src="scripts/backgroundSquares.js?v=20261025-3"></script>
   <script defer src="scripts/tutorialManager.js?v=20261025-3"></script>
+  <script defer src="scripts/updates.js?v=20261027-1"></script>
   <script defer src="scripts/webLanding.js?v=20261025-3"></script>
-  <script defer src="scripts/main.js?v=20261025-3"></script>
+  <script defer src="scripts/main.js?v=20261027-1"></script>
 </head>
 <body>
   <div class="app-container">
@@ -404,11 +405,11 @@
             </span>
           </h1>
 
-          <div class="menu-whats-new-box" id="menu-whats-new-box" role="status">
+          <button type="button" class="menu-whats-new-box" id="menu-whats-new-box" aria-label="Open Update Log">
             <span class="whats-new-dot" aria-hidden="true"></span>
             <span class="whats-new-label">WHAT'S NEW</span>
-            <span class="whats-new-value">the new menu</span>
-          </div>
+            <span class="whats-new-value" id="whats-new-latest-label">Remaking the Menu</span>
+          </button>
         </header>
       </div>
 
@@ -467,6 +468,33 @@
         </div>
       </nav>
     </main>
+
+    <!-- Update Log Menu View (Populated from scripts/updates.js) -->
+    <section id="update-log-view" class="update-log-view" aria-label="Update Log" aria-hidden="true">
+      <header class="update-log-header">
+        <div class="update-log-header-left">
+          <button id="btn-back-updates" class="play-back-btn" type="button" aria-label="Return to Main Menu">
+            &larr; Main Menu
+          </button>
+        </div>
+
+        <div class="update-log-header-center">
+          <div class="update-log-title-badge">Changelog</div>
+          <h2 class="update-log-screen-title">Update Log</h2>
+          <p class="update-log-screen-subtitle">Version history and feature releases for Project Alpha+</p>
+        </div>
+
+        <div class="update-log-header-right">
+          <span id="update-log-version-pill" class="update-log-stats-pill">v0.4.0</span>
+        </div>
+      </header>
+
+      <div class="update-log-content">
+        <div id="update-log-list" class="update-log-list" role="list">
+          <!-- Dynamically populated from Updates in scripts/updates.js -->
+        </div>
+      </div>
+    </section>
 
     <!-- Play Menu View (Song Selection) -->
     <section id="play-menu-view" class="play-menu-view" aria-label="Song Selection" aria-hidden="true">
