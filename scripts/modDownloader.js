@@ -13,29 +13,40 @@
      * @param {SoundManager} options.soundManager
      */
     constructor({ mapStorage, soundManager } = {}) {
-      this.mapStorage = mapStorage || window.mapStorage;
-      this.soundManager = soundManager || window.soundManager;
+      this.mapStorage = mapStorage || (typeof window !== "undefined" ? window.mapStorage : null);
+      this.soundManager = soundManager || (typeof window !== "undefined" ? window.soundManager : null);
       this.isElectron = typeof window !== "undefined" && Boolean(window.electronAPI && window.electronAPI.isElectron);
 
-      this.modal = document.getElementById("downloader-modal");
-      this.urlInput = document.getElementById("downloader-url-input");
-      this.nameInput = document.getElementById("downloader-name-input");
-      this.downloadBtn = document.getElementById("btn-start-download");
-      this.cancelBtn = document.getElementById("btn-close-downloader");
-      this.openFolderBtn = document.getElementById("btn-downloader-open-folder");
-      this.progressBar = document.getElementById("downloader-progress-bar");
-      this.progressText = document.getElementById("downloader-progress-text");
-      this.statusAlert = document.getElementById("downloader-status-alert");
+      this.modal = typeof document !== "undefined" ? document.getElementById("downloader-modal") : null;
+      this.urlInput = typeof document !== "undefined" ? document.getElementById("downloader-url-input") : null;
+      this.nameInput = typeof document !== "undefined" ? document.getElementById("downloader-name-input") : null;
+      this.downloadBtn = typeof document !== "undefined" ? document.getElementById("btn-start-download") : null;
+      this.cancelBtn = typeof document !== "undefined" ? document.getElementById("btn-close-downloader") : null;
+      this.openFolderBtn = typeof document !== "undefined" ? document.getElementById("btn-downloader-open-folder") : null;
+      this.progressBar = typeof document !== "undefined" ? document.getElementById("downloader-progress-bar") : null;
+      this.progressText = typeof document !== "undefined" ? document.getElementById("downloader-progress-text") : null;
+      this.statusAlert = typeof document !== "undefined" ? document.getElementById("downloader-status-alert") : null;
 
       this.isDownloading = false;
+      this._progressUnsubscribe = null;
       this.bindEvents();
     }
 
     init() {
+      // Clean up previous listener to prevent leaks or duplicate events
+      if (this._progressUnsubscribe) {
+        try {
+          this._progressUnsubscribe();
+        } catch (e) {}
+        this._progressUnsubscribe = null;
+      }
+
       // Setup progress listener from Electron main process
       if (this.isElectron && window.electronAPI && typeof window.electronAPI.onDownloadProgress === "function") {
-        window.electronAPI.onDownloadProgress((progress) => {
-          this.updateProgress(progress.percent, progress.receivedBytes, progress.totalBytes);
+        this._progressUnsubscribe = window.electronAPI.onDownloadProgress((progress) => {
+          if (progress) {
+            this.updateProgress(progress.percent, progress.receivedBytes, progress.totalBytes);
+          }
         });
       }
     }
@@ -59,7 +70,7 @@
 
       if (this.openFolderBtn) {
         this.openFolderBtn.addEventListener("click", () => {
-          if (this.isElectron && window.electronAPI) {
+          if (this.isElectron && window.electronAPI && typeof window.electronAPI.openFolder === "function") {
             window.electronAPI.openFolder("songs");
           }
         });
@@ -84,12 +95,16 @@
       this.modal.classList.add("is-active");
       this.modal.setAttribute("aria-hidden", "false");
       if (this.urlInput) this.urlInput.focus();
-      if (this.soundManager) this.soundManager.playClick();
+      if (this.soundManager && typeof this.soundManager.playClick === "function") {
+        this.soundManager.playClick();
+      }
     }
 
     close() {
       if (this.isDownloading) {
-        if (!confirm("A download is currently in progress. Cancel and close?")) return;
+        if (typeof confirm === "function" && !confirm("A download is currently in progress. Cancel and close?")) {
+          return;
+        }
       }
       if (this.modal) {
         this.modal.classList.remove("is-active");
@@ -113,16 +128,22 @@
         this.downloadBtn.disabled = false;
         this.downloadBtn.innerHTML = "<span>Start Download</span>";
       }
+      if (this.nameInput && !this.isDownloading) {
+        this.nameInput.value = "";
+      }
     }
 
     updateProgress(percent, received, total) {
+      const pct = typeof percent === "number" && !isNaN(percent) ? Math.min(100, Math.max(0, percent)) : 0;
       if (this.progressBar) {
-        this.progressBar.style.width = `${Math.min(100, Math.max(0, percent))}%`;
+        this.progressBar.style.width = `${pct}%`;
       }
       if (this.progressText) {
-        const receivedMb = (received / (1024 * 1024)).toFixed(2);
-        const totalMb = total > 0 ? (total / (1024 * 1024)).toFixed(2) : "?";
-        this.progressText.textContent = `${percent}% (${receivedMb} MB / ${totalMb} MB)`;
+        const rec = typeof received === "number" && !isNaN(received) ? received : 0;
+        const tot = typeof total === "number" && !isNaN(total) ? total : 0;
+        const receivedMb = (rec / (1024 * 1024)).toFixed(2);
+        const totalMb = tot > 0 ? (tot / (1024 * 1024)).toFixed(2) : "?";
+        this.progressText.textContent = `${pct}% (${receivedMb} MB / ${totalMb} MB)`;
       }
     }
 
@@ -138,6 +159,11 @@
         parsedUrl = new URL(url);
       } catch (e) {
         this.showError("Invalid URL format. Make sure it starts with http:// or https://");
+        return;
+      }
+
+      if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+        this.showError("Invalid URL protocol. Only http:// and https:// URLs are supported.");
         return;
       }
 
@@ -160,42 +186,65 @@
             throw new Error(result ? result.error : "Download failed on disk.");
           }
 
-          // If downloaded file is JSON, validate and add to game tracks!
+          let imported = null;
+          // If downloaded file is JSON, validate and import into map storage
           if (result.filePath && result.filePath.toLowerCase().endsWith(".json")) {
             const fileData = await window.electronAPI.readTextFile(result.filePath);
             if (fileData && fileData.success && fileData.content) {
-              if (this.mapStorage && typeof this.mapStorage.importSongAsync === "function") {
+              if (this.mapStorage) {
                 const parsed = JSON.parse(fileData.content);
-                await this.mapStorage.importSongAsync(parsed);
+                const importFn = this.mapStorage.importTrackAsync || this.mapStorage.importSongAsync || this.mapStorage.importTrack;
+                if (typeof importFn === "function") {
+                  imported = await importFn.call(this.mapStorage, parsed);
+                }
               }
             }
           }
 
-          this.showSuccess(`Download complete! Saved to ${result.fileName}`);
-          if (this.soundManager) this.soundManager.playTestTone();
+          const songName = imported && imported.name ? imported.name : (result.fileName || "Song");
+          this.showSuccess(`Download complete! Saved to ${result.fileName || songName}`);
+          if (this.soundManager && typeof this.soundManager.playTestTone === "function") {
+            this.soundManager.playTestTone();
+          }
 
           // Refresh Play Menu if open
           if (window.playMenu && typeof window.playMenu.updateSongs === "function") {
-            window.playMenu.updateSongs(this.mapStorage ? this.mapStorage.getAllMaps() : []);
+            const allMaps = this.mapStorage && typeof this.mapStorage.getAllMaps === "function" ? this.mapStorage.getAllMaps() : [];
+            window.playMenu.updateSongs(allMaps);
+            if (imported && imported.id && typeof window.playMenu.selectSongById === "function") {
+              window.playMenu.selectSongById(imported.id, true, true);
+            }
           }
         } else {
           // Web fallback: fetch via browser
-          this.progressText.textContent = "Fetching via web...";
+          if (this.progressText) {
+            this.progressText.textContent = "Fetching via web...";
+          }
           const response = await fetch(url);
           if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
           const text = await response.text();
           let imported = null;
-          if (this.mapStorage && typeof this.mapStorage.importSongAsync === "function") {
+          if (this.mapStorage) {
             const parsed = JSON.parse(text);
-            imported = await this.mapStorage.importSongAsync(parsed);
+            const importFn = this.mapStorage.importTrackAsync || this.mapStorage.importSongAsync || this.mapStorage.importTrack;
+            if (typeof importFn === "function") {
+              imported = await importFn.call(this.mapStorage, parsed);
+            }
           }
 
-          this.showSuccess(`Track successfully downloaded and imported: ${imported ? imported.name : "Song"}`);
-          if (this.soundManager) this.soundManager.playTestTone();
+          const songName = imported && imported.name ? imported.name : "Song";
+          this.showSuccess(`Track successfully downloaded and imported: ${songName}`);
+          if (this.soundManager && typeof this.soundManager.playTestTone === "function") {
+            this.soundManager.playTestTone();
+          }
 
           if (window.playMenu && typeof window.playMenu.updateSongs === "function") {
-            window.playMenu.updateSongs(this.mapStorage.getAllMaps());
+            const allMaps = this.mapStorage && typeof this.mapStorage.getAllMaps === "function" ? this.mapStorage.getAllMaps() : [];
+            window.playMenu.updateSongs(allMaps);
+            if (imported && imported.id && typeof window.playMenu.selectSongById === "function") {
+              window.playMenu.selectSongById(imported.id, true, true);
+            }
           }
         }
       } catch (err) {
@@ -224,5 +273,10 @@
     }
   }
 
-  window.ModDownloader = ModDownloader;
+  if (typeof window !== "undefined") {
+    window.ModDownloader = ModDownloader;
+  }
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = ModDownloader;
+  }
 })();

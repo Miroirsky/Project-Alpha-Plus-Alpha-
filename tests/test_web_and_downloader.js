@@ -174,7 +174,19 @@ async function runTests() {
     const downloaderExe = path.join(ROOT_DIR, 'PAPLUS-Downloader.exe');
     assert.ok(fs.existsSync(downloaderExe), 'PAPLUS-Downloader.exe must exist in project root');
 
-    const tempBase = fs.mkdtempSync(path.join(os.tmpdir(), 'paplus-e2e-'));
+    // Ensure test temporary directory is located on a volume with sufficient disk space (>300 MB)
+    let tempRoot = os.tmpdir();
+    try {
+        const cStat = fs.statfsSync ? fs.statfsSync(tempRoot) : null;
+        if (cStat && (cStat.bavail * cStat.bsize) < 300 * 1024 * 1024) {
+            tempRoot = path.join(ROOT_DIR, '.tmp_e2e_test');
+            if (!fs.existsSync(tempRoot)) fs.mkdirSync(tempRoot, { recursive: true });
+        }
+    } catch (e) {
+        tempRoot = path.join(ROOT_DIR, '.tmp_e2e_test');
+        if (!fs.existsSync(tempRoot)) fs.mkdirSync(tempRoot, { recursive: true });
+    }
+    const tempBase = fs.mkdtempSync(path.join(tempRoot, 'paplus-e2e-'));
     const targetInstallDir = path.join(tempBase, 'InstalledGame');
     const targetShortcutDir = path.join(tempBase, 'DesktopShortcuts');
 
@@ -220,7 +232,63 @@ async function runTests() {
         } catch (cleanupErr) {
             console.warn('   [WARN] Failed to clean up temp dir:', cleanupErr.message);
         }
+        try {
+            const extraTmp = path.join(ROOT_DIR, '.tmp_e2e_test');
+            if (fs.existsSync(extraTmp)) fs.rmSync(extraTmp, { recursive: true, force: true });
+        } catch (e) {}
     }
+
+    // 5. Test ModDownloader class and MapStorage.importSongAsync integration
+    console.log('5. Testing ModDownloader & MapStorage.importSongAsync integration...');
+    const store = new Map();
+    global.localStorage = {
+        getItem(k) { return store.has(k) ? store.get(k) : null; },
+        setItem(k, v) { store.set(k, String(v)); },
+        removeItem(k) { store.delete(k); },
+        clear() { store.clear(); }
+    };
+
+    const ModDownloader = require('../scripts/modDownloader.js');
+    const MapStorage = require('../scripts/mapStorage.js');
+
+    const testMapStorage = new MapStorage();
+    assert.strictEqual(typeof testMapStorage.importSongAsync, 'function', 'MapStorage must implement importSongAsync');
+    assert.strictEqual(typeof testMapStorage.importTrackAsync, 'function', 'MapStorage must implement importTrackAsync');
+
+    // Test importing a track via importSongAsync
+    const mockSong = {
+        name: 'Mod Test Track',
+        bpm: 120,
+        difficulties: {
+            normal: { notes: [{ time: 0, lane: 1, type: 'tap' }] }
+        }
+    };
+    const importedSongResult = await testMapStorage.importSongAsync(mockSong);
+    assert.ok(importedSongResult, 'importSongAsync must return imported song object');
+    assert.strictEqual(importedSongResult.name, 'Mod Test Track', 'Imported song name must match');
+
+    // Test ModDownloader progress calculation with numbers and undefined/NaN
+    const mockDownloaderEl = {
+        style: {},
+        textContent: '',
+        value: '',
+        disabled: false,
+        className: '',
+        addEventListener() {}
+    };
+    global.document = {
+        getElementById() { return { ...mockDownloaderEl }; }
+    };
+    const modDownloader = new ModDownloader({ mapStorage: testMapStorage });
+    modDownloader.updateProgress(50, 1024 * 1024, 2 * 1024 * 1024);
+    assert.ok(modDownloader.progressText.textContent.includes('50%'), 'Progress text must include percent');
+    assert.ok(modDownloader.progressText.textContent.includes('1.00 MB / 2.00 MB'), 'Progress text must format MB correctly');
+
+    // Edge cases: NaN and undefined must not crash or show NaN
+    modDownloader.updateProgress(undefined, undefined, undefined);
+    assert.ok(modDownloader.progressText.textContent.includes('0% (0.00 MB / ? MB)'), 'Progress with undefined should fallback safely without NaN');
+
+    console.log('   [PASS] ModDownloader & MapStorage integration and edge cases verified.');
 
     console.log('\nALL WEB & DOWNLOADER END-TO-END TESTS PASSED!');
 }

@@ -32,7 +32,7 @@ namespace ProjectAlphaPlusInstaller
         {
             try
             {
-                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
+                ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | (SecurityProtocolType)12288 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
             }
             catch { }
 
@@ -146,7 +146,27 @@ namespace ProjectAlphaPlusInstaller
 
             installDir = Path.GetFullPath(installDir.Trim());
             Log("Preparing installation directory: " + installDir);
-            ReportProgress(2, "Initializing setup...", "Validating target directory");
+            ReportProgress(2, "Initializing setup...", "Validating target directory & disk space");
+
+            // Pre-check free disk space on the target installation drive (at least 250 MB required)
+            string root = Path.GetPathRoot(installDir);
+            if (!string.IsNullOrEmpty(root))
+            {
+                try
+                {
+                    DriveInfo dInfo = new DriveInfo(root);
+                    if (dInfo.IsReady && dInfo.AvailableFreeSpace < 250L * 1024 * 1024)
+                    {
+                        throw new IOException(string.Format(
+                            "Insufficient free disk space on drive {0}. Project Alpha Plus requires at least 250 MB free, but only {1:0.0} MB is available. Please select a different installation drive with more free space.",
+                            root,
+                            dInfo.AvailableFreeSpace / (1024.0 * 1024.0)
+                        ));
+                    }
+                }
+                catch (IOException) { throw; }
+                catch { }
+            }
 
             try
             {
@@ -167,21 +187,34 @@ namespace ProjectAlphaPlusInstaller
 
             ct.ThrowIfCancellationRequested();
 
-            string tempWorkDir = Path.Combine(Path.GetTempPath(), "PAPLUS_Setup_" + Guid.NewGuid().ToString("N").Substring(0, 8));
+            // Select staging directory that has sufficient disk space
+            string tempBaseDir = Path.GetTempPath();
+            try
+            {
+                DriveInfo targetDrive = new DriveInfo(root);
+                DriveInfo sysTempDrive = new DriveInfo(Path.GetPathRoot(tempBaseDir));
+                if (targetDrive.IsReady && sysTempDrive.IsReady && targetDrive.AvailableFreeSpace > sysTempDrive.AvailableFreeSpace)
+                {
+                    tempBaseDir = Path.Combine(installDir, ".paplus_setup_staging");
+                }
+            }
+            catch { }
+
+            string tempWorkDir = Path.Combine(tempBaseDir, "PAPLUS_Setup_" + Guid.NewGuid().ToString("N").Substring(0, 8));
             Directory.CreateDirectory(tempWorkDir);
             string stagedZipPath = Path.Combine(tempWorkDir, "ProjectAlphaPlus-Win64.zip");
 
             try
             {
                 // Phase 1: Download / Stream Game Package (0% -> 50%)
-                bool hasStagedZip = await AcquireGamePackageAsync(stagedZipPath, ct);
+                string packageZipPath = await AcquireGamePackageAsync(stagedZipPath, ct);
 
                 ct.ThrowIfCancellationRequested();
 
                 // Phase 2: Extract & Install Game Files (50% -> 94%)
-                if (hasStagedZip && File.Exists(stagedZipPath))
+                if (!string.IsNullOrEmpty(packageZipPath) && File.Exists(packageZipPath))
                 {
-                    await ExtractZipPackageWithProgressAsync(stagedZipPath, installDir, ct);
+                    await ExtractZipPackageWithProgressAsync(packageZipPath, installDir, ct);
                 }
                 else
                 {
@@ -291,7 +324,7 @@ namespace ProjectAlphaPlusInstaller
             }
         }
 
-        private async Task<bool> AcquireGamePackageAsync(string destinationZipPath, CancellationToken ct)
+        private async Task<string> AcquireGamePackageAsync(string destinationZipPath, CancellationToken ct)
         {
             // 1. Check candidate HTTP URLs (custom env URL or local distribution server)
             var candidateUrls = new List<string>();
@@ -307,17 +340,17 @@ namespace ProjectAlphaPlusInstaller
             {
                 if (await TryDownloadFromHttpAsync(url, destinationZipPath, ct))
                 {
-                    return true;
+                    return destinationZipPath;
                 }
             }
 
-            // 2. Check local package zip candidates (adjacent to downloader, in dist/, or workspace root)
+            // 2. Check local package zip candidates (adjacent to downloader, in dist/, working directory, or workspace root)
             string localZipSource = FindLocalZipPackage();
             if (!string.IsNullOrEmpty(localZipSource) && File.Exists(localZipSource))
             {
-                Log("Downloading package stream from local repository archive: " + Path.GetFileName(localZipSource));
-                await StreamFileWithProgressAsync(localZipSource, destinationZipPath, 4, 50, "Downloading game package...", ct);
-                return true;
+                Log("Using local repository package archive directly: " + Path.GetFileName(localZipSource));
+                ReportProgress(50, "Verified game package...", "Local package archive ready");
+                return localZipSource;
             }
 
             // 3. Local unpacked directory (if present on disk, Phase 2 copies it directly)
@@ -327,7 +360,7 @@ namespace ProjectAlphaPlusInstaller
                 Log("Found local standalone build package at: " + unpacked);
                 ReportProgress(45, "Downloading game package...", "Verified local standalone build assets");
                 await Task.Delay(120, ct);
-                return false;
+                return null;
             }
 
             // 4. Remote GitHub Cloud Distribution (works when PAPLUS-Downloader.exe is downloaded from GitHub Pages onto any PC)
@@ -342,11 +375,11 @@ namespace ProjectAlphaPlusInstaller
                 Log("Connecting to GitHub distribution server: " + cloudUrl);
                 if (await TryDownloadFromHttpAsync(cloudUrl, destinationZipPath, ct))
                 {
-                    return true;
+                    return destinationZipPath;
                 }
             }
 
-            return false;
+            return null;
         }
 
         private async Task<bool> TryDownloadFromHttpAsync(string url, string destinationFile, CancellationToken ct)
@@ -364,6 +397,12 @@ namespace ProjectAlphaPlusInstaller
 
                 using (WebResponse resp = await req.GetResponseAsync())
                 {
+                    HttpWebResponse httpResp = resp as HttpWebResponse;
+                    if (httpResp != null && httpResp.StatusCode != HttpStatusCode.OK)
+                    {
+                        return false;
+                    }
+
                     long totalBytes = resp.ContentLength;
                     Log(string.Format("Connected to distribution server ({0})", url));
 
@@ -408,6 +447,13 @@ namespace ProjectAlphaPlusInstaller
                         }
                     }
 
+                    FileInfo fi = new FileInfo(destinationFile);
+                    if (!fi.Exists || fi.Length < 1024)
+                    {
+                        try { File.Delete(destinationFile); } catch { }
+                        return false;
+                    }
+
                     Log("Package download completed from server.");
                     return true;
                 }
@@ -418,6 +464,7 @@ namespace ProjectAlphaPlusInstaller
             }
             catch
             {
+                try { if (File.Exists(destinationFile)) File.Delete(destinationFile); } catch { }
                 return false;
             }
         }
@@ -634,6 +681,15 @@ internal static class LauncherProgram
         private async Task CopyUnpackedBuildWithProgressAsync(string sourceDir, string installDir, CancellationToken ct)
         {
             Log("Installing standalone build files from: " + sourceDir);
+
+            // Avoid self-copy corruption if source and destination are the same folder
+            if (string.Equals(Path.GetFullPath(sourceDir).TrimEnd('\\'), Path.GetFullPath(installDir).TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+            {
+                Log("Installation directory matches source build directory; skipping self-copy.");
+                ReportProgress(90, "Installing standalone game files...", "Verified build files in place");
+                return;
+            }
+
             string[] allFiles = Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories);
             long totalBytes = 0;
             foreach (string f in allFiles)
@@ -658,6 +714,11 @@ internal static class LauncherProgram
                 if (!string.IsNullOrEmpty(parentDir) && !Directory.Exists(parentDir))
                 {
                     Directory.CreateDirectory(parentDir);
+                }
+
+                if (File.Exists(dstFile))
+                {
+                    try { File.SetAttributes(dstFile, FileAttributes.Normal); } catch { }
                 }
 
                 using (FileStream src = new FileStream(srcFile, FileMode.Open, FileAccess.Read, FileShare.Read, 262144, true))
@@ -692,11 +753,14 @@ internal static class LauncherProgram
         private static string FindLocalZipPackage()
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string curDir = Environment.CurrentDirectory;
             string[] candidates = new string[]
             {
                 Path.Combine(exeDir, "ProjectAlphaPlus-Win64.zip"),
                 Path.Combine(exeDir, "dist", "ProjectAlphaPlus-Win64.zip"),
                 Path.Combine(exeDir, "..", "dist", "ProjectAlphaPlus-Win64.zip"),
+                Path.Combine(curDir, "ProjectAlphaPlus-Win64.zip"),
+                Path.Combine(curDir, "dist", "ProjectAlphaPlus-Win64.zip"),
                 Path.Combine(WorkspaceRootFallback, "dist", "ProjectAlphaPlus-Win64.zip"),
                 Path.Combine(WorkspaceRootFallback, "ProjectAlphaPlus-Win64.zip")
             };
@@ -719,11 +783,14 @@ internal static class LauncherProgram
         private static string FindUnpackedSourceDirectory()
         {
             string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string curDir = Environment.CurrentDirectory;
             string[] candidates = new string[]
             {
                 Path.Combine(exeDir, "dist", "win-unpacked"),
                 Path.Combine(exeDir, "win-unpacked"),
                 Path.Combine(exeDir, "..", "dist", "win-unpacked"),
+                Path.Combine(curDir, "dist", "win-unpacked"),
+                Path.Combine(curDir, "win-unpacked"),
                 Path.Combine(WorkspaceRootFallback, "dist", "win-unpacked")
             };
 
@@ -903,11 +970,7 @@ internal static class LauncherProgram
             };
             this.Controls.Add(lblFolderHeader);
 
-            string defaultDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Programs",
-                "Project Alpha Plus"
-            );
+            string defaultDir = GetSmartDefaultInstallDir();
 
             txtInstallPath = new TextBox
             {
@@ -1285,6 +1348,66 @@ internal static class LauncherProgram
                 }
             }
             catch { }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (isInstalling)
+            {
+                var res = MessageBox.Show(
+                    this,
+                    "Installation is currently in progress. Are you sure you want to cancel?",
+                    "Cancel Installation",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question
+                );
+                if (res == DialogResult.Yes)
+                {
+                    if (cts != null) cts.Cancel();
+                }
+                else
+                {
+                    e.Cancel = true;
+                    return;
+                }
+            }
+            base.OnFormClosing(e);
+        }
+
+        private static string GetSmartDefaultInstallDir()
+        {
+            string defaultDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Programs",
+                "Project Alpha Plus"
+            );
+
+            try
+            {
+                string root = Path.GetPathRoot(defaultDir);
+                DriveInfo cDrive = new DriveInfo(root);
+                if (cDrive.IsReady && cDrive.AvailableFreeSpace < 300L * 1024 * 1024)
+                {
+                    // If default C: drive is low on disk space, suggest a drive with ample space
+                    DriveInfo bestDrive = null;
+                    foreach (DriveInfo d in DriveInfo.GetDrives())
+                    {
+                        if (d.IsReady && d.DriveType == DriveType.Fixed && d.AvailableFreeSpace > 1024L * 1024 * 1024)
+                        {
+                            if (bestDrive == null || d.AvailableFreeSpace > bestDrive.AvailableFreeSpace)
+                            {
+                                bestDrive = d;
+                            }
+                        }
+                    }
+                    if (bestDrive != null)
+                    {
+                        return Path.Combine(bestDrive.RootDirectory.FullName, "Programs", "Project Alpha Plus");
+                    }
+                }
+            }
+            catch { }
+            return defaultDir;
         }
 
         private void OnCancelClicked(object sender, EventArgs e)

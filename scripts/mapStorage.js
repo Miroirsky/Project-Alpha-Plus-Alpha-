@@ -2716,6 +2716,15 @@ class MapStorage {
   }
 
   /**
+   * Alias for importTrackAsync for compatibility with ModDownloader and external integrations.
+   * @param {Object} validatedSong
+   * @returns {Promise<Object>} importedSong
+   */
+  async importSongAsync(validatedSong) {
+    return this.importTrackAsync(validatedSong);
+  }
+
+  /**
    * Erases all custom tracks, copies, map overrides, player high scores, and stats,
    * while strictly preserving all built-in default songs.
    * @returns {Promise<Array>} The remaining default maps

@@ -1,4 +1,8 @@
 const Updates = {
+    "Downloader Fixes": {
+        id: "0.4.2",
+        description: "Hmmm bug > No bug."
+    },
     "Yellow Notes": {
         id: "0.4.1",
         description: "Adding the yellow notes that can be triggered by pressing space."

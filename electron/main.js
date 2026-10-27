@@ -761,42 +761,85 @@ ipcMain.handle('tracks:import-folder-from-path', async (event, folderPath) => {
   return copyAndLoadSongFolder(folderPath);
 });
 
-// --- Direct Mod & Song Downloader ---
-ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, preferredName) => {
+// --- Direct Mod & Song Downloader Helper & Handler ---
+async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName, redirectCount = 0) {
+  if (redirectCount > 5) {
+    return { success: false, error: 'Too many HTTP redirects (limit exceeded)' };
+  }
+
   return new Promise((resolve) => {
     try {
       const urlObj = new URL(downloadUrl);
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+        return resolve({ success: false, error: `Unsupported protocol: ${urlObj.protocol}. Only http: and https: are supported.` });
+      }
+
+      if (!fs.existsSync(destFolder)) {
+        fs.mkdirSync(destFolder, { recursive: true });
+      }
+
+      let ext = path.extname(urlObj.pathname);
+      let rawBase = preferredName && preferredName.trim()
+        ? preferredName.trim()
+        : (path.basename(urlObj.pathname) || `download_${Date.now()}`);
+
+      // If preferredName was given without an extension, preserve extension from URL if available
+      if (preferredName && ext && !path.extname(preferredName)) {
+        rawBase += ext;
+      }
+
+      // Sanitize against path traversal attacks and illegal characters
+      const safeFileName = path.basename(rawBase).replace(/[/\\?%*:|"<>]/g, '_').trim() || `download_${Date.now()}`;
+      const destPath = path.join(destFolder, safeFileName);
+
       const client = urlObj.protocol === 'https:' ? https : http;
+      const requestOptions = {
+        headers: {
+          'User-Agent': 'ProjectAlphaPlus-Downloader/1.0',
+          'Accept': '*/*'
+        }
+      };
 
-      const destFolder = subfolder === 'songs' ? SONGS_DIR : DOWNLOADS_DIR;
-      const fileName = preferredName || path.basename(urlObj.pathname) || `download_${Date.now()}`;
-      const destPath = path.join(destFolder, fileName);
-
-      const request = client.get(downloadUrl, (response) => {
-        // Handle HTTP redirects
+      const request = client.get(downloadUrl, requestOptions, async (response) => {
+        // Handle HTTP redirects (301, 302, 303, 307, 308)
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-          const redirectUrl = new URL(response.headers.location, downloadUrl).href;
-          resolve(ipcMain.emit('net:download-file', event, redirectUrl, subfolder, preferredName));
-          return;
+          response.resume(); // Discard body
+          try {
+            const redirectUrl = new URL(response.headers.location, downloadUrl).href;
+            const redirectRes = await downloadFileWithRedirects(redirectUrl, destFolder, preferredName, redirectCount + 1);
+            return resolve(redirectRes);
+          } catch (redErr) {
+            return resolve({ success: false, error: `Failed to follow redirect: ${redErr.message}` });
+          }
         }
 
         if (response.statusCode !== 200) {
-          resolve({ success: false, error: `HTTP ${response.statusCode}: ${response.statusMessage}` });
-          return;
+          response.resume(); // Discard error response body
+          return resolve({ success: false, error: `HTTP ${response.statusCode}: ${response.statusMessage || 'Error'}` });
         }
 
         const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
         let receivedBytes = 0;
+        let isAborted = false;
 
         const fileStream = fs.createWriteStream(destPath);
 
+        const cleanupPartialFile = () => {
+          try {
+            if (fs.existsSync(destPath)) {
+              fs.unlinkSync(destPath);
+            }
+          } catch (e) {}
+        };
+
         response.on('data', (chunk) => {
+          if (isAborted) return;
           receivedBytes += chunk.length;
           const percent = totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0;
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('download:progress', {
               url: downloadUrl,
-              fileName,
+              fileName: safeFileName,
               receivedBytes,
               totalBytes,
               percent
@@ -804,18 +847,31 @@ ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, prefer
           }
         });
 
-        response.pipe(fileStream);
+        response.on('error', (err) => {
+          isAborted = true;
+          fileStream.destroy();
+          cleanupPartialFile();
+          resolve({ success: false, error: `Network stream error: ${err.message}` });
+        });
 
         fileStream.on('finish', () => {
           fileStream.close(() => {
-            resolve({ success: true, filePath: destPath, fileName, totalBytes: receivedBytes });
+            resolve({
+              success: true,
+              filePath: destPath,
+              fileName: safeFileName,
+              totalBytes: receivedBytes
+            });
           });
         });
 
         fileStream.on('error', (err) => {
-          fs.unlink(destPath, () => {});
-          resolve({ success: false, error: err.message });
+          isAborted = true;
+          cleanupPartialFile();
+          resolve({ success: false, error: `Disk write error: ${err.message}` });
         });
+
+        response.pipe(fileStream);
       });
 
       request.on('error', (err) => {
@@ -830,6 +886,11 @@ ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, prefer
       resolve({ success: false, error: err.message });
     }
   });
+}
+
+ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, preferredName) => {
+  const destFolder = subfolder === 'songs' ? SONGS_DIR : DOWNLOADS_DIR;
+  return downloadFileWithRedirects(downloadUrl, destFolder, preferredName, 0);
 });
 
 // --- Custom Songs & Default Tracks Disk Scanners ---
