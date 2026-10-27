@@ -2038,6 +2038,7 @@ class CreateMenu {
   open() {
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
+      this.mainMenuCard.classList.add("is-hidden");
     }
     this.renderMapsList();
     if (this.view) {
@@ -2055,6 +2056,7 @@ class CreateMenu {
       this.view.setAttribute("aria-hidden", "true");
     }
     if (this.mainMenuCard) {
+      this.mainMenuCard.classList.remove("is-hidden");
       this.mainMenuCard.style.display = "";
     }
   }

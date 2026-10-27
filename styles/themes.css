@@ -1,72 +1,74 @@
 /* ==========================================================================
-   Project Alpha Plus - Unified Themes Stylesheet
-   Design Philosophy:
-     Every theme adheres to a balanced 4-role color architecture:
-     1. Primary: Rich, saturated focal color for cards, panels, dialog headers, and key accents.
-     2. Secondary: Grounded, dark contrasting shade for action buttons, inputs, and deep panels.
-     3. Primary Background: Soft, airy canvas backdrop that also provides crisp light text on dark surfaces.
-     4. Secondary Background: Distinct pastel tone for solid drifting background squares, glowing borders, and badges.
+   Project Alpha Plus - Unified Themes Stylesheet (Dark Obsidian + Neon Cyan & Pink)
    ========================================================================== */
 
-/* --------------------------------------------------------------------------
-   THEME 1: Terracotta (Warm Earth / Current Signature)
-   -------------------------------------------------------------------------- */
 :root,
 [data-theme="terracotta"],
-[data-theme="dark"] {
-  --palette-primary: #954132;
-  --palette-primary-hover: #a84b3b;
-  --palette-primary-dark: #7c3426;
-  --palette-primary-rgb: 149, 65, 50;
+[data-theme="dark"],
+[data-theme="midnight"],
+[data-theme="sage"],
+[data-theme="light"],
+[data-theme="amethyst"] {
+  --palette-primary: #00c4d0;
+  --palette-primary-hover: #00e5ff;
+  --palette-primary-dark: #0095a0;
+  --palette-primary-rgb: 0, 196, 208;
 
-  --palette-secondary: #322214;
-  --palette-secondary-hover: #442f1d;
-  --palette-secondary-light: #523a25;
-  --palette-secondary-rgb: 50, 34, 20;
+  --palette-secondary: #040308;
+  --palette-secondary-hover: #0d0818;
+  --palette-secondary-light: #160f29;
+  --palette-secondary-rgb: 4, 3, 8;
 
-  --palette-bg-primary: #FAE3E3;
-  --palette-bg-primary-rgb: 250, 227, 227;
+  --palette-bg-primary: #ffffff;
+  --palette-bg-primary-rgb: 255, 255, 255;
 
-  --palette-bg-secondary: #F7D4BC;
-  --palette-bg-secondary-rgb: 247, 212, 188;
+  --palette-bg-secondary: #00f0ff;
+  --palette-bg-secondary-rgb: 0, 240, 255;
 
-  --color-bg: var(--palette-bg-primary);
-  --color-bg-secondary: var(--palette-bg-secondary);
-  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #FAE3E3 0%, #f4d4be 100%);
+  --neon-pink: #ff2a7a;
+  --neon-pink-rgb: 255, 42, 122;
+  --neon-cyan: #00f0ff;
+  --neon-cyan-rgb: 0, 240, 255;
+  --neon-obsidian: #0b0714;
+  --neon-bar-dark: #040308;
 
-  --color-surface: var(--palette-primary);
-  --color-surface-gradient: linear-gradient(168deg, #9f4737 0%, #954132 55%, #88392d 100%);
-  --color-surface-secondary: var(--palette-secondary);
-  --color-surface-secondary-gradient: linear-gradient(180deg, #3a2818 0%, #322214 75%, #2a1c10 100%);
-  --color-surface-hover: var(--palette-primary-hover);
-  --color-surface-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
-  --color-surface-border-active: var(--palette-bg-secondary);
-  --color-surface-shadow: 0 24px 64px rgba(var(--palette-secondary-rgb), 0.32), 0 8px 24px rgba(var(--palette-primary-rgb), 0.24);
+  --color-bg: #0b0714;
+  --color-bg-secondary: #05030a;
+  --color-bg-gradient: linear-gradient(135deg, #0d0818 0%, #090511 55%, #05030a 100%);
 
-  --color-text-primary: #FAE3E3;
-  --color-text-secondary: #F7D4BC;
-  --color-text-muted: rgba(var(--palette-bg-primary-rgb), 0.72);
-  --color-text-dark: #322214;
-  --color-text-dark-muted: rgba(var(--palette-secondary-rgb), 0.72);
+  --color-surface: #05030a;
+  --color-surface-gradient: linear-gradient(168deg, #0b0714 0%, #05030a 100%);
+  --color-surface-secondary: #030207;
+  --color-surface-secondary-gradient: linear-gradient(180deg, #080510 0%, #030207 100%);
+  --color-surface-hover: #00c4d0;
+  --color-surface-border: rgba(0, 240, 255, 0.25);
+  --color-surface-border-active: #00f0ff;
+  --color-surface-shadow: 0 24px 64px rgba(0, 0, 0, 0.7), 0 0 24px rgba(0, 240, 255, 0.12);
 
-  --color-accent: var(--palette-bg-secondary);
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #00e5ff;
+  --color-text-muted: rgba(215, 205, 240, 0.65);
+  --color-text-dark: #ffffff;
+  --color-text-dark-muted: rgba(0, 229, 255, 0.75);
+
+  --color-accent: #00f0ff;
   --color-accent-hover: #ffffff;
-  --color-accent-glow: rgba(var(--palette-bg-secondary-rgb), 0.4);
-  --color-accent-terracotta: var(--palette-primary);
+  --color-accent-glow: rgba(0, 240, 255, 0.45);
+  --color-accent-terracotta: #ff2a7a;
 
-  --color-button-bg: var(--palette-secondary);
-  --color-button-border: rgba(var(--palette-bg-secondary-rgb), 0.28);
-  --color-button-text: var(--palette-bg-primary);
-  --color-button-hover-bg: var(--palette-secondary-hover);
-  --color-button-hover-border: var(--palette-bg-secondary);
-  --color-button-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb), 0.28);
+  --color-button-bg: #040308;
+  --color-button-border: rgba(0, 240, 255, 0.28);
+  --color-button-text: #ffffff;
+  --color-button-hover-bg: #00c4d0;
+  --color-button-hover-border: #ffffff;
+  --color-button-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
 
-  --color-modal-backdrop: rgba(var(--palette-secondary-rgb), 0.8);
-  --color-slider-track: rgba(var(--palette-secondary-rgb), 0.55);
-  --color-slider-fill: var(--palette-bg-secondary);
-  --color-input-bg: rgba(var(--palette-secondary-rgb), 0.45);
-  --color-input-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-grid-line: rgba(var(--palette-primary-rgb), 0.08);
+  --color-modal-backdrop: rgba(5, 3, 10, 0.86);
+  --color-slider-track: #040308;
+  --color-slider-fill: #00f0ff;
+  --color-input-bg: #030207;
+  --color-input-border: rgba(0, 240, 255, 0.28);
+  --color-grid-line: rgba(0, 240, 255, 0.07);
 
   --menu-primary: var(--palette-primary);
   --menu-secondary: var(--palette-secondary);
@@ -74,305 +76,100 @@
   --menu-bg-secondary: var(--palette-bg-secondary);
 
   /* Universal Button & Folder Component Tokens */
-  --btn-radius-sm: 0.35rem;
-  --btn-radius-md: 0.45rem;
-  --btn-radius-lg: 0.55rem;
-  --btn-radius-pill: 999px;
+  --btn-radius-sm: 0px;
+  --btn-radius-md: 0px;
+  --btn-radius-lg: 0px;
+  --btn-radius-pill: 0px;
 
-  --folder-accent: var(--palette-bg-secondary);
+  --folder-accent: #00f0ff;
   --folder-accent-hover: #ffffff;
-  --folder-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
-  --folder-bg-hover: rgba(var(--palette-bg-secondary-rgb), 0.18);
-  --folder-border: rgba(var(--palette-bg-secondary-rgb), 0.32);
-  --folder-border-hover: var(--palette-bg-secondary);
-  --folder-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
+  --folder-bg: rgba(0, 240, 255, 0.08);
+  --folder-bg-hover: rgba(0, 240, 255, 0.18);
+  --folder-border: rgba(0, 240, 255, 0.3);
+  --folder-border-hover: #00f0ff;
+  --folder-glow: rgba(0, 240, 255, 0.25);
 
-  --download-accent: var(--palette-bg-secondary);
+  --download-accent: #00f0ff;
   --download-accent-hover: #ffffff;
-  --download-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
-  --download-border: rgba(var(--palette-bg-secondary-rgb), 0.32);
-  --download-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
+  --download-bg: rgba(0, 240, 255, 0.08);
+  --download-border: rgba(0, 240, 255, 0.3);
+  --download-glow: rgba(0, 240, 255, 0.25);
 
-  --import-accent: var(--palette-bg-secondary);
+  --import-accent: #00f0ff;
   --import-accent-hover: #ffffff;
-  --import-bg: rgba(var(--palette-bg-secondary-rgb), 0.1);
-  --import-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
-  --import-glow: rgba(var(--palette-bg-secondary-rgb), 0.2);
+  --import-bg: rgba(0, 240, 255, 0.08);
+  --import-border: rgba(0, 240, 255, 0.35);
+  --import-glow: rgba(0, 240, 255, 0.25);
 
-  --save-accent: #2ed573;
-  --save-accent-hover: #48e288;
-  --save-bg: rgba(46, 213, 115, 0.14);
-  --save-border: rgba(46, 213, 115, 0.45);
-  --save-glow: rgba(46, 213, 115, 0.22);
+  --save-accent: #00f0ff;
+  --save-accent-hover: #ffffff;
+  --save-bg: rgba(0, 240, 255, 0.14);
+  --save-border: rgba(0, 240, 255, 0.45);
+  --save-glow: rgba(0, 240, 255, 0.25);
 
-  --danger-accent: #ff4757;
-  --danger-accent-hover: #ff6b81;
-  --danger-bg: rgba(255, 71, 87, 0.12);
-  --danger-border: rgba(255, 71, 87, 0.38);
-  --danger-glow: rgba(255, 71, 87, 0.22);
+  --danger-accent: #ff2a7a;
+  --danger-accent-hover: #ff5c99;
+  --danger-bg: rgba(255, 42, 122, 0.12);
+  --danger-border: rgba(255, 42, 122, 0.4);
+  --danger-glow: rgba(255, 42, 122, 0.25);
 }
 
-/* --------------------------------------------------------------------------
-   THEME 2: Midnight Abyss (Oceanic Cobalt & Frost)
-   -------------------------------------------------------------------------- */
-[data-theme="midnight"] {
-  --palette-primary: #244B6E;
-  --palette-primary-hover: #2d5b85;
-  --palette-primary-dark: #1b3b59;
-  --palette-primary-rgb: 36, 75, 110;
-
-  --palette-secondary: #101E2B;
-  --palette-secondary-hover: #172a3c;
-  --palette-secondary-light: #1e364d;
-  --palette-secondary-rgb: 16, 30, 43;
-
-  --palette-bg-primary: #E7F0F8;
-  --palette-bg-primary-rgb: 231, 240, 248;
-
-  --palette-bg-secondary: #BBD5EB;
-  --palette-bg-secondary-rgb: 187, 213, 235;
-
-  --color-bg: var(--palette-bg-primary);
-  --color-bg-secondary: var(--palette-bg-secondary);
-  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #E7F0F8 0%, #cfe0f0 100%);
-
-  --color-surface: var(--palette-primary);
-  --color-surface-gradient: linear-gradient(168deg, #2a557c 0%, #244B6E 55%, #1d3e5b 100%);
-  --color-surface-secondary: var(--palette-secondary);
-  --color-surface-secondary-gradient: linear-gradient(180deg, #172a3c 0%, #101E2B 75%, #0c1822 100%);
-  --color-surface-hover: var(--palette-primary-hover);
-  --color-surface-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
-  --color-surface-border-active: var(--palette-bg-secondary);
-  --color-surface-shadow: 0 24px 64px rgba(var(--palette-secondary-rgb), 0.35), 0 8px 24px rgba(var(--palette-primary-rgb), 0.28);
-
-  --color-text-primary: #E7F0F8;
-  --color-text-secondary: #BBD5EB;
-  --color-text-muted: rgba(var(--palette-bg-primary-rgb), 0.75);
-  --color-text-dark: #101E2B;
-  --color-text-dark-muted: rgba(var(--palette-secondary-rgb), 0.75);
-
-  --color-accent: var(--palette-bg-secondary);
-  --color-accent-hover: #ffffff;
-  --color-accent-glow: rgba(var(--palette-bg-secondary-rgb), 0.45);
-  --color-accent-terracotta: var(--palette-primary);
-
-  --color-button-bg: var(--palette-secondary);
-  --color-button-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-button-text: var(--palette-bg-primary);
-  --color-button-hover-bg: var(--palette-secondary-hover);
-  --color-button-hover-border: var(--palette-bg-secondary);
-  --color-button-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb), 0.32);
-
-  --color-modal-backdrop: rgba(var(--palette-secondary-rgb), 0.85);
-  --color-slider-track: rgba(var(--palette-secondary-rgb), 0.6);
-  --color-slider-fill: var(--palette-bg-secondary);
-  --color-input-bg: rgba(var(--palette-secondary-rgb), 0.5);
-  --color-input-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-grid-line: rgba(var(--palette-primary-rgb), 0.1);
-
-  --menu-primary: var(--palette-primary);
-  --menu-secondary: var(--palette-secondary);
-  --menu-bg-primary: var(--palette-bg-primary);
-  --menu-bg-secondary: var(--palette-bg-secondary);
-}
-
-/* --------------------------------------------------------------------------
-   THEME 3: Nordic Sage (Botanical Evergreen & Mint Dew)
-   -------------------------------------------------------------------------- */
-[data-theme="sage"],
-[data-theme="light"] {
-  --palette-primary: #2C5740;
-  --palette-primary-hover: #35674c;
-  --palette-primary-dark: #204331;
-  --palette-primary-rgb: 44, 87, 64;
-
-  --palette-secondary: #14251B;
-  --palette-secondary-hover: #1d3527;
-  --palette-secondary-light: #264432;
-  --palette-secondary-rgb: 20, 37, 27;
-
-  --palette-bg-primary: #E7EFEA;
-  --palette-bg-primary-rgb: 231, 239, 234;
-
-  --palette-bg-secondary: #BEDBCB;
-  --palette-bg-secondary-rgb: 190, 219, 203;
-
-  --color-bg: var(--palette-bg-primary);
-  --color-bg-secondary: var(--palette-bg-secondary);
-  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #E7EFEA 0%, #d0e4d7 100%);
-
-  --color-surface: var(--palette-primary);
-  --color-surface-gradient: linear-gradient(168deg, #326249 0%, #2C5740 55%, #244935 100%);
-  --color-surface-secondary: var(--palette-secondary);
-  --color-surface-secondary-gradient: linear-gradient(180deg, #1c3325 0%, #14251B 75%, #0e1b13 100%);
-  --color-surface-hover: var(--palette-primary-hover);
-  --color-surface-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
-  --color-surface-border-active: var(--palette-bg-secondary);
-  --color-surface-shadow: 0 24px 64px rgba(var(--palette-secondary-rgb), 0.35), 0 8px 24px rgba(var(--palette-primary-rgb), 0.28);
-
-  --color-text-primary: #E7EFEA;
-  --color-text-secondary: #BEDBCB;
-  --color-text-muted: rgba(var(--palette-bg-primary-rgb), 0.75);
-  --color-text-dark: #14251B;
-  --color-text-dark-muted: rgba(var(--palette-secondary-rgb), 0.75);
-
-  --color-accent: var(--palette-bg-secondary);
-  --color-accent-hover: #ffffff;
-  --color-accent-glow: rgba(var(--palette-bg-secondary-rgb), 0.45);
-  --color-accent-terracotta: var(--palette-primary);
-
-  --color-button-bg: var(--palette-secondary);
-  --color-button-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-button-text: var(--palette-bg-primary);
-  --color-button-hover-bg: var(--palette-secondary-hover);
-  --color-button-hover-border: var(--palette-bg-secondary);
-  --color-button-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb), 0.32);
-
-  --color-modal-backdrop: rgba(var(--palette-secondary-rgb), 0.85);
-  --color-slider-track: rgba(var(--palette-secondary-rgb), 0.6);
-  --color-slider-fill: var(--palette-bg-secondary);
-  --color-input-bg: rgba(var(--palette-secondary-rgb), 0.5);
-  --color-input-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-grid-line: rgba(var(--palette-primary-rgb), 0.1);
-
-  --menu-primary: var(--palette-primary);
-  --menu-secondary: var(--palette-secondary);
-  --menu-bg-primary: var(--palette-bg-primary);
-  --menu-bg-secondary: var(--palette-bg-secondary);
-}
-
-/* --------------------------------------------------------------------------
-   THEME 4: Amethyst Twilight (Imperial Plum & Heather Quartz)
-   -------------------------------------------------------------------------- */
-[data-theme="amethyst"] {
-  --palette-primary: #5C3565;
-  --palette-primary-hover: #6c3f76;
-  --palette-primary-dark: #4a2a52;
-  --palette-primary-rgb: 92, 53, 101;
-
-  --palette-secondary: #241328;
-  --palette-secondary-hover: #331c39;
-  --palette-secondary-light: #422449;
-  --palette-secondary-rgb: 36, 19, 40;
-
-  --palette-bg-primary: #F6EEF8;
-  --palette-bg-primary-rgb: 246, 238, 248;
-
-  --palette-bg-secondary: #E0C3E5;
-  --palette-bg-secondary-rgb: 224, 195, 229;
-
-  --color-bg: var(--palette-bg-primary);
-  --color-bg-secondary: var(--palette-bg-secondary);
-  --color-bg-gradient: radial-gradient(ellipse at 50% 20%, #F6EEF8 0%, #ecd6ef 100%);
-
-  --color-surface: var(--palette-primary);
-  --color-surface-gradient: linear-gradient(168deg, #663c70 0%, #5C3565 55%, #4f2d57 100%);
-  --color-surface-secondary: var(--palette-secondary);
-  --color-surface-secondary-gradient: linear-gradient(180deg, #2d1832 0%, #241328 75%, #1a0e1d 100%);
-  --color-surface-hover: var(--palette-primary-hover);
-  --color-surface-border: rgba(var(--palette-bg-secondary-rgb), 0.35);
-  --color-surface-border-active: var(--palette-bg-secondary);
-  --color-surface-shadow: 0 24px 64px rgba(var(--palette-secondary-rgb), 0.35), 0 8px 24px rgba(var(--palette-primary-rgb), 0.28);
-
-  --color-text-primary: #F6EEF8;
-  --color-text-secondary: #E0C3E5;
-  --color-text-muted: rgba(var(--palette-bg-primary-rgb), 0.75);
-  --color-text-dark: #241328;
-  --color-text-dark-muted: rgba(var(--palette-secondary-rgb), 0.75);
-
-  --color-accent: var(--palette-bg-secondary);
-  --color-accent-hover: #ffffff;
-  --color-accent-glow: rgba(var(--palette-bg-secondary-rgb), 0.45);
-  --color-accent-terracotta: var(--palette-primary);
-
-  --color-button-bg: var(--palette-secondary);
-  --color-button-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-button-text: var(--palette-bg-primary);
-  --color-button-hover-bg: var(--palette-secondary-hover);
-  --color-button-hover-border: var(--palette-bg-secondary);
-  --color-button-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb), 0.32);
-
-  --color-modal-backdrop: rgba(var(--palette-secondary-rgb), 0.85);
-  --color-slider-track: rgba(var(--palette-secondary-rgb), 0.6);
-  --color-slider-fill: var(--palette-bg-secondary);
-  --color-input-bg: rgba(var(--palette-secondary-rgb), 0.5);
-  --color-input-border: rgba(var(--palette-bg-secondary-rgb), 0.3);
-  --color-grid-line: rgba(var(--palette-primary-rgb), 0.1);
-
-  --menu-primary: var(--palette-primary);
-  --menu-secondary: var(--palette-secondary);
-  --menu-bg-primary: var(--palette-bg-primary);
-  --menu-bg-secondary: var(--palette-bg-secondary);
-}
-
-/* ==========================================================================
-   Shared Reusable UI Classes (Unified Design Language)
-   ========================================================================== */
-
-/* Standard Unified Button: Secondary background, Primary Background text */
+/* Shared Reusable UI Classes */
 .unified-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  padding: 0.85rem 1.45rem;
+  padding: 0.8rem 1.45rem;
   font-family: var(--font-family-display);
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  background-color: var(--color-button-bg);
-  color: var(--color-button-text);
-  border: 1.5px solid var(--color-button-border);
-  border-radius: 0.85rem;
+  background-color: #040308;
+  color: #ffffff;
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-right: 4px solid #00f0ff;
+  border-radius: 0;
   cursor: pointer;
   outline: none;
-  overflow: hidden;
-  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: var(--color-button-shadow);
+  transform: skewX(-16deg);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
   user-select: none;
 }
 
+.unified-btn > * {
+  transform: skewX(16deg);
+}
+
 .unified-btn:hover {
-  background-color: var(--color-button-hover-bg);
-  border-color: var(--color-button-hover-border);
+  background-color: #00c4d0;
+  border-color: #ffffff;
+  border-right-color: #ffffff;
   color: #ffffff;
-  transform: translateY(-2px) scale(1.01);
-  box-shadow: 0 8px 24px rgba(var(--palette-secondary-rgb), 0.38), 0 0 16px rgba(var(--palette-bg-secondary-rgb), 0.25);
+  transform: skewX(-16deg) translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 240, 255, 0.35);
 }
 
-.unified-btn:active {
-  transform: translateY(0) scale(0.99);
-}
-
-/* Unified Card: Primary container with subtle gradient */
-.unified-card {
-  background-color: var(--color-surface);
-  background: var(--color-surface-gradient);
-  border: 1.5px solid var(--color-surface-border);
-  border-radius: 0.85rem;
-  box-shadow: var(--color-surface-shadow), inset 0 1px 0 rgba(var(--palette-bg-primary-rgb), 0.35);
-  color: var(--color-text-primary);
-}
-
-/* Unified Dark/Secondary Card */
+.unified-card,
 .unified-card-dark {
-  background-color: var(--color-surface-secondary);
-  background: var(--color-surface-secondary-gradient);
-  border: 1.5px solid var(--color-surface-border);
-  border-radius: 0.85rem;
-  box-shadow: 0 12px 36px rgba(var(--palette-secondary-rgb), 0.4);
-  color: var(--color-text-primary);
+  background-color: #05030a;
+  border: 1px solid rgba(0, 240, 255, 0.22);
+  border-left: 4px solid #00f0ff;
+  border-radius: 0;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.7);
+  color: #ffffff;
 }
 
-/* Unified Input / Select */
 .unified-input {
-  background: var(--color-input-bg);
-  border: 1.5px solid var(--color-input-border);
-  border-radius: 0.65rem;
+  background: #030207;
+  border: 1px solid rgba(0, 240, 255, 0.28);
+  border-left: 3px solid #00f0ff;
+  border-radius: 0;
   padding: 0.75rem 1rem;
-  color: var(--color-text-primary);
+  color: #ffffff;
   font-family: inherit;
   font-size: 0.9rem;
   outline: none;
@@ -380,27 +177,28 @@
 }
 
 .unified-input:focus {
-  border-color: var(--palette-bg-secondary);
-  box-shadow: 0 0 14px rgba(var(--palette-bg-secondary-rgb), 0.35);
+  border-color: #00f0ff;
+  box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
 }
 
 .unified-input::placeholder {
-  color: rgba(var(--palette-bg-secondary-rgb), 0.5);
+  color: rgba(180, 225, 240, 0.42);
 }
 
-/* Unified Pill Badge */
 .unified-badge {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
   padding: 0.25rem 0.75rem;
-  background: rgba(var(--palette-secondary-rgb), 0.4);
-  border: 1px solid rgba(var(--palette-bg-secondary-rgb), 0.28);
-  border-radius: 999px;
-  color: var(--palette-bg-secondary);
+  background: #040308;
+  border: 1px solid rgba(0, 240, 255, 0.32);
+  border-left: 3px solid #00f0ff;
+  border-radius: 0;
+  color: #00f0ff;
   font-family: var(--font-family-mono);
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
+  transform: skewX(-14deg);
 }

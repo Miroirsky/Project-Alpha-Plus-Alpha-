@@ -181,30 +181,38 @@ class PlayMenu {
       const badgeColor = this.getDifficultyColor(primaryDiffKey, song.color);
 
       const bestScore = this.mapStorage ? this.mapStorage.getBestScore(song.id, primaryDiffKey) : 0;
-      const bestScoreLabel = bestScore > 0 ? `PB: ${bestScore.toLocaleString()}` : "Unplayed";
+      const bestScoreLabel = bestScore > 0 ? `PB: ${bestScore.toLocaleString()}` : `${this.getSongNps(song)} NPS`;
 
       card.innerHTML = `
-        <div class="song-card-drag-wrapper" style="display: flex; align-items: center; padding-left: 6px;">
-          <span class="drag-handle song-card-drag-handle" draggable="true" title="Drag to reorder song" aria-label="Drag to reorder song">&#x22EE;&#x22EE;</span>
-        </div>
-        <div class="song-card-thumb-wrapper">
-          <img class="song-card-thumb" src="${coverSrc}" alt="${song.name}" loading="lazy">
-        </div>
-        <div class="song-card-main">
-          <div class="song-card-header-row">
-            <span class="song-card-name" title="${song.name}">${song.name}</span>
-            <span class="song-card-diff-badge" style="border-color: ${badgeColor}; color: ${badgeColor};">
-              ${diffBadgeText}
-            </span>
+        <span class="song-card-skew-bg" aria-hidden="true"></span>
+        <span class="song-card-right-stripe" aria-hidden="true"></span>
+        <div class="song-card-inner">
+          <div class="song-card-left-group">
+            <div class="song-card-drag-wrapper">
+              <span class="drag-handle song-card-drag-handle" draggable="true" title="Drag to reorder song" aria-label="Drag to reorder song">&#x22EE;&#x22EE;</span>
+            </div>
+            <div class="song-card-thumb-wrapper">
+              <img class="song-card-thumb" src="${coverSrc}" alt="${song.name}" loading="lazy">
+            </div>
+            <div class="song-card-status-col">
+              <div class="song-card-stats-row">
+                <span class="song-card-stat-pill nps">${this.getSongNps(song)} NPS</span>
+                <span class="song-card-stat-pill duration">${song.duration || "03:00"}</span>
+                <span class="song-card-stat-pill score ${bestScore > 0 ? 'has-score' : ''}">${bestScore > 0 ? bestScoreLabel : diffBadgeText}</span>
+              </div>
+              <div class="song-card-sub-row">
+                <span class="song-card-artist" title="${song.creator}">${song.creator || "Unknown Artist"}</span>
+                <span class="song-card-mapper" title="Mapped by ${song.mapper}">// ${song.mapper || "Anonymous"}</span>
+                <span class="song-card-diff-badge" style="border-color: ${badgeColor}; color: ${badgeColor};">
+                  ${diffBadgeText}
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="song-card-sub-row">
-            <span class="song-card-artist" title="${song.creator}">${song.creator || "Unknown Artist"}</span>
-            <span class="song-card-mapper" title="Mapped by ${song.mapper}">// ${song.mapper || "Anonymous"}</span>
-          </div>
-          <div class="song-card-stats-row">
-            <span class="song-card-stat-pill nps">${this.getSongNps(song)} NPS</span>
-            <span class="song-card-stat-pill duration">${song.duration || "03:00"}</span>
-            <span class="song-card-stat-pill score ${bestScore > 0 ? 'has-score' : ''}">${bestScoreLabel}</span>
+          <div class="song-card-main">
+            <div class="song-card-header-row">
+              <span class="song-card-name" title="${song.name}">${song.name}</span>
+            </div>
           </div>
         </div>
       `;
@@ -1008,6 +1016,7 @@ class PlayMenu {
     }
     if (this.mainMenuCard) {
       this.mainMenuCard.style.display = "none";
+      this.mainMenuCard.classList.add("is-hidden");
     }
     if (this.view) {
       this.view.classList.add("is-active");
@@ -1036,6 +1045,7 @@ class PlayMenu {
       this.view.setAttribute("aria-hidden", "true");
     }
     if (this.mainMenuCard) {
+      this.mainMenuCard.classList.remove("is-hidden");
       this.mainMenuCard.style.display = "";
     }
   }

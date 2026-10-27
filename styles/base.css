@@ -1,6 +1,5 @@
 /* ==========================================================================
-   Project Alpha Plus - Base Stylesheet
-   Responsibility: Reset, core layout, typography, and background canvas styling.
+   Project Alpha Plus - Base Stylesheet (Dark Obsidian + Slanted Neon Style)
    ========================================================================== */
 
 *,
@@ -24,8 +23,8 @@ body {
   height: 100%;
   overflow: hidden;
   font-family: var(--font-family-display);
-  background-color: var(--palette-bg-primary, #FAE3E3);
-  color: var(--color-text-dark, #322214);
+  background-color: #0b0714;
+  color: #ffffff;
   transition: background-color var(--transition-speed) ease, color var(--transition-speed) ease;
   user-select: none;
   -webkit-user-select: none;
@@ -33,33 +32,30 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars matching the palette */
+/* Custom Scrollbars matching the neon cyan & obsidian palette */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--palette-secondary, #322214);
-  border-radius: 4px;
+  background: #040308;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--palette-primary, #954132);
-  border-radius: 4px;
-  border: 1px solid rgba(247, 212, 188, 0.2);
+  background: rgba(0, 240, 255, 0.45);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--palette-bg-secondary, #F7D4BC);
+  background: #00f0ff;
 }
 
 ::selection {
-  background: var(--palette-primary, #954132);
-  color: var(--palette-bg-primary, #FAE3E3);
+  background: #00c4d0;
+  color: #ffffff;
 }
 
-/* Background animated visual canvas/vignette */
+/* Background animated visual canvas */
 .app-container {
   position: relative;
   width: 100%;
@@ -67,20 +63,19 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: var(--palette-bg-primary, #FAE3E3);
+  background-color: #0b0714;
   overflow: hidden;
 }
 
-/* Subtle backdrop grid & vignette overlay */
 .bg-grid {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-image: 
-    linear-gradient(to right, var(--color-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--color-grid-line) 1px, transparent 1px);
+  background-image:
+    linear-gradient(to right, rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
   background-size: 48px 48px;
   mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.05) 80%);
   -webkit-mask-image: radial-gradient(circle at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.05) 80%);
@@ -93,7 +88,7 @@ body {
   width: 500px;
   height: 500px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--color-accent-glow) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.25) 0%, transparent 65%);
   filter: blur(80px);
   opacity: 0.22;
   pointer-events: none;
@@ -111,24 +106,23 @@ body {
   cursor: grab;
   user-select: none;
   font-family: var(--font-family-mono, monospace);
-  font-size: 1.1rem;
+  font-size: 1rem;
   line-height: 1;
-  color: var(--palette-bg-secondary, #F7D4BC);
-  opacity: 0.7;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.35rem;
-  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.12);
-  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.2);
+  color: #00e5ff;
+  opacity: 0.65;
+  padding: 0.2rem 0.35rem;
+  background: rgba(0, 240, 255, 0.08);
+  border: 1px solid rgba(0, 240, 255, 0.2);
   transition: all 0.18s ease;
   flex-shrink: 0;
 }
 
 .drag-handle:hover {
   opacity: 1;
-  background: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.28);
-  border-color: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.45);
+  background: rgba(0, 240, 255, 0.25);
+  border-color: #00f0ff;
   color: #ffffff;
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .drag-handle:active {
@@ -136,10 +130,10 @@ body {
 }
 
 .is-dragging {
-  opacity: 0.4 !important;
+  opacity: 0.45 !important;
   transform: scale(0.985);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
-  border: 2px dashed var(--palette-primary, #954132) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+  border: 2px dashed #00f0ff !important;
 }
 
 /* Vertical Drop Target Placement Indicators */
@@ -153,9 +147,8 @@ body {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--palette-primary, #954132);
-  border-radius: 2px;
-  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  background: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 4px #ffffff;
   z-index: 100;
   pointer-events: none;
 }
@@ -170,14 +163,13 @@ body {
   left: 0;
   right: 0;
   height: 4px;
-  background: var(--palette-primary, #954132);
-  border-radius: 2px;
-  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  background: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 4px #ffffff;
   z-index: 100;
   pointer-events: none;
 }
 
-/* Horizontal Drop Target Placement Indicators (Tabs, difficulty chips) */
+/* Horizontal Drop Target Placement Indicators */
 .drop-target-h-before {
   position: relative !important;
 }
@@ -188,9 +180,8 @@ body {
   bottom: 0;
   left: -4px;
   width: 4px;
-  background: var(--palette-primary, #954132);
-  border-radius: 2px;
-  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  background: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 4px #ffffff;
   z-index: 100;
   pointer-events: none;
 }
@@ -205,14 +196,12 @@ body {
   bottom: 0;
   right: -4px;
   width: 4px;
-  background: var(--palette-primary, #954132);
-  border-radius: 2px;
-  box-shadow: 0 0 10px var(--palette-primary, #954132), 0 0 4px #ffffff;
+  background: #00f0ff;
+  box-shadow: 0 0 12px #00f0ff, 0 0 4px #ffffff;
   z-index: 100;
   pointer-events: none;
 }
 
-/* Specific Drag Handle Placements */
 .song-card-drag-wrapper {
   margin-right: 0.35rem;
 }
@@ -234,7 +223,7 @@ body {
 }
 
 /* ==========================================================================
-   Universal Button & Folder Handling Component System
+   Universal Button & Folder Handling Component System (Slanted Dark/Cyan)
    ========================================================================== */
 
 button,
@@ -247,16 +236,14 @@ button,
   outline: none;
 }
 
-/* Universal Accessible Focus Rings */
 button:focus-visible,
 [role="button"]:focus-visible,
 input:focus-visible,
 select:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px var(--palette-bg-secondary, #F7D4BC), 0 0 12px rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.5) !important;
+  box-shadow: 0 0 0 2px #00f0ff, 0 0 14px rgba(0, 240, 255, 0.55) !important;
 }
 
-/* Universal Tactile Micro-interaction on All Action Buttons */
 .btn-theme-action,
 .menu-btn,
 .play-back-btn,
@@ -273,39 +260,31 @@ select:focus-visible {
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-theme-action:active,
-.btn-editor-action:active,
-.btn-song-export:active,
-.btn-song-params:active,
-.btn-diff-action:active,
-.btn-folder-tile:active,
-.btn-create-submit:active,
-.btn-start-action:active,
-.play-back-btn:active,
-.btn-results-primary:active,
-.btn-results-secondary:active {
-  transform: translateY(1px) scale(0.98) !important;
-}
-
-/* Base Theme Action Button */
+/* Base Theme Action Button (Slanted Dark Bar + Cyan Right Stripe) */
 .btn-theme-action {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  padding: 0.52rem 1rem;
-  border-radius: var(--btn-radius-md, 0.45rem);
+  padding: 0.55rem 1.1rem;
+  border-radius: 0;
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--palette-bg-primary, #FAE3E3);
-  background: var(--palette-secondary, #322214);
-  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.26);
-  box-shadow: 0 2px 8px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.22);
+  color: #ffffff;
+  background: #040308;
+  border: 1px solid rgba(0, 240, 255, 0.26);
+  border-right: 4px solid #00f0ff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  transform: skewX(-16deg);
   overflow: hidden;
   white-space: nowrap;
+}
+
+.btn-theme-action > * {
+  transform: skewX(16deg);
 }
 
 .btn-theme-action .btn-icon,
@@ -315,51 +294,22 @@ select:focus-visible {
   justify-content: center;
   font-size: 0.9rem;
   line-height: 1;
-  color: var(--palette-bg-secondary, #F7D4BC);
+  color: #00f0ff;
   transition: transform 0.18s ease, color 0.18s ease;
 }
 
 .btn-theme-action:hover {
-  background: var(--palette-secondary-hover, #442f1d);
-  border-color: var(--palette-bg-secondary, #F7D4BC);
+  background: #00c4d0;
+  border-color: #ffffff;
+  border-right-color: #ffffff;
   color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.32);
+  transform: skewX(-16deg) translateY(-1.5px);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.32);
 }
 
 .btn-theme-action:hover .btn-icon,
 .btn-theme-action:hover > span:first-child {
   color: #ffffff;
-}
-
-/* ==========================================================================
-   Folder Handling Action Buttons & Tile Components
-   ========================================================================== */
-
-.btn-folder-action,
-.play-folder-btn,
-.btn-song-folder,
-.btn-editor-folder,
-.play-import-btn,
-.btn-create-import,
-.play-downloader-btn {
-  border-color: rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.28);
-  color: var(--palette-bg-primary, #FAE3E3);
-  background: var(--palette-secondary, #322214);
-}
-
-.btn-folder-action:hover,
-.play-folder-btn:hover,
-.btn-song-folder:hover,
-.btn-editor-folder:hover,
-.play-import-btn:hover,
-.btn-create-import:hover,
-.play-downloader-btn:hover {
-  background: var(--palette-secondary-hover, #442f1d);
-  border-color: var(--palette-bg-secondary, #F7D4BC);
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.35);
 }
 
 /* Interactive Folder Tiles (Settings Modal & Dialogs) */
@@ -375,34 +325,32 @@ select:focus-visible {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.7rem 0.9rem;
-  background: rgba(var(--palette-secondary-rgb, 50, 34, 20), 0.75);
-  border: 1px solid rgba(var(--palette-bg-secondary-rgb, 247, 212, 188), 0.24);
-  border-radius: var(--btn-radius-md, 0.45rem);
-  color: var(--palette-bg-primary, #FAE3E3);
+  padding: 0.75rem 0.95rem;
+  background: #040308;
+  border: 1px solid rgba(0, 240, 255, 0.24);
+  border-right: 4px solid #00f0ff;
+  border-radius: 0;
+  color: #ffffff;
   text-align: left;
   cursor: pointer;
+  transform: skewX(-12deg);
   overflow: hidden;
   transition: all 0.18s ease;
 }
 
+.btn-folder-tile > * {
+  transform: skewX(12deg);
+}
+
 .btn-folder-tile::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 3px;
-  height: 100%;
-  background: var(--palette-bg-secondary, #F7D4BC);
-  opacity: 0.45;
-  transition: opacity 0.18s ease;
+  display: none;
 }
 
 .btn-folder-tile .folder-tile-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--palette-bg-secondary, #F7D4BC);
+  color: #00f0ff;
   flex-shrink: 0;
 }
 
@@ -415,10 +363,10 @@ select:focus-visible {
 
 .btn-folder-tile .folder-tile-title {
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
-  color: var(--palette-bg-primary, #FAE3E3);
-  letter-spacing: 0.05em;
+  color: #ffffff;
+  letter-spacing: 0.08em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -427,23 +375,22 @@ select:focus-visible {
 .btn-folder-tile .folder-tile-sub {
   font-size: 0.66rem;
   font-family: var(--font-family-mono, monospace);
-  color: var(--palette-bg-secondary, #F7D4BC);
-  opacity: 0.8;
+  color: #00e5ff;
+  opacity: 0.85;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .btn-folder-tile:hover {
-  background: var(--palette-secondary, #322214);
-  border-color: var(--palette-bg-secondary, #F7D4BC);
-  transform: translateY(-1px);
+  background: #00c4d0;
+  border-color: #ffffff;
+  border-right-color: #ffffff;
+  transform: skewX(-12deg) translateX(4px);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.3);
 }
 
-.btn-folder-tile:hover::before {
-  opacity: 1;
-}
-
-.btn-folder-tile:active {
-  transform: translateY(0);
+.btn-folder-tile:hover .folder-tile-icon,
+.btn-folder-tile:hover .folder-tile-sub {
+  color: #ffffff;
 }

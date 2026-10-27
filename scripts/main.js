@@ -132,7 +132,7 @@ async function initApp() {
     }
     gameView.hide();
 
-    if (currentTestedMap && mapStorage && currentTestedMap.id && !currentTestedMap.isTutorial) {
+    if (currentTestedMap && mapStorage && currentTestedMap.id) {
       mapStorage.setSelectedSongId(currentTestedMap.id);
     }
 
@@ -142,6 +142,7 @@ async function initApp() {
       const mainMenuCard = document.getElementById("main-menu-card");
       if (mainMenuCard) {
         mainMenuCard.classList.remove("is-hidden");
+        mainMenuCard.style.display = "";
       }
     } else {
       playMenu.updateSongs(mapStorage.getAllMaps());
@@ -158,7 +159,7 @@ async function initApp() {
   function launchTrackGameplay(song, returnTarget = "select", speedMultiplier = 1.0) {
     gameReturnTarget = returnTarget;
     currentTestedMap = song;
-    if (mapStorage && song && song.id && !song.isTutorial) {
+    if (mapStorage && song && song.id) {
       mapStorage.setSelectedSongId(song.id);
     }
 
@@ -181,19 +182,32 @@ async function initApp() {
     playMenu.hideForGame();
     createMenu.hide();
 
-    // Ensure latest map data is queried from mapStorage
-    const freshSong = (!song.isTutorial && mapStorage && song.id && mapStorage.getMap(song.id)) || song;
+    // Ensure latest map data is queried from mapStorage (including Default Tracks/Tutorial)
+    let freshSong = (mapStorage && song && song.id && mapStorage.getMap(song.id)) || null;
+    if (!freshSong && mapStorage && song && song.isTutorial) {
+      const allMaps = mapStorage.getAllMaps();
+      freshSong = allMaps.find(
+        (m) =>
+          m &&
+          (m.id === "custom_1792933532150_9287" ||
+            (m._folderName && m._folderName.toLowerCase() === "tutorial") ||
+            (m.name && m.name.toLowerCase() === "tutorial"))
+      ) || null;
+    }
+    freshSong = freshSong || song;
+
     const diffs = (mapStorage && mapStorage.getSongDifficulties(freshSong)) || freshSong.difficulties || {};
     const chosenDiff = song.selectedDifficulty || freshSong.selectedDifficulty || freshSong.difficulty || Object.keys(diffs)[0] || "Normal";
     const diffData = diffs[chosenDiff] || {};
 
     // Use notes from selected difficulty
-    const trackNotes = (Array.isArray(song.notes) && song.selectedDifficulty === chosenDiff && song.notes.length > 0)
+    const trackNotes = (Array.isArray(song.notes) && song.selectedDifficulty === chosenDiff && song.notes.length > 0 && !freshSong.difficulties)
       ? song.notes
-      : (diffData.notes || freshSong.notes || ((window.SAMPLE_MAPS && window.SAMPLE_MAPS[freshSong.id]) || []));
+      : (diffData.notes || freshSong.notes || song.notes || ((window.SAMPLE_MAPS && window.SAMPLE_MAPS[freshSong.id]) || []));
 
     const songForGame = {
       ...freshSong,
+      isTutorial: Boolean(song.isTutorial || freshSong.isTutorial),
       difficulty: chosenDiff,
       selectedDifficulty: chosenDiff,
       notes: trackNotes,
@@ -216,12 +230,10 @@ async function initApp() {
         gameView.render(state);
       },
       onSongEnd: (results) => {
-        if (songForGame.isTutorial) {
-          gameView.showResults(results, { bestScore: results.score, isNewBest: Boolean(results.isCompleted) });
-          return;
-        }
         // Record high score (completed runs only) for the chosen difficulty and display comprehensive End Screen
-        const scoreRecord = mapStorage.recordScore(results.songId, results.score, results.isCompleted, chosenDiff);
+        const scoreRecord = mapStorage
+          ? mapStorage.recordScore(results.songId, results.score, results.isCompleted, chosenDiff)
+          : { bestScore: results.score, isNewBest: Boolean(results.isCompleted) };
         if (window.saveSystem && typeof window.saveSystem.recordRunResult === "function") {
           window.saveSystem.recordRunResult(results, chosenDiff);
         }
@@ -280,6 +292,9 @@ async function initApp() {
     if (createMenu && typeof createMenu.renderMapsList === "function") {
       createMenu.renderMapsList();
     }
+    if (typeof syncMenuStars === "function") {
+      syncMenuStars();
+    }
   });
 
   // 7. Connect Main Menu Buttons
@@ -328,6 +343,17 @@ async function initApp() {
     });
   }
 
+  const menuStarCountEl = document.getElementById("menu-star-count");
+  function syncMenuStars() {
+    if (!menuStarCountEl) return;
+    let stars = 0;
+    if (mapStorage && mapStorage.highscores && typeof mapStorage.highscores === "object") {
+      stars = Object.values(mapStorage.highscores).filter((v) => Number(v) > 0).length;
+    }
+    menuStarCountEl.textContent = String(stars);
+  }
+  syncMenuStars();
+
   // Initialize First-Time 30s Tutorial Manager
   const TutorialClass = window.TutorialManager;
   const tutorialManager = TutorialClass
@@ -342,6 +368,24 @@ async function initApp() {
     tutorialManager.init();
     window.tutorialManager = tutorialManager;
   }
+
+  const btnMenuNotif = document.getElementById("btn-menu-notif");
+  const menuWhatsNewBox = document.getElementById("menu-whats-new-box");
+  [btnMenuNotif, menuWhatsNewBox].forEach((el) => {
+    if (el) {
+      el.addEventListener("click", () => {
+        try {
+          soundManager.playClick();
+        } catch (e) {}
+        if (tutorialManager && typeof tutorialManager.openPrompt === "function") {
+          tutorialManager.openPrompt();
+        } else {
+          playMenu.updateSongs(mapStorage.getAllMaps());
+          playMenu.open();
+        }
+      });
+    }
+  });
 
   // 8. Complete asynchronous storage & save system initialization after UI buttons are bound
   if (mapStorage.initializationPromise) {

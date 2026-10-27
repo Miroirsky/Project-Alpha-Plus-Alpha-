@@ -267,8 +267,8 @@ class MapStorage {
     });
     // Known protected default tracks
     [
-      "MoodMode", "Why Are You Running", "IDK",
-      "custom_1792673284154_4614", "custom_1792674724366_2151", "custom_1792575111719_6316"
+      "MoodMode", "Why Are You Running", "IDK", "Tutorial",
+      "custom_1792673284154_4614", "custom_1792674724366_2151", "custom_1792575111719_6316", "custom_1792933532150_9287"
     ].forEach((k) => {
       this.removeDeletedTrackId(k);
     });
@@ -1356,6 +1356,15 @@ class MapStorage {
         parsed._folderPath = tPath;
         parsed._folderName = t;
         parsed._source = "default_disk";
+        if (parsed.file && typeof parsed.file === "string" && !parsed.file.includes("/") && !parsed.file.includes("\\") && !parsed.file.startsWith("data:") && !parsed.file.startsWith("blob:")) {
+          parsed.file = `Default Tracks/${t}/${parsed.file}`;
+        }
+        if (parsed.background && parsed.background.url && typeof parsed.background.url === "string" && !parsed.background.url.includes("/") && !parsed.background.url.includes("\\") && !parsed.background.url.startsWith("data:") && !parsed.background.url.startsWith("blob:")) {
+          parsed.background = {
+            ...parsed.background,
+            url: `Default Tracks/${t}/${parsed.background.url}`
+          };
+        }
         this.normalizeSongDifficulties(parsed);
         loaded.push(parsed);
       }
@@ -1586,7 +1595,44 @@ class MapStorage {
     if (typeof window !== "undefined" && window.electronAPI && typeof window.electronAPI.scanFolders === "function") {
       return await this.loadFromElectronDisk();
     }
-    return this.customMaps;
+    if (typeof fetch === "function") {
+      try {
+        const manifestRes = await fetch("Default Tracks/manifest.json");
+        if (manifestRes && manifestRes.ok) {
+          const manifest = await manifestRes.json();
+          const folders = Array.isArray(manifest && manifest.tracks) ? manifest.tracks : [];
+          const loaded = [];
+          for (const folder of folders) {
+            try {
+              const notesRes = await fetch(`Default Tracks/${encodeURIComponent(folder)}/notes.json`);
+              if (!notesRes || !notesRes.ok) continue;
+              const parsed = await notesRes.json();
+              parsed.isDefault = true;
+              parsed.isCustom = false;
+              parsed._folderName = folder;
+              parsed._source = "default_disk";
+              if (parsed.file && typeof parsed.file === "string" && !parsed.file.includes("/") && !parsed.file.includes("\\") && !parsed.file.startsWith("data:") && !parsed.file.startsWith("blob:")) {
+                parsed.file = `Default Tracks/${folder}/${parsed.file}`;
+              }
+              if (parsed.background && parsed.background.url && typeof parsed.background.url === "string" && !parsed.background.url.includes("/") && !parsed.background.url.includes("\\") && !parsed.background.url.startsWith("data:") && !parsed.background.url.startsWith("blob:")) {
+                parsed.background = {
+                  ...parsed.background,
+                  url: `Default Tracks/${folder}/${parsed.background.url}`
+                };
+              }
+              this.normalizeSongDifficulties(parsed);
+              loaded.push(parsed);
+            } catch (e) {}
+          }
+          if (loaded.length > 0) {
+            this.defaultTracks = loaded;
+            this.unblacklistDefaultTracks();
+            this.notify();
+          }
+        }
+      } catch (e) {}
+    }
+    return this.getAllMaps();
   }
 
   /**
@@ -1861,14 +1907,16 @@ class MapStorage {
       if (match) return true;
     }
 
-    // Hardcoded known default track signatures (MoodMode, Why Are You Running, IDK)
+    // Hardcoded known default track signatures (MoodMode, Why Are You Running, IDK, Tutorial)
     const knownDefaultIds = new Set([
       "custom_1792673284154_4614", // MoodMode
       "custom_1792674724366_2151", // Why Are You Running
       "custom_1792575111719_6316", // IDK
+      "custom_1792933532150_9287", // Tutorial
       "moodmode",
       "why are you running",
-      "idk"
+      "idk",
+      "tutorial"
     ]);
 
     if (

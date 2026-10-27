@@ -314,10 +314,6 @@ class GameView {
     this.drawEffects(ctx, state.effects);
     this.drawPlayerOrb(ctx, state.playerOrb);
 
-    if (this.isTutorial && !state.isCountingDown) {
-      this.drawTutorialCoachingBanner(ctx, width, height, state.currentTime);
-    }
-
     if (state.isCountingDown) {
       this.drawCountdownOverlay(ctx, width, height, state);
     }

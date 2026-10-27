@@ -24,53 +24,90 @@ class TutorialManager {
   }
 
   /**
-   * Returns a fresh copy of the 30-second built-in interactive Tutorial song.
+   * Returns the user-authored Tutorial song from Default Tracks ("Default Tracks/Tutorial").
+   * Queries window.mapStorage first so any resolved local file:/// URLs or updates are used,
+   * falling back to the exact Default Tracks/Tutorial/notes.json definition.
    * @returns {Object}
    */
   static getTutorialSong() {
+    if (typeof window !== "undefined" && window.mapStorage && typeof window.mapStorage.getAllMaps === "function") {
+      const allMaps = window.mapStorage.getAllMaps() || [];
+      const found = allMaps.find(
+        (s) =>
+          s &&
+          (s.id === "custom_1792933532150_9287" ||
+            (s._folderName && s._folderName.toLowerCase().trim() === "tutorial") ||
+            (s.name && s.name.toLowerCase().trim() === "tutorial"))
+      );
+      if (found) {
+        const clonedNotes = Array.isArray(found.notes) ? found.notes.map((n) => ({ ...n })) : [];
+        const fileUrl =
+          found.file === "track.mp3" ? "Default Tracks/Tutorial/track.mp3" : found.file || "Default Tracks/Tutorial/track.mp3";
+        const bgObj = found.background ? { ...found.background } : null;
+        if (bgObj && bgObj.url === "background.mp4") {
+          bgObj.url = "Default Tracks/Tutorial/background.mp4";
+        }
+        return {
+          ...found,
+          duration: found.duration || "00:30",
+          durationSeconds: Number(found.durationSeconds) || 30,
+          file: fileUrl,
+          background: bgObj,
+          isTutorial: true,
+          notes: clonedNotes
+        };
+      }
+    }
+
     const notes = [
-      { time: 4.07, color: "blue", type: "normal", x: 0.494, y: 0.586 },
-      { time: 7.57, color: "blue", type: "normal", x: 0.276, y: 0.579 },
-      { time: 12.97, color: "red", type: "normal", x: 0.502, y: 0.587 },
-      { time: 16.23, color: "red", type: "normal", x: 0.33, y: 0.601 },
-      { time: 16.73, color: "red", type: "normal", x: 0.452, y: 0.612 },
-      { time: 17.23, color: "blue", type: "normal", x: 0.422, y: 0.322 },
-      { time: 22.67, color: "yellow", type: "triangle", x: 0.5, y: 0.585 },
-      { time: 26.33, color: "red", type: "normal", x: 0.648, y: 0.543 },
-      { time: 26.33, color: "yellow", type: "triangle", x: 0.486, y: 0.549 },
-      { time: 26.91, color: "blue", type: "normal", x: 0.324, y: 0.55 },
-      { time: 27.27, color: "blue", type: "normal", x: 0.347, y: 0.696 },
-      { time: 27.57, color: "blue", type: "normal", x: 0.453, y: 0.793 },
-      { time: 28.27, color: "red", type: "normal", x: 0.67, y: 0.635 }
+      { time: 4.07, color: "blue", type: "normal", x: 0.496, y: 0.587 },
+      { time: 6.95, color: "blue", type: "normal", x: 0.329, y: 0.604 },
+      { time: 7.65, color: "blue", type: "normal", x: 0.626, y: 0.595 },
+      { time: 12.91, color: "red", type: "normal", x: 0.502, y: 0.583 },
+      { time: 16.21, color: "red", type: "normal", x: 0.418, y: 0.6 },
+      { time: 16.75, color: "red", type: "normal", x: 0.568, y: 0.65 },
+      { time: 17.11, color: "blue", type: "normal", x: 0.69, y: 0.741 },
+      { time: 22.61, color: "yellow", type: "triangle", x: 0.498, y: 0.587 },
+      { time: 26.31, color: "red", type: "normal", x: 0.286, y: 0.551 },
+      { time: 26.91, color: "yellow", type: "triangle", x: 0.474, y: 0.558 },
+      { time: 26.91, color: "blue", type: "normal", x: 0.665, y: 0.555 },
+      { time: 27.27, color: "blue", type: "normal", x: 0.628, y: 0.403 },
+      { time: 27.61, color: "blue", type: "normal", x: 0.5, y: 0.323 },
+      { time: 28.25, color: "blue", type: "directional", x: 0.329, y: 0.315, angle: 358 }
     ];
 
     return {
-      id: "builtin_tutorial_30s",
-      name: "Quick Tutorial (30s)",
+      id: "custom_1792933532150_9287",
+      name: "Tutorial",
       mapper: "Miroirsky",
-      creator: "Miroirsky",
+      creator: "Tutorial",
       duration: "00:30",
       durationSeconds: 30,
-      file: "Assets/Tutorial/track.mp3",
-      cover: "Assets/Tutorial/cover.png",
+      bpm: 120,
+      file: "Default Tracks/Tutorial/track.mp3",
+      cover: "Assets/Tracks Placeholders/Default-0.png",
       color: "#00d4ff",
       difficulty: "Easy",
       selectedDifficulty: "Easy",
-      nps: 0.4,
+      nps: 0.5,
+      isDefault: true,
+      isCustom: false,
       isTutorial: true,
+      _folderName: "Tutorial",
       background: {
         type: "video",
         mediaType: "video",
         fit: "cover",
-        opacity: 0.85,
+        opacity: 0.7,
         name: "Tutorial.mp4",
-        url: "Tutorial.mp4"
+        url: "Default Tracks/Tutorial/background.mp4",
+        mediaId: "bg_custom_1792933532150_9287_1792933532155"
       },
       notes: notes.map((n) => ({ ...n })),
       difficulties: {
         Easy: {
           difficulty: "Easy",
-          nps: 0.4,
+          nps: 0.5,
           color: "#00d4ff",
           notes: notes.map((n) => ({ ...n }))
         }
@@ -218,6 +255,13 @@ class TutorialManager {
       this.modal.classList.add("is-active");
       this.modal.setAttribute("aria-hidden", "false");
     }
+  }
+
+  /**
+   * Alias for openPrompt().
+   */
+  showPromptModal() {
+    this.openPrompt();
   }
 
   /**

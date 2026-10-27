@@ -367,57 +367,105 @@
       </footer>
     </section>
 
-    <!-- Main Menu Card: Primary (#954132) container with Secondary (#322214) buttons -->
+    <!-- Main Menu View: Full-Screen Neon Cyan & Pink Slanted Layout -->
     <main id="main-menu-card" class="menu-card" role="main">
-      <header class="menu-header">
-        <div class="menu-badge">
-          <span class="menu-badge-dot" aria-hidden="true"></span>
-          <span>Rhythm Arcade</span>
+      <!-- Top-Right Status HUD (Stars & Notification Bell) -->
+      <div class="menu-top-hud">
+        <div class="menu-star-counter" title="Completed Tracks / Stars">
+          <svg class="menu-star-icon" width="22" height="22" viewBox="0 0 24 24" fill="#FFD600" stroke="#FFA000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          <span id="menu-star-count" class="menu-star-value">0</span>
         </div>
-        <h1 class="game-title">
-          Project <span class="game-title-highlight">Alpha</span><span class="game-title-plus">+</span>
-        </h1>
-        <p class="game-subtitle">Precision Sound &bull; Arcade Action &bull; v0.3.0</p>
-      </header>
+        <button id="btn-menu-notif" class="menu-notif-btn" type="button" title="What's New &amp; Tutorial">
+          <svg class="menu-bell-icon" width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/>
+          </svg>
+          <span class="menu-notif-badge">1</span>
+        </button>
+      </div>
 
+      <!-- Left Column: Game Logo and What's New Banner -->
+      <div class="menu-left-showcase">
+        <header class="menu-header">
+          <h1 class="game-title" aria-label="Project Alpha Plus">
+            <span class="logo-line-top">
+              <span class="logo-text-white">PROJECT</span>
+            </span>
+            <span class="logo-line-bottom">
+              <span class="logo-word-the">the</span>
+              <span class="logo-word-beat game-title-highlight">ALPHA<span class="game-title-plus">+</span></span>
+              <span class="logo-eq-bars" aria-hidden="true">
+                <span class="logo-eq-bar bar-pink-1"></span>
+                <span class="logo-eq-bar bar-cyan-1"></span>
+                <span class="logo-eq-bar bar-cyan-2"></span>
+                <span class="logo-eq-bar bar-pink-2"></span>
+              </span>
+            </span>
+          </h1>
+
+          <div class="menu-whats-new-box" id="menu-whats-new-box" role="status">
+            <span class="whats-new-dot" aria-hidden="true"></span>
+            <span class="whats-new-label">WHAT'S NEW</span>
+            <span class="whats-new-value">the new menu</span>
+          </div>
+        </header>
+      </div>
+
+      <!-- Right Column: Staggered Slanted Menu Bars Flush to Right Edge -->
       <nav class="menu-actions" aria-label="Main Menu Actions">
-        <button id="btn-play" class="menu-btn menu-btn-primary" type="button">
-          <span class="menu-btn-content">
-            <span class="menu-btn-indicator" aria-hidden="true"></span>
-            <span class="menu-btn-text">Play</span>
-          </span>
-          <span class="menu-btn-icon" aria-hidden="true">&#9654;</span>
-        </button>
-        <button id="btn-create" class="menu-btn" type="button">
-          <span class="menu-btn-content">
-            <span class="menu-btn-indicator" aria-hidden="true"></span>
-            <span class="menu-btn-text">Create</span>
-          </span>
-          <span class="menu-btn-icon" aria-hidden="true">&#10010;</span>
-        </button>
-        <button id="btn-settings" class="menu-btn" type="button">
-          <span class="menu-btn-content">
-            <span class="menu-btn-indicator" aria-hidden="true"></span>
-            <span class="menu-btn-text">Settings</span>
-          </span>
-          <span class="menu-btn-icon" aria-hidden="true">&#9881;</span>
-        </button>
-        <button id="btn-exit" class="menu-btn menu-btn-exit" type="button">
-          <span class="menu-btn-content">
-            <span class="menu-btn-indicator" aria-hidden="true"></span>
-            <span class="menu-btn-text">Exit</span>
-          </span>
-          <span class="menu-btn-icon" aria-hidden="true">&#10005;</span>
-        </button>
-      </nav>
-
-      <footer class="menu-footer">
-        <div class="menu-footer-content">
-          <span>PROJECT ALPHA PLUS &copy; 2026</span>
-          <span class="menu-footer-dot" aria-hidden="true">&bull;</span>
-          <span>SYSTEM READY</span>
+        <!-- Hero PLAY Row -->
+        <div class="menu-slanted-row menu-row-play">
+          <div class="menu-play-features" aria-hidden="true">
+            <span>precision rhythm &bull;</span>
+            <span>dual polarity &bull;</span>
+            <span>voted &amp; custom tracks &bull;</span>
+          </div>
+          <button id="btn-play" class="menu-btn menu-btn-primary" type="button">
+            <span class="menu-btn-LeftStripe stripe-white" aria-hidden="true"></span>
+            <span class="menu-btn-skew-bg" aria-hidden="true"></span>
+            <span class="menu-btn-content">
+              <span class="menu-btn-text">PLAY</span>
+              <span class="menu-btn-subtext">jump in</span>
+            </span>
+          </button>
         </div>
-      </footer>
+
+        <!-- Mid-Tier Primary Bars (Create / Editor) -->
+        <div class="menu-slanted-row menu-row-mid-1">
+          <button id="btn-create" class="menu-btn menu-btn-mid" type="button">
+            <span class="menu-btn-LeftStripe stripe-pink" aria-hidden="true"></span>
+            <span class="menu-btn-skew-bg" aria-hidden="true"></span>
+            <span class="menu-btn-content">
+              <span class="menu-btn-text">EDITOR</span>
+              <span class="menu-btn-subtext subtext-pink">beatmap studio</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Secondary Bars (Settings & Exit) -->
+        <div class="menu-secondary-group">
+          <div class="menu-slanted-row menu-row-sec-1">
+            <button id="btn-settings" class="menu-btn menu-btn-sec" type="button">
+              <span class="menu-btn-LeftStripe stripe-cyan-muted" aria-hidden="true"></span>
+              <span class="menu-btn-skew-bg" aria-hidden="true"></span>
+              <span class="menu-btn-content">
+                <span class="menu-btn-text">SETTINGS</span>
+              </span>
+            </button>
+          </div>
+
+          <div class="menu-slanted-row menu-row-sec-2">
+            <button id="btn-exit" class="menu-btn menu-btn-sec menu-btn-exit" type="button">
+              <span class="menu-btn-LeftStripe stripe-cyan-muted" aria-hidden="true"></span>
+              <span class="menu-btn-skew-bg" aria-hidden="true"></span>
+              <span class="menu-btn-content">
+                <span class="menu-btn-text">EXIT</span>
+              </span>
+            </button>
+          </div>
+        </div>
+      </nav>
     </main>
 
     <!-- Play Menu View (Song Selection) -->

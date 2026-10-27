@@ -211,7 +211,13 @@ assert(mapStorage.customMaps.length > 0, "Should have custom maps before erase")
   assert.strictEqual(tutManager.shouldPromptFirstTime(), false, "Player should not be prompted again after seeing tutorial prompt");
 
   tutManager.launchTutorial();
-  assert(launchedTutorialSong && launchedTutorialSong.id === "builtin_tutorial_30s", "launchTutorial must pass the 30s tutorial song to callback");
+  assert(
+    launchedTutorialSong &&
+      launchedTutorialSong.id === "custom_1792933532150_9287" &&
+      launchedTutorialSong.name === "Tutorial" &&
+      launchedTutorialSong.notes.length === 14,
+    "launchTutorial must pass the Default Tracks Tutorial song to callback"
+  );
   console.log("✓ Test 6 Passed: First-time 30s tutorial detection, prompt state, and 30s tutorial beatmap verified.");
 
   console.log("\n=======================================================");
