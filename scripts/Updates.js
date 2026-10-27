@@ -1,4 +1,8 @@
 const Updates = {
+    "Yellow Notes": {
+        id: "0.4.1",
+        description: "Adding the yellow notes that can be triggered by pressing space."
+    },
     "Remaking the Menu": {
         id: "0.4.0",
         description: "The menu has been redesigned with a cleaner, more polished, and more original look, making the game easier and more enjoyable to navigate. Note: The update log was introduced with this version, so earlier updates are documented retroactively based on the order in which the features were developed."

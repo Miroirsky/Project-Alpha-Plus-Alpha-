@@ -185,6 +185,7 @@ class MapEditor {
     // Bound handlers for cleanup
     this.boundTick = this.tick.bind(this);
     this.boundKeyDown = this.onKeyDown.bind(this);
+    this.boundKeyUp = this.onKeyUp.bind(this);
     this.boundMouseMove = this.onMouseMove.bind(this);
     this.boundMouseDown = this.onMouseDown.bind(this);
     this.boundMouseUp = this.onMouseUp.bind(this);
@@ -220,7 +221,7 @@ class MapEditor {
       const isDirectional = n.type === "directional" || n.type === "arrow";
       const item = {
         time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
-        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
+        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : (n.color === "yellow" ? "yellow" : "blue")),
         type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
         x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
         y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
@@ -1052,6 +1053,7 @@ class MapEditor {
     if (!this.windowEventsBound) {
       this.windowEventsBound = true;
       window.addEventListener("keydown", this.boundKeyDown);
+    window.addEventListener("keyup", this.boundKeyUp);
       window.addEventListener("mouseup", this.boundMouseUp);
       window.addEventListener("mousemove", this.boundMouseMove);
 
@@ -2016,6 +2018,7 @@ class MapEditor {
     }
     if (typeof window !== "undefined" && window.removeEventListener) {
       window.removeEventListener("keydown", this.boundKeyDown);
+    window.removeEventListener("keyup", this.boundKeyUp);
       window.removeEventListener("mouseup", this.boundMouseUp);
       window.removeEventListener("mousemove", this.boundMouseMove);
     }
@@ -2029,7 +2032,8 @@ class MapEditor {
 
   /**
    * Handles keyboard shortcuts:
-   * Space: Pause / Resume moving through the song timeline.
+   * P: Pause / Resume moving through the song timeline.
+   * Space: Places a YELLOW note at the cursor (hold + drag with Directional tool to set angle).
    * Enter: Test map as a real song.
    * @param {KeyboardEvent} e
    */
@@ -2118,7 +2122,11 @@ class MapEditor {
 
     if (e.code === "Space") {
       e.preventDefault();
-      // Ignore key repeat to prevent rapid fluttering on held Spacebar
+      // Ignore key repeat so holding Space doesn't spam notes
+      if (e.repeat) return;
+      this.handleSpacePlacementStart();
+    } else if (e.key === "p" || e.key === "P") {
+      e.preventDefault();
       if (e.repeat) return;
       this.togglePlayPause();
     } else if (e.key === "Enter") {
@@ -2140,6 +2148,8 @@ class MapEditor {
    * @param {MouseEvent} e
    */
   onMouseMove(e) {
+    this.mouse.clientX = e.clientX;
+    this.mouse.clientY = e.clientY;
     if (this.canvas) {
       const rect = this.canvas.getBoundingClientRect();
       this.mouse.x = e.clientX - rect.left;
@@ -2177,7 +2187,7 @@ class MapEditor {
    * @param {MouseEvent} e
    */
   onMouseDown(e) {
-    if (e.button !== 0 && e.button !== 2) return;
+    if (e.button !== 0 && e.button !== 2 && e.button !== "space") return;
     if (!this.canvas) return;
 
     const rect = this.canvas.getBoundingClientRect();
@@ -2208,9 +2218,10 @@ class MapEditor {
       return;
     }
 
-    const isBomb = this.activeTool === "bomb";
+    const isSpace = e.button === "space";
+    const isBomb = this.activeTool === "bomb" && !isSpace;
     const noteType = isBomb ? "triangle" : "normal";
-    const noteColor = isBomb ? "yellow" : (e.button === 0 ? "red" : "blue");
+    const noteColor = isBomb ? "yellow" : this.colorForButton(e.button);
 
     const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height, 24);
     const normalizedX = playArea.clampNormalized(playArea.toLocalX(canvasX));
@@ -2266,6 +2277,11 @@ class MapEditor {
       return;
     }
 
+    // A Space-started directional drag is finalized only by releasing Space (keyup)
+    if (this.directionalDragStart.button === "space" && e && e.type === "mouseup") {
+      return;
+    }
+
     const start = this.directionalDragStart;
     this.isPlacingDirectional = false;
     this.directionalDragStart = null;
@@ -2279,7 +2295,7 @@ class MapEditor {
 
     const playArea = PlayArea.getMetrics(this.canvas.width, this.canvas.height, 24);
     const roundedTime = start.time;
-    const noteColor = start.button === 0 ? "red" : "blue";
+    const noteColor = this.colorForButton(start.button);
 
     // Check if clicking near an existing note at this timestamp to toggle/delete it (short click without drag)
     const timeTolerance = this.isPlaying ? 0.12 : 0.25;
@@ -2337,6 +2353,41 @@ class MapEditor {
   onContextMenu(e) {
     e.preventDefault();
     return false;
+  }
+
+  /**
+   * Maps an input "button" to a note color: 0 = red (L-Click), 2 = blue (R-Click), "space" = yellow.
+   * @param {number|string} button
+   * @returns {'red'|'blue'|'yellow'}
+   */
+  colorForButton(button) {
+    if (button === "space") return "yellow";
+    return button === 0 ? "red" : "blue";
+  }
+
+  /**
+   * Space pressed: places a YELLOW note at the cursor, or starts a yellow directional
+   * angle drag when the Directional tool is active (finalized on Space release).
+   */
+  handleSpacePlacementStart() {
+    if (!this.canvas || !this.mouse || !this.mouse.isHovering) return;
+    const clientX = typeof this.mouse.clientX === "number" ? this.mouse.clientX : 0;
+    const clientY = typeof this.mouse.clientY === "number" ? this.mouse.clientY : 0;
+    this.onMouseDown({ button: "space", clientX, clientY });
+  }
+
+  /**
+   * Space released: finalizes a yellow directional note drag.
+   * @param {KeyboardEvent} e
+   */
+  onKeyUp(e) {
+    if (!this.isOpen() || e.code !== "Space") return;
+    if (this.isPlacingDirectional && this.directionalDragStart && this.directionalDragStart.button === "space") {
+      e.preventDefault();
+      const clientX = typeof this.mouse.clientX === "number" ? this.mouse.clientX : this.directionalDragStart.clientX;
+      const clientY = typeof this.mouse.clientY === "number" ? this.mouse.clientY : this.directionalDragStart.clientY;
+      this.onMouseUp({ type: "keyup", clientX, clientY });
+    }
   }
 
   /**
@@ -2489,7 +2540,7 @@ class MapEditor {
   updateStatusText() {
     if (this.statusEl) {
       if (this.isPlaying) {
-        this.statusEl.textContent = "PLAYING (Press Space to Pause)";
+        this.statusEl.textContent = "PLAYING (Press P to Pause)";
         this.statusEl.style.color = "#2ed573";
       } else {
         this.statusEl.textContent = "PAUSED (Click: Left=Red, Right=Blue)";
@@ -2779,9 +2830,12 @@ class MapEditor {
 
       const isTriangle = note.type === "triangle" || note.type === "bomb";
       const isRed = note.color === "red";
-      // Red lane: 22, Blue lane: 62, Triangle lane: centered at 42 (on line between lanes)
-      const laneCenterY = isTriangle ? 42 : (isRed ? 22 : 62);
+      const isYellow = !isTriangle && note.color === "yellow";
+      // Red lane: 22, Blue lane: 62, Triangle & Yellow notes: centered at 42 (on line between lanes)
+      const laneCenterY = (isTriangle || isYellow) ? 42 : (isRed ? 22 : 62);
       const isSelected = this.selectedNote === note;
+      const rgbBase = isRed ? "255, 71, 87" : (isYellow ? "255, 211, 42" : "0, 212, 255");
+      const rgbStroke = isRed ? "rgba(255, 120, 130, 0.95)" : (isYellow ? "rgba(255, 230, 120, 0.95)" : "rgba(100, 230, 255, 0.95)");
 
       ctx.save();
 
@@ -2823,12 +2877,8 @@ class MapEditor {
       } else if (note.type === "directional") {
         // Directional Note: Semi-transparent circular ball displaying angle arrow
         const fillAlpha = isSelected ? 0.65 : 0.45;
-        const fillColor = isRed
-          ? `rgba(255, 71, 87, ${fillAlpha})`
-          : `rgba(0, 212, 255, ${fillAlpha})`;
-        const strokeColor = isSelected
-          ? "#ffd700"
-          : (isRed ? "rgba(255, 120, 130, 0.95)" : "rgba(100, 230, 255, 0.95)");
+        const fillColor = `rgba(${rgbBase}, ${fillAlpha})`;
+        const strokeColor = isSelected ? "#ffd700" : rgbStroke;
 
         ctx.beginPath();
         ctx.arc(x, laneCenterY, 8.5, 0, Math.PI * 2);
@@ -2864,12 +2914,8 @@ class MapEditor {
       } else {
         // Normal Note: Semi-transparent circular ball displaying waveform through body
         const fillAlpha = isSelected ? 0.65 : 0.45;
-        const fillColor = isRed
-          ? `rgba(255, 71, 87, ${fillAlpha})`
-          : `rgba(0, 212, 255, ${fillAlpha})`;
-        const strokeColor = isSelected
-          ? "#ffd700"
-          : (isRed ? "rgba(255, 120, 130, 0.95)" : "rgba(100, 230, 255, 0.95)");
+        const fillColor = `rgba(${rgbBase}, ${fillAlpha})`;
+        const strokeColor = isSelected ? "#ffd700" : rgbStroke;
 
         ctx.beginPath();
         ctx.arc(x, laneCenterY, 8.5, 0, Math.PI * 2);
@@ -2883,7 +2929,7 @@ class MapEditor {
         ctx.font = "bold 8.5px monospace";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(isRed ? "R" : "B", x, laneCenterY);
+        ctx.fillText(isRed ? "R" : (isYellow ? "Y" : "B"), x, laneCenterY);
 
         ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
         ctx.font = "8px monospace";
@@ -3052,10 +3098,10 @@ class MapEditor {
           this.inspectorNoteType.style.color = "#ffd32a";
         } else if (isDirectional) {
           this.inspectorNoteType.textContent = `${note.color.toUpperCase()} Directional Note (${note.angle || 0}°)`;
-          this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : "#00d4ff";
+          this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : (note.color === "yellow" ? "#ffd32a" : "#00d4ff");
         } else {
           this.inspectorNoteType.textContent = `${note.color.toUpperCase()} Normal Note`;
-          this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : "#00d4ff";
+          this.inspectorNoteType.style.color = note.color === "red" ? "#ff4757" : (note.color === "yellow" ? "#ffd32a" : "#00d4ff");
         }
       }
       if (this.inspectorNoteTime) {
@@ -3348,7 +3394,7 @@ class MapEditor {
         const noteY = playArea.toScreenY(note.y);
         const isTriangle = note.type === "triangle" || note.type === "bomb";
         const isDirectional = note.type === "directional" || note.type === "arrow";
-        const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : "#00d4ff");
+        const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : (note.color === "yellow" ? "#ffd32a" : "#00d4ff"));
 
         // Proximity factor (1 = exact current time, 0 = at boundary)
         const proximity = Math.max(0, 1 - Math.abs(timeDiff) / windowSpan);
@@ -3400,7 +3446,7 @@ class MapEditor {
           ctx.arc(noteX, noteY, radius, 0, Math.PI * 2);
           ctx.strokeStyle = colorHex;
           ctx.lineWidth = Math.abs(timeDiff) < 0.1 ? 3.5 : 2;
-          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : "rgba(0, 212, 255, 0.3)";
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : (note.color === "yellow" ? "rgba(255, 211, 42, 0.3)" : "rgba(0, 212, 255, 0.3)");
 
           if (Math.abs(timeDiff) < 0.1) {
             ctx.shadowColor = colorHex;
@@ -3461,7 +3507,7 @@ class MapEditor {
           ctx.arc(noteX, noteY, radius, 0, Math.PI * 2);
           ctx.strokeStyle = colorHex;
           ctx.lineWidth = Math.abs(timeDiff) < 0.1 ? 4 : 2;
-          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : "rgba(0, 212, 255, 0.3)";
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.3)" : (note.color === "yellow" ? "rgba(255, 211, 42, 0.3)" : "rgba(0, 212, 255, 0.3)");
 
           if (Math.abs(timeDiff) < 0.1) {
             ctx.shadowColor = colorHex;

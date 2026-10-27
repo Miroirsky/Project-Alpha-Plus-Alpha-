@@ -890,7 +890,7 @@ class MapStorage {
       const isDirectional = n.type === "directional" || n.type === "arrow";
       const item = {
         time: parseFloat(Number(n.time !== undefined ? n.time : (n.timestamp !== undefined ? n.timestamp : 0)).toFixed(3)),
-        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : "blue"),
+        color: isTriangle ? "yellow" : (n.color === "red" ? "red" : (n.color === "yellow" ? "yellow" : "blue")),
         type: isTriangle ? "triangle" : (isDirectional ? "directional" : "normal"),
         x: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.x !== undefined ? n.x : 0.5).toFixed(3)))),
         y: Math.max(0.02, Math.min(0.98, parseFloat(Number(n.y !== undefined ? n.y : 0.5).toFixed(3))))
@@ -2512,7 +2512,7 @@ class MapStorage {
         let color = String(n.color || "").toLowerCase();
         if (isTriangle) {
           color = "yellow";
-        } else if (color !== "red" && color !== "blue") {
+        } else if (color !== "red" && color !== "blue" && color !== "yellow") {
           continue;
         }
 

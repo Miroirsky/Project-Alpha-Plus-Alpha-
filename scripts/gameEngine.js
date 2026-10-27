@@ -221,9 +221,12 @@ class GameEngine {
       e.preventDefault();
       this.abandonRun();
     } else if (e.code === "Space" || e.key === " ") {
+      e.preventDefault();
       if (this.isCountingDown) {
-        e.preventDefault();
         this.skipCountdown();
+      } else if (!e.repeat) {
+        // Space switches the orb to YELLOW (stays yellow until a mouse click)
+        this.switchColor("yellow");
       }
     }
   }
@@ -379,7 +382,7 @@ class GameEngine {
 
   /**
    * Switches the active color of the player orb.
-   * @param {'red' | 'blue'} newColor
+   * @param {'red' | 'blue' | 'yellow'} newColor
    */
   switchColor(newColor) {
     if (this.playerOrb.color !== newColor) {
@@ -394,7 +397,7 @@ class GameEngine {
         type: "switch-pulse",
         x: this.playerOrb.x,
         y: this.playerOrb.y,
-        color: newColor === "red" ? "#ff4757" : "#00d4ff",
+        color: newColor === "red" ? "#ff4757" : (newColor === "yellow" ? "#ffd32a" : "#00d4ff"),
         radius: 20,
         maxRadius: 50,
         opacity: 0.8
@@ -868,7 +871,7 @@ class GameEngine {
       type: "hit-ripple",
       x,
       y,
-      color: color === "red" ? "#ff4757" : "#00d4ff",
+      color: color === "red" ? "#ff4757" : (color === "yellow" ? "#ffd32a" : "#00d4ff"),
       radius: 26,
       maxRadius: 80,
       opacity: 1.0
@@ -879,7 +882,7 @@ class GameEngine {
       text: `HIT +${points}`,
       x,
       y: y - 20,
-      color: color === "red" ? "#ff4757" : "#00d4ff",
+      color: color === "red" ? "#ff4757" : (color === "yellow" ? "#ffd32a" : "#00d4ff"),
       opacity: 0.9,
       vy: -1.2
     });

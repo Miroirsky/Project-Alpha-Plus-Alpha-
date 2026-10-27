@@ -248,6 +248,10 @@ class GameView {
         this.colorDot.className = "color-dot red";
         this.colorText.textContent = "RED [Left Click]";
         this.colorText.style.color = "#ff4757";
+      } else if (state.color === "yellow") {
+        this.colorDot.className = "color-dot yellow";
+        this.colorText.textContent = "YELLOW [Space]";
+        this.colorText.style.color = "#ffd32a";
       } else {
         this.colorDot.className = "color-dot blue";
         this.colorText.textContent = "BLUE [Right Click]";
@@ -518,7 +522,7 @@ class GameView {
     const isTriangle = firstNote.type === "triangle" || firstNote.type === "bomb";
     const isDirectional = firstNote.type === "directional" || firstNote.type === "arrow";
     const noteRadius = isTriangle ? (playArea.triangleRadius || (baseRadius * 1.05)) : baseRadius;
-    const colorHex = isTriangle ? "#ffd32a" : (firstNote.color === "red" ? "#ff4757" : "#00d4ff");
+    const colorHex = isTriangle ? "#ffd32a" : (firstNote.color === "red" ? "#ff4757" : (firstNote.color === "yellow" ? "#ffd32a" : "#00d4ff"));
 
     ctx.save();
 
@@ -561,7 +565,7 @@ class GameView {
       ctx.shadowBlur = 18;
       ctx.stroke();
 
-      ctx.fillStyle = firstNote.color === "red" ? "rgba(255, 71, 87, 0.4)" : "rgba(0, 212, 255, 0.4)";
+      ctx.fillStyle = firstNote.color === "red" ? "rgba(255, 71, 87, 0.4)" : (firstNote.color === "yellow" ? "rgba(255, 211, 42, 0.4)" : "rgba(0, 212, 255, 0.4)");
       ctx.fill();
 
       // Inner white guide ring
@@ -763,7 +767,7 @@ class GameView {
       const noteRadius = isTriangle ? triangleRadius : baseRadius;
       const noteX = playArea.toScreenX(note.x);
       const noteY = playArea.toScreenY(note.y);
-      const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : "#00d4ff");
+      const colorHex = isTriangle ? "#ffd32a" : (note.color === "red" ? "#ff4757" : (note.color === "yellow" ? "#ffd32a" : "#00d4ff"));
 
       // Phase 1: Grow-In Phase (spawnTime <= currentTime < note.time)
       // Note finishes growing to 100% full size at exactly note.time (editor placement beat)
@@ -819,7 +823,7 @@ class GameView {
           ctx.shadowBlur = 20;
           ctx.stroke();
 
-          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.42)" : "rgba(0, 212, 255, 0.42)";
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.42)" : (note.color === "yellow" ? "rgba(255, 211, 42, 0.42)" : "rgba(0, 212, 255, 0.42)");
           ctx.fill();
         }
 
@@ -866,7 +870,7 @@ class GameView {
           ctx.shadowBlur = 20;
           ctx.stroke();
 
-          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.32)" : "rgba(0, 212, 255, 0.32)";
+          ctx.fillStyle = note.color === "red" ? "rgba(255, 71, 87, 0.32)" : (note.color === "yellow" ? "rgba(255, 211, 42, 0.32)" : "rgba(0, 212, 255, 0.32)");
           ctx.fill();
 
           // Circular countdown ring
@@ -1124,7 +1128,7 @@ class GameView {
     remainingFraction = 1.0
   ) {
     const isGrowing = phase === "growing";
-    const colorHex = color === "red" ? "#ff4757" : "#00d4ff";
+    const colorHex = color === "red" ? "#ff4757" : (color === "yellow" ? "#ffd32a" : "#00d4ff");
     const rad = ((angleDeg * Math.PI) / 180);
 
     ctx.save();
@@ -1149,7 +1153,7 @@ class GameView {
       ctx.shadowBlur = 18;
       ctx.stroke();
 
-      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.42)" : "rgba(0, 212, 255, 0.42)";
+      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.42)" : (color === "yellow" ? "rgba(255, 211, 42, 0.42)" : "rgba(0, 212, 255, 0.42)");
       ctx.fill();
 
       // Thicker stroke on required hit side (±90° arc along angle)
@@ -1196,7 +1200,7 @@ class GameView {
       ctx.shadowBlur = 20;
       ctx.stroke();
 
-      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.35)" : "rgba(0, 212, 255, 0.35)";
+      ctx.fillStyle = color === "red" ? "rgba(255, 71, 87, 0.35)" : (color === "yellow" ? "rgba(255, 211, 42, 0.35)" : "rgba(0, 212, 255, 0.35)");
       ctx.fill();
 
       // 2. Thicker stroke on required hit side (±90° arc along angle)
@@ -1428,7 +1432,7 @@ class GameView {
   drawPlayerOrb(ctx, orb) {
     if (!orb) return;
 
-    const colorHex = orb.color === "red" ? "#ff4757" : "#00d4ff";
+    const colorHex = orb.color === "red" ? "#ff4757" : (orb.color === "yellow" ? "#ffd32a" : "#00d4ff");
     const pulseOffset = (orb.pulse || 0) * 8;
     const radius = orb.radius + pulseOffset;
 
@@ -1441,7 +1445,7 @@ class GameView {
         const nextPt = this.orbTrail[i + 1];
         const progress = (i + 1) / this.orbTrail.length; // 0 to 1
         const trailRadius = radius * (0.28 + 0.5 * progress);
-        const trailColor = pt.color === "red" ? "rgba(255, 71, 87, " : "rgba(0, 212, 255, ";
+        const trailColor = pt.color === "red" ? "rgba(255, 71, 87, " : (pt.color === "yellow" ? "rgba(255, 211, 42, " : "rgba(0, 212, 255, ");
 
         ctx.beginPath();
         ctx.arc(pt.x, pt.y, trailRadius, 0, Math.PI * 2);
@@ -1463,8 +1467,8 @@ class GameView {
     // 2. Multi-layer ambient radial glow aura
     const gradient = ctx.createRadialGradient(orb.x, orb.y, 4, orb.x, orb.y, radius * 2.1);
     gradient.addColorStop(0, colorHex);
-    gradient.addColorStop(0.35, orb.color === "red" ? "rgba(255, 71, 87, 0.45)" : "rgba(0, 212, 255, 0.45)");
-    gradient.addColorStop(0.75, orb.color === "red" ? "rgba(255, 71, 87, 0.12)" : "rgba(0, 212, 255, 0.12)");
+    gradient.addColorStop(0.35, orb.color === "red" ? "rgba(255, 71, 87, 0.45)" : (orb.color === "yellow" ? "rgba(255, 211, 42, 0.45)" : "rgba(0, 212, 255, 0.45)"));
+    gradient.addColorStop(0.75, orb.color === "red" ? "rgba(255, 71, 87, 0.12)" : (orb.color === "yellow" ? "rgba(255, 211, 42, 0.12)" : "rgba(0, 212, 255, 0.12)"));
     gradient.addColorStop(1, "transparent");
 
     ctx.fillStyle = gradient;
