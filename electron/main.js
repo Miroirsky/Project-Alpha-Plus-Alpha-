@@ -762,6 +762,298 @@ ipcMain.handle('tracks:import-folder-from-path', async (event, folderPath) => {
 });
 
 // --- Direct Mod & Song Downloader Helper & Handler ---
+function normalizeDownloadUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return rawUrl;
+  try {
+    let url = rawUrl.trim();
+    // 1. Google Drive: https://drive.google.com/file/d/ID/view?usp=sharing or similar
+    const gDriveMatch = url.match(/drive\.google\.com\/(?:file\/d\/|open\?id=)([a-zA-Z0-9_-]+)/i);
+    if (gDriveMatch && gDriveMatch[1]) {
+      return `https://drive.google.com/uc?export=download&id=${gDriveMatch[1]}&confirm=t`;
+    }
+
+    // 2. Dropbox: convert dl=0 to dl=1
+    if (url.includes('dropbox.com')) {
+      if (url.includes('dl=0')) {
+        return url.replace('dl=0', 'dl=1');
+      } else if (!url.includes('dl=1')) {
+        const joinChar = url.includes('?') ? '&' : '?';
+        return `${url}${joinChar}dl=1`;
+      }
+      return url;
+    }
+
+    // 3. GitHub blob: https://github.com/USER/REPO/blob/BRANCH/FILE -> raw
+    const ghBlobMatch = url.match(/github\.com\/([^/]+)\/([^/]+)\/blob\/(.+)$/i);
+    if (ghBlobMatch) {
+      return `https://raw.githubusercontent.com/${ghBlobMatch[1]}/${ghBlobMatch[2]}/${ghBlobMatch[3]}`;
+    }
+
+    return url;
+  } catch (e) {
+    return rawUrl;
+  }
+}
+
+function extractZipArchiveSync(zipFilePath, destinationDir) {
+  if (!fs.existsSync(destinationDir)) {
+    fs.mkdirSync(destinationDir, { recursive: true });
+  }
+
+  // 1. Try Windows bsdtar (standard built-in tool in modern Windows)
+  try {
+    const { execFileSync } = require('child_process');
+    execFileSync('tar', ['-xf', zipFilePath, '-C', destinationDir], {
+      windowsHide: true,
+      stdio: 'pipe',
+      timeout: 30000
+    });
+    return true;
+  } catch (tarErr) {
+    console.warn('[Downloader] tar extraction failed, attempting PowerShell fallback:', tarErr.message);
+  }
+
+  // 2. Fallback to PowerShell Expand-Archive
+  try {
+    const { execFileSync } = require('child_process');
+    const escapedZip = zipFilePath.replace(/'/g, "''");
+    const escapedDest = destinationDir.replace(/'/g, "''");
+    execFileSync('powershell.exe', [
+      '-NoProfile',
+      '-NonInteractive',
+      '-Command',
+      `Expand-Archive -LiteralPath '${escapedZip}' -DestinationPath '${escapedDest}' -Force`
+    ], {
+      windowsHide: true,
+      stdio: 'pipe',
+      timeout: 45000
+    });
+    return true;
+  } catch (psErr) {
+    console.error('[Downloader] PowerShell Expand-Archive failed:', psErr.message);
+    throw new Error(`Failed to extract zip archive: ${psErr.message}`);
+  }
+}
+
+function findNotesJsonRecursive(dir, maxDepth = 4, currentDepth = 0) {
+  if (currentDepth > maxDepth || !fs.existsSync(dir)) return null;
+  let items;
+  try {
+    items = fs.readdirSync(dir);
+  } catch (e) {
+    return null;
+  }
+
+  if (items.includes('notes.json')) {
+    return dir;
+  }
+  for (const item of items) {
+    const sub = path.join(dir, item);
+    try {
+      if (fs.statSync(sub).isDirectory()) {
+        const found = findNotesJsonRecursive(sub, maxDepth, currentDepth + 1);
+        if (found) return found;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+function findAudioFileRecursive(dir, maxDepth = 4, currentDepth = 0) {
+  if (currentDepth > maxDepth || !fs.existsSync(dir)) return null;
+  let items;
+  try {
+    items = fs.readdirSync(dir);
+  } catch (e) {
+    return null;
+  }
+
+  for (const item of items) {
+    const sub = path.join(dir, item);
+    try {
+      const stat = fs.statSync(sub);
+      if (stat.isFile() && /\.(mp3|ogg|wav|m4a|flac)$/i.test(item)) {
+        return sub;
+      } else if (stat.isDirectory()) {
+        const found = findAudioFileRecursive(sub, maxDepth, currentDepth + 1);
+        if (found) return found;
+      }
+    } catch (e) {}
+  }
+  return null;
+}
+
+function importExtractedSongFolder(extractedDir, preferredName) {
+  const folderWithNotes = findNotesJsonRecursive(extractedDir);
+  if (folderWithNotes) {
+    const parsedRes = parseSongFolderSync(folderWithNotes);
+    const rawTitle = (parsedRes.song && parsedRes.song.name) || preferredName || path.basename(folderWithNotes);
+    const safeTitle = (rawTitle || `song_${Date.now()}`).replace(/[/\\?%*:|"<>]/g, '_').trim() || `song_${Date.now()}`;
+    const targetFolder = path.join(SONGS_DIR, safeTitle);
+
+    if (path.resolve(folderWithNotes) !== path.resolve(targetFolder)) {
+      if (!fs.existsSync(targetFolder)) {
+        fs.mkdirSync(targetFolder, { recursive: true });
+      }
+      copyDirRecursiveSync(folderWithNotes, targetFolder);
+    }
+
+    const finalParsed = parseSongFolderSync(targetFolder);
+    if (finalParsed.valid) {
+      finalParsed.song.isCustom = true;
+      finalParsed.song.isDefault = false;
+      finalParsed.song._source = 'custom_disk';
+      return { success: true, song: finalParsed.song, folderPath: targetFolder };
+    }
+    return { success: true, song: parsedRes.song, folderPath: targetFolder };
+  }
+
+  // If no notes.json was found, look for audio file to create a playable song template
+  const audioFile = findAudioFileRecursive(extractedDir);
+  if (audioFile) {
+    const ext = path.extname(audioFile);
+    const rawTitle = preferredName || path.basename(audioFile, ext);
+    const safeTitle = (rawTitle || `song_${Date.now()}`).replace(/[/\\?%*:|"<>]/g, '_').trim() || `song_${Date.now()}`;
+    const targetFolder = path.join(SONGS_DIR, safeTitle);
+    if (!fs.existsSync(targetFolder)) {
+      fs.mkdirSync(targetFolder, { recursive: true });
+    }
+    const targetAudio = path.join(targetFolder, `track${ext}`);
+    fs.copyFileSync(audioFile, targetAudio);
+
+    const starterNotes = {
+      id: `custom_${Date.now()}`,
+      name: safeTitle,
+      bpm: 120,
+      difficulty: 'Normal',
+      difficulties: {
+        Normal: { notes: [] }
+      },
+      file: `track${ext}`,
+      duration: '03:00',
+      color: '#954132'
+    };
+    fs.writeFileSync(path.join(targetFolder, 'notes.json'), JSON.stringify(starterNotes, null, 2), 'utf8');
+    const finalParsed = parseSongFolderSync(targetFolder);
+    return { success: true, song: finalParsed.valid ? finalParsed.song : starterNotes, folderPath: targetFolder };
+  }
+
+  throw new Error('No rhythm chart (notes.json) or valid audio track found inside the downloaded archive.');
+}
+
+function processDownloadedJson(jsonFilePath, preferredName) {
+  try {
+    const raw = fs.readFileSync(jsonFilePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || (!parsed.name && !parsed.difficulties && !parsed.notes)) {
+      return { success: false, error: 'Downloaded JSON is not a valid Project Alpha Plus rhythm track.' };
+    }
+
+    const songTitle = (parsed.name || preferredName || `song_${Date.now()}`).replace(/[/\\?%*:|"<>]/g, '_').trim();
+    const folderPath = path.join(SONGS_DIR, songTitle);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    // 1. Check if audio is embedded base64 data
+    if (parsed.file && typeof parsed.file === 'string' && parsed.file.startsWith('data:audio/')) {
+      const match = parsed.file.match(/^data:audio\/([a-zA-Z0-9]+);base64,(.+)$/);
+      if (match) {
+        const audioExt = match[1] === 'mpeg' ? 'mp3' : match[1];
+        const audioBuf = Buffer.from(match[2], 'base64');
+        const audioFileName = `track.${audioExt}`;
+        fs.writeFileSync(path.join(folderPath, audioFileName), audioBuf);
+        parsed.file = audioFileName;
+      }
+    }
+
+    // 2. Check if background is embedded base64
+    if (parsed.background && parsed.background.url && typeof parsed.background.url === 'string' && parsed.background.url.startsWith('data:')) {
+      const matchBg = parsed.background.url.match(/^data:(image|video)\/([a-zA-Z0-9]+);base64,(.+)$/);
+      if (matchBg) {
+        const bgExt = matchBg[2] === 'jpeg' ? 'jpg' : matchBg[2];
+        const bgFileName = `background.${bgExt}`;
+        fs.writeFileSync(path.join(folderPath, bgFileName), Buffer.from(matchBg[3], 'base64'));
+        parsed.background.url = bgFileName;
+      }
+    }
+
+    // Write notes.json
+    const notesPath = path.join(folderPath, 'notes.json');
+    fs.writeFileSync(notesPath, JSON.stringify(parsed, null, 2), 'utf8');
+
+    // Remove temporary downloaded file if it's different from notes.json
+    if (path.resolve(jsonFilePath) !== path.resolve(notesPath) && fs.existsSync(jsonFilePath)) {
+      try { fs.unlinkSync(jsonFilePath); } catch (e) {}
+    }
+
+    const validation = parseSongFolderSync(folderPath);
+    if (validation.valid) {
+      validation.song.isCustom = true;
+      validation.song.isDefault = false;
+      validation.song._source = 'custom_disk';
+      return { success: true, song: validation.song, folderPath };
+    }
+
+    return {
+      success: true,
+      song: {
+        ...parsed,
+        id: parsed.id || `custom_${Date.now()}`,
+        name: parsed.name || songTitle,
+        _folderPath: folderPath,
+        _folderName: songTitle,
+        isCustom: true
+      },
+      folderPath,
+      warning: validation.error
+    };
+  } catch (err) {
+    return { success: false, error: `Failed to process JSON track: ${err.message}` };
+  }
+}
+
+function processDownloadedAudio(audioFilePath, preferredName) {
+  try {
+    const ext = path.extname(audioFilePath);
+    const baseName = preferredName || path.basename(audioFilePath, ext);
+    const safeName = baseName.replace(/[/\\?%*:|"<>]/g, '_').trim() || `track_${Date.now()}`;
+    const folderPath = path.join(SONGS_DIR, safeName);
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath, { recursive: true });
+    }
+
+    const targetAudio = path.join(folderPath, `track${ext}`);
+    fs.copyFileSync(audioFilePath, targetAudio);
+    try { fs.unlinkSync(audioFilePath); } catch (e) {}
+
+    const starterNotes = {
+      id: `custom_${Date.now()}`,
+      name: safeName,
+      bpm: 120,
+      difficulty: 'Normal',
+      difficulties: {
+        Normal: { notes: [] }
+      },
+      file: `track${ext}`,
+      duration: '03:00',
+      color: '#954132'
+    };
+    fs.writeFileSync(path.join(folderPath, 'notes.json'), JSON.stringify(starterNotes, null, 2), 'utf8');
+
+    const validation = parseSongFolderSync(folderPath);
+    if (validation.valid) {
+      validation.song.isCustom = true;
+      validation.song.isDefault = false;
+      validation.song._source = 'custom_disk';
+      return { success: true, song: validation.song, folderPath };
+    }
+    return { success: true, song: starterNotes, folderPath };
+  } catch (err) {
+    return { success: false, error: `Failed to process audio track: ${err.message}` };
+  }
+}
+
 async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName, redirectCount = 0) {
   if (redirectCount > 5) {
     return { success: false, error: 'Too many HTTP redirects (limit exceeded)' };
@@ -769,7 +1061,8 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
 
   return new Promise((resolve) => {
     try {
-      const urlObj = new URL(downloadUrl);
+      const normalizedUrl = normalizeDownloadUrl(downloadUrl);
+      const urlObj = new URL(normalizedUrl);
       if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
         return resolve({ success: false, error: `Unsupported protocol: ${urlObj.protocol}. Only http: and https: are supported.` });
       }
@@ -789,8 +1082,8 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
       }
 
       // Sanitize against path traversal attacks and illegal characters
-      const safeFileName = path.basename(rawBase).replace(/[/\\?%*:|"<>]/g, '_').trim() || `download_${Date.now()}`;
-      const destPath = path.join(destFolder, safeFileName);
+      let safeFileName = path.basename(rawBase).replace(/[/\\?%*:|"<>]/g, '_').trim() || `download_${Date.now()}`;
+      let destPath = path.join(destFolder, safeFileName);
 
       const client = urlObj.protocol === 'https:' ? https : http;
       const requestOptions = {
@@ -800,12 +1093,12 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
         }
       };
 
-      const request = client.get(downloadUrl, requestOptions, async (response) => {
+      const request = client.get(normalizedUrl, requestOptions, async (response) => {
         // Handle HTTP redirects (301, 302, 303, 307, 308)
         if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
           response.resume(); // Discard body
           try {
-            const redirectUrl = new URL(response.headers.location, downloadUrl).href;
+            const redirectUrl = new URL(response.headers.location, normalizedUrl).href;
             const redirectRes = await downloadFileWithRedirects(redirectUrl, destFolder, preferredName, redirectCount + 1);
             return resolve(redirectRes);
           } catch (redErr) {
@@ -816,6 +1109,20 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
         if (response.statusCode !== 200) {
           response.resume(); // Discard error response body
           return resolve({ success: false, error: `HTTP ${response.statusCode}: ${response.statusMessage || 'Error'}` });
+        }
+
+        // Try extracting real filename from Content-Disposition header if available
+        const contentDisp = response.headers['content-disposition'];
+        if (contentDisp && (!preferredName || !path.extname(preferredName))) {
+          const matchFilename = contentDisp.match(/filename\*?=['"]?(?:UTF-8'')?([^"';\r\n]+)['"]?/i);
+          if (matchFilename && matchFilename[1]) {
+            const extracted = decodeURIComponent(matchFilename[1].trim());
+            const safeExtracted = path.basename(extracted).replace(/[/\\?%*:|"<>]/g, '_').trim();
+            if (safeExtracted) {
+              safeFileName = safeExtracted;
+              destPath = path.join(destFolder, safeFileName);
+            }
+          }
         }
 
         const totalBytes = parseInt(response.headers['content-length'] || '0', 10);
@@ -838,7 +1145,7 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
           const percent = totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0;
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.webContents.send('download:progress', {
-              url: downloadUrl,
+              url: normalizedUrl,
               fileName: safeFileName,
               receivedBytes,
               totalBytes,
@@ -889,8 +1196,56 @@ async function downloadFileWithRedirects(downloadUrl, destFolder, preferredName,
 }
 
 ipcMain.handle('net:download-file', async (event, downloadUrl, subfolder, preferredName) => {
-  const destFolder = subfolder === 'songs' ? SONGS_DIR : DOWNLOADS_DIR;
-  return downloadFileWithRedirects(downloadUrl, destFolder, preferredName, 0);
+  const isSongsSubfolder = subfolder === 'songs';
+  const stagingFolder = isSongsSubfolder ? path.join(DOWNLOADS_DIR, 'staging') : DOWNLOADS_DIR;
+  if (!fs.existsSync(stagingFolder)) {
+    fs.mkdirSync(stagingFolder, { recursive: true });
+  }
+
+  const normalizedUrl = normalizeDownloadUrl(downloadUrl);
+  const downloadRes = await downloadFileWithRedirects(normalizedUrl, stagingFolder, preferredName, 0);
+
+  if (!downloadRes || !downloadRes.success) {
+    return downloadRes;
+  }
+
+  if (isSongsSubfolder && downloadRes.filePath) {
+    const filePath = downloadRes.filePath;
+    const ext = path.extname(filePath).toLowerCase();
+
+    if (ext === '.zip' || ext === '.osz' || ext === '.smzip' || ext === '.paplus') {
+      try {
+        const extractTempDir = path.join(DOWNLOADS_DIR, `unzip_${Date.now()}`);
+        extractZipArchiveSync(filePath, extractTempDir);
+        const imported = importExtractedSongFolder(extractTempDir, preferredName);
+        try { fs.rmSync(extractTempDir, { recursive: true, force: true }); } catch (e) {}
+        try { fs.unlinkSync(filePath); } catch (e) {}
+        return {
+          success: true,
+          filePath: imported.folderPath || filePath,
+          fileName: imported.song ? imported.song.name : path.basename(filePath),
+          song: imported.song,
+          isSongFolder: true
+        };
+      } catch (zipErr) {
+        return { success: false, error: `Failed to extract song archive: ${zipErr.message}` };
+      }
+    } else if (ext === '.json') {
+      const jsonRes = processDownloadedJson(filePath, preferredName);
+      return {
+        ...jsonRes,
+        fileName: jsonRes.song ? jsonRes.song.name : path.basename(filePath)
+      };
+    } else if (['.mp3', '.ogg', '.wav', '.m4a', '.flac'].includes(ext)) {
+      const audioRes = processDownloadedAudio(filePath, preferredName);
+      return {
+        ...audioRes,
+        fileName: audioRes.song ? audioRes.song.name : path.basename(filePath)
+      };
+    }
+  }
+
+  return downloadRes;
 });
 
 // --- Custom Songs & Default Tracks Disk Scanners ---

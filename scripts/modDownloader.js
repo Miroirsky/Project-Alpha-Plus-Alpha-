@@ -186,9 +186,9 @@
             throw new Error(result ? result.error : "Download failed on disk.");
           }
 
-          let imported = null;
-          // If downloaded file is JSON, validate and import into map storage
-          if (result.filePath && result.filePath.toLowerCase().endsWith(".json")) {
+          let imported = result.song || null;
+          // If downloaded file was a standalone JSON without direct folder wrapping
+          if (!imported && result.filePath && result.filePath.toLowerCase().endsWith(".json")) {
             const fileData = await window.electronAPI.readTextFile(result.filePath);
             if (fileData && fileData.success && fileData.content) {
               if (this.mapStorage) {
@@ -201,7 +201,14 @@
             }
           }
 
-          const songName = imported && imported.name ? imported.name : (result.fileName || "Song");
+          // Reload from Electron disk so mapStorage customMaps and defaultTracks are 100% in sync
+          if (this.mapStorage && typeof this.mapStorage.loadFromElectronDisk === "function") {
+            try {
+              await this.mapStorage.loadFromElectronDisk();
+            } catch (syncErr) {}
+          }
+
+          const songName = (imported && imported.name) || (result.song && result.song.name) || result.fileName || "Song";
           this.showSuccess(`Download complete! Saved to ${result.fileName || songName}`);
           if (this.soundManager && typeof this.soundManager.playTestTone === "function") {
             this.soundManager.playTestTone();
@@ -211,8 +218,9 @@
           if (window.playMenu && typeof window.playMenu.updateSongs === "function") {
             const allMaps = this.mapStorage && typeof this.mapStorage.getAllMaps === "function" ? this.mapStorage.getAllMaps() : [];
             window.playMenu.updateSongs(allMaps);
-            if (imported && imported.id && typeof window.playMenu.selectSongById === "function") {
-              window.playMenu.selectSongById(imported.id, true, true);
+            const targetId = (imported && imported.id) || (result.song && result.song.id);
+            if (targetId && typeof window.playMenu.selectSongById === "function") {
+              window.playMenu.selectSongById(targetId, true, true);
             }
           }
         } else {
@@ -220,7 +228,12 @@
           if (this.progressText) {
             this.progressText.textContent = "Fetching via web...";
           }
-          const response = await fetch(url);
+          let response;
+          try {
+            response = await fetch(url);
+          } catch (fetchErr) {
+            throw new Error("Download was blocked by browser security (CORS). External websites require CORS headers to allow browser downloads. For full unrestricted URL downloads and .zip packages, please play in the Project Alpha Plus desktop application.");
+          }
           if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
 
           const text = await response.text();

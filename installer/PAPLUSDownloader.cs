@@ -27,6 +27,9 @@ namespace ProjectAlphaPlusInstaller
         [DllImport("user32.dll")]
         private static extern bool SetProcessDPIAware();
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool AttachConsole(int dwProcessId);
+
         [STAThread]
         private static int Main(string[] args)
         {
@@ -39,6 +42,7 @@ namespace ProjectAlphaPlusInstaller
             // Support headless CLI installation for automated end-to-end verification tests
             if (args != null && args.Length >= 2 && string.Equals(args[0], "--headless-install", StringComparison.OrdinalIgnoreCase))
             {
+                try { AttachConsole(-1); } catch { }
                 string targetDir = args[1];
                 string customShortcutDir = null;
                 bool createShortcut = true;
@@ -702,6 +706,8 @@ internal static class LauncherProgram
             int fileIndex = 0;
             int totalFiles = Math.Max(1, allFiles.Length);
             byte[] buffer = new byte[262144];
+            Stopwatch sw = Stopwatch.StartNew();
+            long lastReportMs = 0;
 
             foreach (string srcFile in allFiles)
             {
@@ -731,18 +737,22 @@ internal static class LauncherProgram
                         await dst.WriteAsync(buffer, 0, read, ct);
                         copiedBytes += read;
 
-                        double ratio = (double)copiedBytes / totalBytes;
-                        int pct = 45 + (int)Math.Round(ratio * 49.0);
-                        ReportProgress(
-                            pct,
-                            "Installing standalone game files...",
-                            string.Format("Installing ({0}/{1}): {2} ({3:0.0} MB / {4:0.0} MB)",
-                                fileIndex,
-                                totalFiles,
-                                Path.GetFileName(srcFile),
-                                copiedBytes / (1024.0 * 1024.0),
-                                totalBytes / (1024.0 * 1024.0))
-                        );
+                        if (sw.ElapsedMilliseconds - lastReportMs >= 60 || copiedBytes == totalBytes)
+                        {
+                            lastReportMs = sw.ElapsedMilliseconds;
+                            double ratio = (double)copiedBytes / totalBytes;
+                            int pct = 45 + (int)Math.Round(ratio * 49.0);
+                            ReportProgress(
+                                pct,
+                                "Installing standalone game files...",
+                                string.Format("Installing ({0}/{1}): {2} ({3:0.0} MB / {4:0.0} MB)",
+                                    fileIndex,
+                                    totalFiles,
+                                    Path.GetFileName(srcFile),
+                                    copiedBytes / (1024.0 * 1024.0),
+                                    totalBytes / (1024.0 * 1024.0))
+                            );
+                        }
                     }
                 }
             }
