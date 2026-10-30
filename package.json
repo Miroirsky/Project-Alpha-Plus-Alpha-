@@ -9,7 +9,7 @@
     "web": "node server.js",
     "test": "node tests/test_folder_import_system.js",
     "build:dir": "electron-builder --dir",
-    "build:downloader": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /target:winexe /optimize+ /out:PAPLUS-Downloader.exe /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll installer\\PAPLUSDownloader.cs",
+    "build:downloader": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /target:winexe /optimize+ /out:PAPLUS-Downloader.exe /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll installer\\PAPLUSDownloader.cs && node -e \"require('fs').copyFileSync('PAPLUS-Downloader.exe', 'dist/PAPLUS-Downloader.exe')\"",
     "build:exe": "electron-builder --win nsis",
     "dist": "electron-builder --win nsis"
   },

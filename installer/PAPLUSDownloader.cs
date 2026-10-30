@@ -226,8 +226,11 @@ namespace ProjectAlphaPlusInstaller
                     if (string.IsNullOrEmpty(unpackedSource))
                     {
                         throw new FileNotFoundException(
-                            "Could not locate the Project Alpha Plus game package archive or unpacked build. " +
-                            "Ensure the distribution server is running or dist/ProjectAlphaPlus-Win64.zip is present."
+                            "Could not download or locate the Project Alpha Plus game package archive (ProjectAlphaPlus-Win64.zip).\n\n" +
+                            "To fix this:\n" +
+                            "1. Ensure 'ProjectAlphaPlus-Win64.zip' is published on GitHub Releases:\n" +
+                            "   https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-/releases\n" +
+                            "2. Or place 'ProjectAlphaPlus-Win64.zip' in the same folder as PAPLUS-Downloader.exe for offline installation."
                         );
                     }
                     await CopyUnpackedBuildWithProgressAsync(unpackedSource, installDir, ct);
@@ -235,8 +238,23 @@ namespace ProjectAlphaPlusInstaller
 
                 ct.ThrowIfCancellationRequested();
 
-                // Verify or synthesize standalone executable if installed from GitHub repository archive
+                // Check if Project Alpha Plus.exe was extracted directly or into a subfolder
                 string installedExe = Path.Combine(installDir, "Project Alpha Plus.exe");
+                if (!File.Exists(installedExe))
+                {
+                    // Check subdirectories in case the archive had an inner folder (e.g. win-unpacked/)
+                    string[] candidateExes = Directory.GetFiles(installDir, "Project Alpha Plus.exe", SearchOption.AllDirectories);
+                    if (candidateExes != null && candidateExes.Length > 0)
+                    {
+                        string innerDir = Path.GetDirectoryName(candidateExes[0]);
+                        if (!string.Equals(innerDir, installDir, StringComparison.OrdinalIgnoreCase))
+                        {
+                            Log("Moving game files from nested folder to install root: " + innerDir);
+                            MoveDirectoryContents(innerDir, installDir);
+                        }
+                    }
+                }
+
                 string installedAsar = Path.Combine(installDir, "resources", "app.asar");
 
                 if (!File.Exists(installedExe))
@@ -246,7 +264,11 @@ namespace ProjectAlphaPlusInstaller
 
                 if (!File.Exists(installedExe))
                 {
-                    throw new FileNotFoundException("Installation verification failed: 'Project Alpha Plus.exe' was not found in " + installDir);
+                    throw new FileNotFoundException(
+                        "Installation verification failed: 'Project Alpha Plus.exe' was not found in " + installDir + ".\n\n" +
+                        "The downloaded package did not contain the standalone game executable. " +
+                        "Please verify that 'ProjectAlphaPlus-Win64.zip' published on GitHub Releases contains the compiled Electron application."
+                    );
                 }
 
                 FileInfo exeInfo = new FileInfo(installedExe);
@@ -371,7 +393,8 @@ namespace ProjectAlphaPlusInstaller
             var remoteCloudUrls = new List<string>
             {
                 "https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-/releases/latest/download/ProjectAlphaPlus-Win64.zip",
-                "https://codeload.github.com/Miroirsky/Project-Alpha-Plus-Alpha-/zip/refs/heads/main"
+                "https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-/releases/download/v1.0.0/ProjectAlphaPlus-Win64.zip",
+                "https://github.com/Miroirsky/Project-Alpha-Plus-Alpha-/releases/download/1.0.0/ProjectAlphaPlus-Win64.zip"
             };
 
             foreach (string cloudUrl in remoteCloudUrls)
@@ -384,6 +407,33 @@ namespace ProjectAlphaPlusInstaller
             }
 
             return null;
+        }
+
+        private static void MoveDirectoryContents(string sourceDir, string targetDir)
+        {
+            try
+            {
+                foreach (string file in Directory.GetFiles(sourceDir))
+                {
+                    string dest = Path.Combine(targetDir, Path.GetFileName(file));
+                    if (File.Exists(dest))
+                    {
+                        try { File.Delete(dest); } catch { }
+                    }
+                    File.Move(file, dest);
+                }
+                foreach (string subDir in Directory.GetDirectories(sourceDir))
+                {
+                    string destSubDir = Path.Combine(targetDir, Path.GetFileName(subDir));
+                    if (!Directory.Exists(destSubDir))
+                    {
+                        Directory.CreateDirectory(destSubDir);
+                    }
+                    MoveDirectoryContents(subDir, destSubDir);
+                }
+                try { Directory.Delete(sourceDir, true); } catch { }
+            }
+            catch { }
         }
 
         private async Task<bool> TryDownloadFromHttpAsync(string url, string destinationFile, CancellationToken ct)
